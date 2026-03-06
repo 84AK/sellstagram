@@ -352,7 +352,7 @@ export default function OnboardingWizard({ onComplete }: { onComplete?: () => vo
                                 내 마케터 정보 입력 ✏️
                             </h2>
                             <p className="text-sm mb-5" style={{ color: "var(--foreground-soft)" }}>
-                                선생님이 알려준 팀 코드를 입력해요
+                                이름과 아바타를 설정해요. 팀은 선생님이 배정해 드려요.
                             </p>
                             <div className="flex flex-col gap-4">
                                 <div>
@@ -361,13 +361,6 @@ export default function OnboardingWizard({ onComplete }: { onComplete?: () => vo
                                         placeholder="예: 김지우"
                                         className="w-full px-4 py-3 rounded-xl text-sm font-semibold outline-none"
                                         style={{ background: "var(--surface-2)", border: name ? "2px solid var(--primary)" : "2px solid transparent", color: "var(--foreground)" }} />
-                                </div>
-                                <div>
-                                    <label className="text-xs font-bold mb-1.5 block" style={{ color: "var(--foreground-soft)" }}>팀 코드</label>
-                                    <input type="text" value={teamCode} onChange={e => setTeamCode(e.target.value.toUpperCase())}
-                                        placeholder="예: A팀, TEAM-B"
-                                        className="w-full px-4 py-3 rounded-xl text-sm font-semibold outline-none"
-                                        style={{ background: "var(--surface-2)", border: teamCode ? "2px solid var(--secondary)" : "2px solid transparent", color: "var(--foreground)" }} />
                                 </div>
                                 <div>
                                     <label className="text-xs font-bold mb-1.5 block" style={{ color: "var(--foreground-soft)" }}>아바타</label>
