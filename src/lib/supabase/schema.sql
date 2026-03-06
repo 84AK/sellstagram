@@ -142,7 +142,8 @@ create policy "profiles_update" on public.profiles for update using (auth.uid() 
 alter table public.posts enable row level security;
 create policy "posts_read" on public.posts for select using (true);
 create policy "posts_insert" on public.posts for insert with check (auth.uid() is not null);
-create policy "posts_update" on public.posts for update using (true);  -- 교사 highlighted 업데이트용
+create policy "posts_update" on public.posts for update using (true);
+create policy "posts_delete" on public.posts for delete using (true);
 
 -- missions: 누구나 읽기, 쓰기는 서비스 키로만 (교사 대시보드)
 alter table public.missions enable row level security;
