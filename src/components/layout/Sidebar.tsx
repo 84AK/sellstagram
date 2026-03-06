@@ -309,10 +309,10 @@ export default function Sidebar() {
                     </button>
                 </div>
 
-                {/* 사용자 정보 + XP 바 */}
+                {/* 사용자 정보 + XP 바 — 로그인 시에만 표시 */}
+                {(isAdmin || user.name) && (
                 <div className="p-4" style={{ borderTop: "1px solid var(--border)" }}>
                     {!adminChecked ? (
-                        // 관리자 체크 완료 전 — 빈 상태
                         <div className="h-9 rounded-xl animate-pulse" style={{ background: "var(--surface-2)" }} />
                     ) : isAdmin ? (
                         <div className="flex items-center gap-3">
@@ -377,6 +377,7 @@ export default function Sidebar() {
                         </>
                     )}
                 </div>
+                )}
             </aside>
         </>
     );
