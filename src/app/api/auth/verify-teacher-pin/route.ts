@@ -1,10 +1,26 @@
 import { NextRequest, NextResponse } from "next/server";
+import { createClient } from "@supabase/supabase-js";
+
+const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
 
 export async function POST(request: NextRequest) {
     const { pin } = await request.json();
-    const correctPin = process.env.TEACHER_PIN;
+    if (!pin) return NextResponse.json({ valid: false }, { status: 400 });
 
-    if (!correctPin || pin !== correctPin) {
+    // DB에서 현재 teacher_pin 조회
+    const { data } = await supabase
+        .from("game_state")
+        .select("teacher_pin")
+        .eq("id", 1)
+        .single();
+
+    // DB에 PIN이 없으면 env fallback
+    const correctPin = data?.teacher_pin ?? process.env.TEACHER_PIN ?? "1234";
+
+    if (pin !== correctPin) {
         return NextResponse.json({ valid: false }, { status: 401 });
     }
 

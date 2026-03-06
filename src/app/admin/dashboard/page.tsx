@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import {
     Shield, Users, FileText, Trophy, MessageSquare,
     LogOut, Loader2, Trash2, Crown, RefreshCw,
-    TrendingUp, ShoppingBag, BarChart3,
+    TrendingUp, ShoppingBag, BarChart3, Settings, Eye, EyeOff, Check,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase/client";
 
@@ -38,7 +38,7 @@ interface TeamStat {
     posts: number;
 }
 
-type Tab = "overview" | "users" | "teams" | "posts";
+type Tab = "overview" | "users" | "teams" | "posts" | "settings";
 
 export default function AdminDashboard() {
     const router = useRouter();
@@ -52,6 +52,14 @@ export default function AdminDashboard() {
     const [loading, setLoading] = useState(true);
     const [updatingRole, setUpdatingRole] = useState<string | null>(null);
     const [deletingPost, setDeletingPost] = useState<string | null>(null);
+
+    // PIN 설정 상태
+    const [currentPin, setCurrentPin] = useState("");
+    const [newPin, setNewPin] = useState("");
+    const [confirmPin, setConfirmPin] = useState("");
+    const [showPin, setShowPin] = useState(false);
+    const [pinSaving, setPinSaving] = useState(false);
+    const [pinResult, setPinResult] = useState<{ ok: boolean; msg: string } | null>(null);
 
     // 관리자 인증 확인
     useEffect(() => {
@@ -70,16 +78,19 @@ export default function AdminDashboard() {
                 { data: postData },
                 { count: commentCnt },
                 { count: purchaseCnt },
+                { data: gameState },
             ] = await Promise.all([
                 supabase.from("profiles").select("*").order("created_at"),
                 supabase.from("posts").select("id,user_name,user_handle,caption,description,likes,type,created_at").order("created_at", { ascending: false }).limit(50),
                 supabase.from("comments").select("id", { count: "exact", head: true }),
                 supabase.from("purchases").select("id", { count: "exact", head: true }),
+                supabase.from("game_state").select("teacher_pin").eq("id", 1).single(),
             ]);
             setProfiles(profileData ?? []);
             setPosts(postData ?? []);
             setCommentCount(commentCnt ?? 0);
             setPurchaseCount(purchaseCnt ?? 0);
+            setCurrentPin(gameState?.teacher_pin ?? "");
             setLoading(false);
         };
         load();
@@ -95,6 +106,33 @@ export default function AdminDashboard() {
         await supabase.from("profiles").update({ role: newRole }).eq("id", userId);
         setProfiles(prev => prev.map(p => p.id === userId ? { ...p, role: newRole } : p));
         setUpdatingRole(null);
+    };
+
+    const handleSavePin = async () => {
+        if (!newPin) return;
+        if (newPin !== confirmPin) {
+            setPinResult({ ok: false, msg: "새 PIN이 일치하지 않습니다." });
+            return;
+        }
+        if (newPin.length < 4) {
+            setPinResult({ ok: false, msg: "PIN은 4자리 이상이어야 합니다." });
+            return;
+        }
+        setPinSaving(true);
+        const { error } = await supabase
+            .from("game_state")
+            .update({ teacher_pin: newPin })
+            .eq("id", 1);
+        if (error) {
+            setPinResult({ ok: false, msg: "저장 실패: " + error.message });
+        } else {
+            setCurrentPin(newPin);
+            setNewPin("");
+            setConfirmPin("");
+            setPinResult({ ok: true, msg: "PIN이 성공적으로 변경되었습니다." });
+        }
+        setPinSaving(false);
+        setTimeout(() => setPinResult(null), 3000);
     };
 
     const handleDeletePost = async (postId: string) => {
@@ -134,6 +172,7 @@ export default function AdminDashboard() {
         { id: "users", label: "사용자 관리", icon: Users },
         { id: "teams", label: "팀 현황", icon: Trophy },
         { id: "posts", label: "게시물 관리", icon: FileText },
+        { id: "settings", label: "설정", icon: Settings },
     ];
 
     if (!authChecked || loading) {
@@ -345,6 +384,88 @@ export default function AdminDashboard() {
                                     </button>
                                 </div>
                             ))}
+                        </div>
+                    </div>
+                )}
+                {/* ── 설정 탭 ── */}
+                {activeTab === "settings" && (
+                    <div className="flex flex-col gap-6 max-w-md">
+                        <div className="flex flex-col gap-4 p-5 rounded-2xl"
+                            style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
+                            <div className="flex items-center gap-2">
+                                <Settings size={16} style={{ color: "#7C3AED" }} />
+                                <h3 className="text-sm font-black" style={{ color: "var(--foreground)" }}>
+                                    교사 PIN 관리
+                                </h3>
+                            </div>
+                            <p className="text-xs" style={{ color: "var(--foreground-muted)" }}>
+                                교사 대시보드 접근 시 사용하는 PIN 번호입니다.
+                            </p>
+
+                            {/* 현재 PIN */}
+                            <div className="flex flex-col gap-1.5">
+                                <label className="text-[10px] font-bold uppercase tracking-widest"
+                                    style={{ color: "var(--foreground-muted)" }}>현재 PIN</label>
+                                <div className="flex items-center gap-2 px-4 py-3 rounded-xl"
+                                    style={{ background: "var(--surface-2)", border: "1px solid var(--border)" }}>
+                                    <span className="text-sm font-mono font-bold flex-1" style={{ color: "var(--foreground)" }}>
+                                        {showPin ? (currentPin || "미설정") : (currentPin ? "•".repeat(currentPin.length) : "미설정")}
+                                    </span>
+                                    <button onClick={() => setShowPin(v => !v)}
+                                        className="p-1" style={{ color: "var(--foreground-muted)" }}>
+                                        {showPin ? <EyeOff size={14} /> : <Eye size={14} />}
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* 새 PIN 입력 */}
+                            <div className="flex flex-col gap-1.5">
+                                <label className="text-[10px] font-bold uppercase tracking-widest"
+                                    style={{ color: "var(--foreground-muted)" }}>새 PIN</label>
+                                <input
+                                    type={showPin ? "text" : "password"}
+                                    value={newPin}
+                                    onChange={e => setNewPin(e.target.value)}
+                                    placeholder="새 PIN 입력 (4자리 이상)"
+                                    className="px-4 py-3 rounded-xl text-sm font-mono font-bold outline-none"
+                                    style={{ background: "var(--surface-2)", border: "1px solid var(--border)", color: "var(--foreground)" }}
+                                />
+                            </div>
+
+                            {/* PIN 확인 */}
+                            <div className="flex flex-col gap-1.5">
+                                <label className="text-[10px] font-bold uppercase tracking-widest"
+                                    style={{ color: "var(--foreground-muted)" }}>새 PIN 확인</label>
+                                <input
+                                    type={showPin ? "text" : "password"}
+                                    value={confirmPin}
+                                    onChange={e => setConfirmPin(e.target.value)}
+                                    placeholder="새 PIN 재입력"
+                                    className="px-4 py-3 rounded-xl text-sm font-mono font-bold outline-none"
+                                    style={{ background: "var(--surface-2)", border: "1px solid var(--border)", color: "var(--foreground)" }}
+                                />
+                            </div>
+
+                            {/* 결과 메시지 */}
+                            {pinResult && (
+                                <div className="flex items-center gap-2 px-4 py-3 rounded-xl text-sm font-semibold"
+                                    style={{
+                                        background: pinResult.ok ? "rgba(6,214,160,0.1)" : "rgba(239,68,68,0.1)",
+                                        color: pinResult.ok ? "var(--accent)" : "#ef4444",
+                                    }}>
+                                    {pinResult.ok ? <Check size={14} /> : <Shield size={14} />}
+                                    {pinResult.msg}
+                                </div>
+                            )}
+
+                            <button
+                                onClick={handleSavePin}
+                                disabled={pinSaving || !newPin || !confirmPin}
+                                className="w-full py-3 rounded-xl font-black text-sm flex items-center justify-center gap-2 transition-all disabled:opacity-50"
+                                style={{ background: "linear-gradient(135deg, #7C3AED, #4F46E5)", color: "white" }}>
+                                {pinSaving ? <Loader2 size={15} className="animate-spin" /> : <Check size={15} />}
+                                {pinSaving ? "저장 중..." : "PIN 변경 저장"}
+                            </button>
                         </div>
                     </div>
                 )}

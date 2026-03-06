@@ -69,11 +69,12 @@ create table if not exists public.game_state (
     id integer primary key default 1,
     week integer default 1,
     is_session_active boolean default false,
+    teacher_pin text default '1234',
     updated_at timestamptz default now()
 );
 
-insert into public.game_state (id, week, is_session_active)
-values (1, 1, false)
+insert into public.game_state (id, week, is_session_active, teacher_pin)
+values (1, 1, false, '1234')
 on conflict (id) do nothing;
 
 -- 6. Products (셀러샵 상품 - 교사가 관리)
