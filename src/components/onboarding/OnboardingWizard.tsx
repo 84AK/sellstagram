@@ -116,7 +116,6 @@ export default function OnboardingWizard({ onComplete }: { onComplete?: () => vo
         if (!selectedType || !name.trim()) return;
         setSaving(true);
 
-        const teamName = getTeamName(teamCode);
         const handle = name.trim().toLowerCase().replace(/\s/g, "_") + "_marketer";
 
         const { data: { session } } = await supabase.auth.getSession();
@@ -124,12 +123,12 @@ export default function OnboardingWizard({ onComplete }: { onComplete?: () => vo
             await supabase.from("profiles").upsert({
                 id: session.user.id, name: name.trim(), handle,
                 avatar: selectedAvatar, marketer_type: selectedType.id,
-                team: teamName, points: 0, rank: selectedType.badge, role: "student",
+                team: "미배정", points: 0, rank: selectedType.badge, role: "student",
             });
             localStorage.setItem("sellstagram_user_id", session.user.id);
         }
 
-        updateProfile({ name: name.trim(), handle, avatar: selectedAvatar, rank: selectedType.badge, team: teamName });
+        updateProfile({ name: name.trim(), handle, avatar: selectedAvatar, rank: selectedType.badge, team: "미배정" });
 
         setSaving(false);
         setIsComplete(true);
@@ -164,13 +163,10 @@ export default function OnboardingWizard({ onComplete }: { onComplete?: () => vo
                         마케터로서의 첫 걸음을 내딛었어요 🎉
                     </p>
                     <div className="rounded-2xl p-4 mb-6" style={{ background: "var(--surface-2)" }}>
-                        <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                                <Users size={16} style={{ color: "var(--secondary)" }} />
-                                <span className="text-sm font-bold" style={{ color: "var(--foreground)" }}>소속 팀</span>
-                            </div>
-                            <span className="badge badge-secondary">
-                                {TEAM_EMOJIS[getTeamName(teamCode)]} {getTeamName(teamCode)}
+                        <div className="flex items-center gap-2">
+                            <Users size={16} style={{ color: "var(--secondary)" }} />
+                            <span className="text-sm font-semibold" style={{ color: "var(--foreground-soft)" }}>
+                                팀은 선생님이 곧 배정해 드릴 거예요!
                             </span>
                         </div>
                     </div>
@@ -404,7 +400,7 @@ export default function OnboardingWizard({ onComplete }: { onComplete?: () => vo
                                             {selectedType.badge}
                                         </span>
                                         <span className="text-xs font-semibold" style={{ color: "var(--foreground-soft)" }}>
-                                            {getTeamName(teamCode)}
+                                            팀 배정 대기 중
                                         </span>
                                     </div>
                                 </div>
