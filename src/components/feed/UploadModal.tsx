@@ -1,0 +1,389 @@
+"use client";
+
+import React, { useState, useEffect, useRef } from "react";
+import GlassCard from "../common/GlassCard";
+import {
+    X,
+    Image as ImageIcon,
+    Hash,
+    Send,
+    Sparkles,
+    Loader2,
+    CheckCircle,
+    Eye,
+    FileText,
+    ArrowRight,
+    Upload,
+    Trash2,
+} from "lucide-react";
+import { useGameStore } from "@/store/useGameStore";
+import { supabase } from "@/lib/supabase/client";
+
+export default function UploadModal() {
+    const {
+        isUploadModalOpen,
+        setUploadModalOpen,
+        uploadContext,
+        addPost,
+        addInsight,
+        setAIReportModal,
+        addPoints,
+        user
+    } = useGameStore();
+    const [uploadType, setUploadType] = useState<"post" | "video">("post");
+    const [caption, setCaption] = useState("");
+    const [tags, setTags] = useState("");
+    const [isUploading, setIsUploading] = useState(false);
+    const [isSuccess, setIsSuccess] = useState(false);
+    const [aiPreview, setAiPreview] = useState<string>("");
+    const [isAnalyzing, setIsAnalyzing] = useState(false);
+
+    // 이미지 업로드 관련
+    const [selectedFile, setSelectedFile] = useState<File | null>(null);
+    const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+    const [isDragging, setIsDragging] = useState(false);
+    const fileInputRef = useRef<HTMLInputElement>(null);
+
+    // Prevent background scrolling when modal is open
+    useEffect(() => {
+        if (isUploadModalOpen) {
+            document.body.style.overflow = "hidden";
+        } else {
+            document.body.style.overflow = "unset";
+        }
+        return () => {
+            document.body.style.overflow = "unset";
+        };
+    }, [isUploadModalOpen]);
+
+    const onClose = () => {
+        setUploadModalOpen(false);
+        setCaption("");
+        setTags("");
+        setAiPreview("");
+        setSelectedFile(null);
+        setPreviewUrl(null);
+    };
+
+    const handleFileSelect = (file: File) => {
+        if (!file.type.startsWith("image/")) return;
+        if (file.size > 10 * 1024 * 1024) { alert("10MB 이하 이미지만 업로드 가능해요"); return; }
+        setSelectedFile(file);
+        const url = URL.createObjectURL(file);
+        setPreviewUrl(url);
+    };
+
+    const handleDrop = (e: React.DragEvent) => {
+        e.preventDefault();
+        setIsDragging(false);
+        const file = e.dataTransfer.files[0];
+        if (file) handleFileSelect(file);
+    };
+
+    const uploadImageToStorage = async (file: File): Promise<string | null> => {
+        const { data: { session } } = await supabase.auth.getSession();
+        const userId = session?.user?.id || "anon";
+        const ext = file.name.split(".").pop() ?? "jpg";
+        const path = `${userId}/${Date.now()}.${ext}`;
+
+        const { error } = await supabase.storage.from("posts").upload(path, file, { cacheControl: "3600" });
+        if (error) { console.error("Storage upload error:", error.message); return null; }
+
+        const { data: { publicUrl } } = supabase.storage.from("posts").getPublicUrl(path);
+        return publicUrl;
+    };
+
+    if (!isUploadModalOpen) return null;
+
+    const isMissionMode = uploadContext === "mission";
+
+    const handleAnalyze = async () => {
+        if (!caption || isAnalyzing) return;
+        setIsAnalyzing(true);
+        try {
+            const response = await fetch("/api/ai/analyze", {
+                method: "POST",
+                body: JSON.stringify({ type: "coach", caption, engagement: "Predictions" }),
+                headers: { "Content-Type": "application/json" }
+            });
+            const data = await response.json();
+            setAiPreview(data.insight);
+        } catch (err) {
+            setAiPreview("분석 중 오류가 발생했습니다.");
+        } finally {
+            setIsAnalyzing(false);
+        }
+    };
+
+    const handleViewReport = () => {
+        if (!aiPreview) return;
+
+        const newInsight = {
+            id: Math.random().toString(36).substr(2, 9),
+            type: "coach" as const,
+            title: isMissionMode ? "주간 미션 마케팅 리포트" : "일반 게시물 마케팅 분석",
+            content: aiPreview,
+            date: new Date().toISOString().split('T')[0]
+        };
+
+        addInsight(newInsight);
+        setAIReportModal(true, newInsight);
+    };
+
+    const handleUpload = async () => {
+        if (!caption.trim()) return;
+        setIsUploading(true);
+
+        try {
+            const { data: { session } } = await supabase.auth.getSession();
+            const userId = session?.user?.id ?? localStorage.getItem("sellstagram_user_id");
+            const tagList = uploadType === "post" ? tags.split(",").map(t => t.trim()).filter(Boolean) : [];
+
+            // 이미지 Storage 업로드
+            let imageUrl: string | null = null;
+            if (selectedFile && uploadType === "post") {
+                imageUrl = await uploadImageToStorage(selectedFile);
+            }
+
+            // Supabase에 저장 (실패 시 로컬 fallback)
+            const { data: inserted, error } = await supabase.from("posts").insert({
+                user_id: userId ?? null,
+                user_name: user.name,
+                user_handle: user.handle,
+                user_avatar: user.avatar,
+                type: uploadType,
+                caption: uploadType === "post" ? caption : null,
+                image_url: imageUrl,
+                description: uploadType === "video" ? caption : null,
+                music_name: uploadType === "video" ? "Original Audio" : null,
+                tags: tagList,
+                likes: 0,
+                comments: 0,
+                shares: 0,
+                engagement_rate: "0%",
+                sales: uploadType === "post" ? "₩0" : null,
+            }).select().single();
+
+            if (error || !inserted) {
+                // Supabase 미연결 시 로컬에만 저장
+                addPost({
+                    id: Math.random().toString(36).substr(2, 9),
+                    type: uploadType,
+                    user: { name: user.name, handle: user.handle, avatar: user.avatar },
+                    content: uploadType === "post" ? { image: imageUrl ?? "", caption, tags: tagList } : undefined,
+                    description: uploadType === "video" ? caption : undefined,
+                    musicName: uploadType === "video" ? "Original Audio" : undefined,
+                    stats: { likes: 0, engagement: "0%", sales: "₩0", comments: "0", shares: "0" },
+                    timeAgo: "방금 전",
+                } as any);
+            }
+            // Supabase 성공 시 realtime이 자동으로 addPost 호출 (page.tsx 구독)
+
+            // 포인트 지급: 게시물 +10 XP, 미션 모드 +20 XP
+            const xp = isMissionMode ? 20 : 10;
+            addPoints(xp);
+
+            setIsUploading(false);
+            setIsSuccess(true);
+
+            setTimeout(() => {
+                setIsSuccess(false);
+                onClose();
+            }, 1000);
+        } catch {
+            setIsUploading(false);
+        }
+    };
+
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300">
+            <GlassCard className="w-full max-w-lg p-0 overflow-hidden border-foreground/10 shadow-2xl flex flex-col max-h-[90vh]">
+                {/* Modal Header */}
+                <div className="flex items-center justify-between p-6 border-b border-foreground/5 flex-shrink-0">
+                    <div className="flex flex-col gap-1">
+                        <h3 className="text-xl font-black italic tracking-tighter flex items-center gap-2 text-foreground">
+                            <Sparkles size={20} className="text-primary" />
+                            {isMissionMode ? "주간 미션 게시물 생성" : "새 게시물 생성"}
+                        </h3>
+                        {isMissionMode && (
+                            <div className="flex items-center gap-1.5">
+                                <span className="w-1.5 h-1.5 bg-primary rounded-full animate-pulse" />
+                                <span className="text-[10px] font-bold text-primary uppercase tracking-widest">Weekly Mission Mode</span>
+                            </div>
+                        )}
+                    </div>
+                    <button onClick={onClose} className="p-2 hover:bg-foreground/5 rounded-full transition-colors">
+                        <X size={20} className="text-foreground/40" />
+                    </button>
+                </div>
+
+                {/* Upload Format Toggle */}
+                <div className="flex p-1 bg-foreground/5 rounded-xl mx-6 mt-4 flex-shrink-0">
+                    <button
+                        onClick={() => setUploadType("post")}
+                        className={`flex-1 py-2 text-[10px] font-bold uppercase tracking-widest rounded-lg transition-all ${uploadType === "post" ? "bg-background shadow-sm text-primary" : "text-foreground/40 hover:text-foreground/60"}`}
+                    >
+                        Photo Post
+                    </button>
+                    <button
+                        onClick={() => setUploadType("video")}
+                        className={`flex-1 py-2 text-[10px] font-bold uppercase tracking-widest rounded-lg transition-all ${uploadType === "video" ? "bg-background shadow-sm text-primary" : "text-foreground/40 hover:text-foreground/60"}`}
+                    >
+                        Video Reels
+                    </button>
+                </div>
+
+                {/* Modal Body */}
+                <div className="p-6 pb-24 flex flex-col gap-6 overflow-y-auto custom-scrollbar flex-1">
+                    {/* Image/Video Upload Area */}
+                    <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFileSelect(f); }}
+                    />
+                    {previewUrl && uploadType === "post" ? (
+                        <div className="relative w-full rounded-2xl overflow-hidden flex-shrink-0 group/preview">
+                            <img src={previewUrl} alt="preview" className="w-full object-cover max-h-[300px]" />
+                            <div className="absolute inset-0 bg-black/0 group-hover/preview:bg-black/30 transition-colors duration-300" />
+                            <button
+                                onClick={() => { setSelectedFile(null); setPreviewUrl(null); if (fileInputRef.current) fileInputRef.current.value = ""; }}
+                                className="absolute top-3 right-3 p-2 bg-black/60 hover:bg-red-500 text-white rounded-full transition-colors opacity-0 group-hover/preview:opacity-100"
+                            >
+                                <Trash2 size={14} />
+                            </button>
+                            <div className="absolute bottom-3 left-3 px-2 py-1 bg-black/50 rounded-lg flex items-center gap-1.5">
+                                <Upload size={10} className="text-white/70" />
+                                <span className="text-[9px] font-bold text-white/70 uppercase tracking-wider">이미지 선택됨</span>
+                            </div>
+                        </div>
+                    ) : (
+                        <div
+                            onClick={() => fileInputRef.current?.click()}
+                            onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+                            onDragLeave={() => setIsDragging(false)}
+                            onDrop={handleDrop}
+                            className={`min-h-[200px] w-full rounded-2xl border-2 border-dashed flex flex-col items-center justify-center gap-3 group cursor-pointer relative overflow-hidden flex-shrink-0 transition-all duration-300 ${isDragging ? "border-primary bg-primary/10 scale-[0.99]" : "bg-foreground/5 border-foreground/10 hover:border-primary/50"}`}
+                        >
+                            <div className={`p-5 bg-background rounded-3xl shadow-xl transition-transform z-10 border border-foreground/5 ${isDragging ? "scale-110" : "group-hover:scale-110"}`}>
+                                {uploadType === "post" ? <ImageIcon size={40} className="text-primary" /> : <Eye size={40} className="text-primary" />}
+                            </div>
+                            <div className="flex flex-col items-center gap-1 z-10">
+                                <span className="text-[10px] font-black text-foreground/40 uppercase tracking-widest">
+                                    {isDragging ? "여기에 놓으세요!" : (uploadType === "post" ? "Upload Marketing Image" : "Upload Vertical Video")}
+                                </span>
+                                <span className="text-[8px] font-bold text-foreground/20 uppercase tracking-tight">Drag and drop or click to browse • Max 10MB</span>
+                            </div>
+                            <div className={`absolute inset-0 bg-primary/5 transition-opacity ${isDragging ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`} />
+                        </div>
+                    )}
+
+                    {/* Inputs */}
+                    <div className="flex flex-col gap-4">
+                        <div className="flex flex-col gap-2">
+                            <label className="text-[10px] font-bold text-foreground/40 uppercase tracking-widest ml-1">
+                                {uploadType === "post" ? "Caption" : "Video Description"}
+                            </label>
+                            <textarea
+                                placeholder={uploadType === "post" ? "Z세대를 사로잡을 매력적인 카피를 작성하세요..." : "릴스 알고리즘을 타기 위한 핵심 설명과 키워드를 입력하세요..."}
+                                value={caption}
+                                onChange={(e) => setCaption(e.target.value)}
+                                className="w-full bg-foreground/5 border border-foreground/10 rounded-2xl p-4 text-sm min-h-[100px] focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all resize-none italic font-medium"
+                            />
+                        </div>
+
+                        {uploadType === "post" && (
+                            <div className="flex flex-col gap-2">
+                                <label className="text-[10px] font-bold text-foreground/40 uppercase tracking-widest ml-1">Hashtags</label>
+                                <div className="relative">
+                                    <Hash size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-primary" />
+                                    <input
+                                        type="text"
+                                        placeholder="태그를 입력하세요 (쉼표로 구분)"
+                                        value={tags}
+                                        onChange={(e) => setTags(e.target.value)}
+                                        className="w-full bg-foreground/5 border border-foreground/10 rounded-2xl py-3 pl-10 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium italic"
+                                    />
+                                </div>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* AI Coaching Action Card */}
+                    <div className={`p-6 rounded-3xl border transition-all duration-500 overflow-hidden flex-shrink-0 ${aiPreview ? "bg-primary/5 border-primary/20 shadow-xl shadow-primary/5" : "bg-foreground/[0.02] border-foreground/5"}`}>
+                        <div className="flex items-center justify-between mb-4">
+                            <div className="flex items-center gap-3">
+                                <div className={`p-2 rounded-xl transition-colors ${aiPreview ? "bg-primary text-white" : "bg-foreground/10 text-foreground/20"}`}>
+                                    <Sparkles size={18} className={isAnalyzing ? "animate-spin" : ""} />
+                                </div>
+                                <div className="flex flex-col">
+                                    <span className={`text-[10px] font-black uppercase tracking-widest ${aiPreview ? "text-primary" : "text-foreground/40"}`}>Star Coach Engine</span>
+                                    <span className="text-xs font-bold text-foreground/60">리얼타임 마케팅 분석</span>
+                                </div>
+                            </div>
+                            {!aiPreview && !isAnalyzing && (
+                                <button
+                                    onClick={handleAnalyze}
+                                    disabled={!caption}
+                                    className="px-4 py-2 bg-primary text-white text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-primary/90 disabled:opacity-30 transition-all active:scale-95"
+                                >
+                                    AI 분석하기
+                                </button>
+                            )}
+                        </div>
+
+                        {isAnalyzing ? (
+                            <div className="flex items-center gap-2 py-2">
+                                <Loader2 size={16} className="animate-spin text-primary" />
+                                <span className="text-xs font-bold text-primary italic">AI 코치가 당신의 카피를 분석 중입니다...</span>
+                            </div>
+                        ) : aiPreview ? (
+                            <div className="flex flex-col gap-4 animate-in slide-in-from-bottom-2 duration-500">
+                                <div className="p-4 bg-background/50 rounded-2xl border border-primary/10">
+                                    <p className="text-xs text-foreground/60 leading-relaxed font-medium italic">
+                                        "분석이 완료되었습니다! 전문 마케팅 보고서가 준비되었어요. 럭키!🚀"
+                                    </p>
+                                </div>
+                                <button
+                                    onClick={handleViewReport}
+                                    className="w-full py-4 bg-primary text-white rounded-2xl flex items-center justify-center gap-3 font-black italic text-sm transition-all hover:bg-primary/90 shadow-lg shadow-primary/20 hover:translate-y-[-2px] active:translate-y-0"
+                                >
+                                    <FileText size={18} /> 상세 리포트 확인하기 <ArrowRight size={18} />
+                                </button>
+                            </div>
+                        ) : (
+                            <div className="flex flex-col gap-1">
+                                <p className="text-[11px] text-foreground/30 font-medium italic">
+                                    캡션을 작성하고 AI 분석하기 버튼을 누르면 정교한 피드백을 받을 수 있습니다.
+                                </p>
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+                {/* Modal Footer */}
+                <div className="p-6 pt-2 border-t border-foreground/5 bg-background/80 backdrop-blur-md flex-shrink-0">
+                    <button
+                        disabled={isUploading || isSuccess || !caption}
+                        onClick={handleUpload}
+                        className={`w-full py-4 rounded-2xl flex items-center justify-center gap-3 font-black italic text-sm transition-all active:scale-[0.98] shadow-xl ${isSuccess
+                            ? "bg-green-500 text-white"
+                            : isUploading
+                                ? "bg-foreground/10 text-foreground/40"
+                                : "bg-foreground text-background hover:bg-foreground/90"
+                            }`}
+                    >
+                        {isSuccess ? (
+                            <>업로드 완료! <CheckCircle size={20} /></>
+                        ) : isUploading ? (
+                            <><Loader2 size={18} className="animate-spin" /> 성과 시뮬레이션 중...</>
+                        ) : (
+                            <>실세계 피드에 게시하기 <Send size={18} /></>
+                        )}
+                    </button>
+                </div>
+            </GlassCard>
+        </div>
+    );
+}

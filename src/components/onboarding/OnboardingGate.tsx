@@ -1,0 +1,105 @@
+"use client";
+
+import { useEffect, useRef, useState } from "react";
+import { useRouter, usePathname } from "next/navigation";
+import { supabase } from "@/lib/supabase/client";
+import { useGameStore } from "@/store/useGameStore";
+import OnboardingWizard from "./OnboardingWizard";
+import { Loader2 } from "lucide-react";
+
+// 인증 체크를 건너뛸 페이지 (로그인, 콜백, 교사 대시보드, 관리자)
+const PUBLIC_PATHS = ["/login", "/auth/callback", "/teacher", "/admin"];
+
+type Status = "loading" | "needs-onboarding" | "ready";
+
+export default function OnboardingGate({ children }: { children: React.ReactNode }) {
+    const [status, setStatus] = useState<Status>("loading");
+    // 초기 인증 체크 완료 여부를 추적 — 토큰 갱신 시 SIGNED_IN 재실행 방지
+    const initializedRef = useRef(false);
+    const router = useRouter();
+    const pathname = usePathname();
+    const { updateProfile } = useGameStore();
+
+    const isPublicPath = PUBLIC_PATHS.some(p => pathname?.startsWith(p));
+
+    useEffect(() => {
+        // 공개 페이지는 인증 체크 불필요
+        if (isPublicPath) {
+            setStatus("ready");
+            return;
+        }
+
+        initializedRef.current = false;
+
+        const checkAuthAndProfile = async () => {
+            // 관리자 쿠키 확인 — 관리자는 모든 페이지 자유 접근
+            const adminRes = await fetch("/api/auth/admin-check");
+            const { isAdmin } = await adminRes.json();
+            if (isAdmin) {
+                initializedRef.current = true;
+                setStatus("ready");
+                return;
+            }
+
+            const { data: { session } } = await supabase.auth.getSession();
+
+            if (!session) {
+                router.push("/login");
+                return;
+            }
+
+            const { data: profile } = await supabase
+                .from("profiles")
+                .select("id, name, handle, avatar, marketer_type, team, points, rank, role")
+                .eq("id", session.user.id)
+                .single();
+
+            if (!profile) {
+                setStatus("needs-onboarding");
+                return;
+            }
+
+            updateProfile({
+                name: profile.name,
+                handle: profile.handle,
+                avatar: profile.avatar,
+                rank: profile.rank,
+                team: profile.team,
+                points: profile.points ?? 0,
+                role: profile.role ?? "student",
+            });
+
+            initializedRef.current = true;
+            setStatus("ready");
+        };
+
+        checkAuthAndProfile();
+
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+            // SIGNED_IN은 토큰 갱신 시에도 발생하므로, 이미 초기화된 경우 무시
+            if (event === "SIGNED_IN" && !initializedRef.current) checkAuthAndProfile();
+            if (event === "SIGNED_OUT") router.push("/login");
+        });
+
+        return () => subscription.unsubscribe();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [isPublicPath]);
+
+    // 공개 페이지는 그대로 렌더링
+    if (isPublicPath) return <>{children}</>;
+
+    if (status === "loading") {
+        return (
+            <div className="min-h-screen flex items-center justify-center"
+                style={{ background: "var(--background)" }}>
+                <Loader2 size={28} className="animate-spin" style={{ color: "var(--primary)" }} />
+            </div>
+        );
+    }
+
+    if (status === "needs-onboarding") {
+        return <OnboardingWizard onComplete={() => setStatus("ready")} />;
+    }
+
+    return <>{children}</>;
+}

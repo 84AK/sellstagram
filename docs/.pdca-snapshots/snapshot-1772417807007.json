@@ -1,0 +1,311 @@
+{
+  "timestamp": "2026-03-02T02:16:47.005Z",
+  "reason": "compaction",
+  "status": {
+    "version": "2.0",
+    "lastUpdated": "2026-03-02T02:16:45.721Z",
+    "activeFeatures": [
+      "marketing_simulation",
+      "layout",
+      "dashboard",
+      "analyze",
+      "profile",
+      "onboarding",
+      "curriculum",
+      "session",
+      "learn",
+      "store",
+      "teacher"
+    ],
+    "primaryFeature": "marketing_simulation",
+    "features": {
+      "marketing_simulation": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-03-02T00:59:27.350Z",
+          "lastUpdated": "2026-03-02T01:05:11.660Z"
+        },
+        "lastFile": "/Users/byunmose/Desktop/vibe_coding/marketing_simulation/src/app/layout.tsx"
+      },
+      "layout": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-03-02T01:00:05.111Z",
+          "lastUpdated": "2026-03-02T01:00:05.111Z"
+        },
+        "lastFile": "/Users/byunmose/Desktop/vibe_coding/marketing_simulation/src/components/layout/Sidebar.tsx"
+      },
+      "dashboard": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-03-02T01:01:30.468Z",
+          "lastUpdated": "2026-03-02T01:01:30.468Z"
+        },
+        "lastFile": "/Users/byunmose/Desktop/vibe_coding/marketing_simulation/src/components/dashboard/Insights.tsx"
+      },
+      "analyze": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-03-02T01:02:38.636Z",
+          "lastUpdated": "2026-03-02T01:02:38.636Z"
+        },
+        "lastFile": "/Users/byunmose/Desktop/vibe_coding/marketing_simulation/src/app/api/ai/analyze/route.ts"
+      },
+      "profile": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-03-02T01:03:01.472Z",
+          "lastUpdated": "2026-03-02T01:03:01.472Z"
+        },
+        "lastFile": "/Users/byunmose/Desktop/vibe_coding/marketing_simulation/src/app/profile/page.tsx"
+      },
+      "onboarding": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-03-02T01:04:53.091Z",
+          "lastUpdated": "2026-03-02T01:05:00.593Z"
+        },
+        "lastFile": "/Users/byunmose/Desktop/vibe_coding/marketing_simulation/src/components/onboarding/OnboardingGate.tsx"
+      },
+      "curriculum": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-03-02T01:08:58.980Z",
+          "lastUpdated": "2026-03-02T01:08:58.980Z"
+        },
+        "lastFile": "/Users/byunmose/Desktop/vibe_coding/marketing_simulation/src/lib/curriculum/sessions.ts"
+      },
+      "session": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-03-02T01:10:13.156Z",
+          "lastUpdated": "2026-03-02T01:10:13.156Z"
+        },
+        "lastFile": "/Users/byunmose/Desktop/vibe_coding/marketing_simulation/src/app/session/page.tsx"
+      },
+      "learn": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-03-02T02:05:08.398Z",
+          "lastUpdated": "2026-03-02T02:11:28.315Z"
+        },
+        "lastFile": "/Users/byunmose/Desktop/vibe_coding/marketing_simulation/src/app/learn/page.tsx"
+      },
+      "store": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-03-02T02:13:55.752Z",
+          "lastUpdated": "2026-03-02T02:14:17.470Z"
+        },
+        "lastFile": "/Users/byunmose/Desktop/vibe_coding/marketing_simulation/src/store/useGameStore.ts"
+      },
+      "teacher": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-03-02T02:16:45.721Z",
+          "lastUpdated": "2026-03-02T02:16:45.721Z"
+        },
+        "lastFile": "/Users/byunmose/Desktop/vibe_coding/marketing_simulation/src/app/teacher/page.tsx"
+      }
+    },
+    "pipeline": {
+      "currentPhase": 1,
+      "level": "Dynamic",
+      "phaseHistory": []
+    },
+    "session": {
+      "startedAt": "2026-03-02T00:46:47.990Z",
+      "onboardingCompleted": false,
+      "lastActivity": "2026-03-02T02:16:45.721Z"
+    },
+    "history": [
+      {
+        "timestamp": "2026-03-02T00:59:27.350Z",
+        "feature": "marketing_simulation",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-02T01:00:05.111Z",
+        "feature": "layout",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-02T01:00:10.558Z",
+        "feature": "marketing_simulation",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-02T01:00:16.767Z",
+        "feature": "marketing_simulation",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-02T01:00:59.855Z",
+        "feature": "marketing_simulation",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-02T01:01:30.468Z",
+        "feature": "dashboard",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-02T01:02:38.636Z",
+        "feature": "analyze",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-02T01:03:01.472Z",
+        "feature": "profile",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-02T01:04:53.091Z",
+        "feature": "onboarding",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-02T01:05:00.593Z",
+        "feature": "onboarding",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-02T01:05:04.119Z",
+        "feature": "marketing_simulation",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-02T01:05:11.660Z",
+        "feature": "marketing_simulation",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-02T01:08:58.980Z",
+        "feature": "curriculum",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-02T01:10:13.156Z",
+        "feature": "session",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-02T02:05:08.398Z",
+        "feature": "learn",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-02T02:06:27.384Z",
+        "feature": "learn",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-02T02:11:28.315Z",
+        "feature": "learn",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-02T02:13:55.752Z",
+        "feature": "store",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-02T02:14:03.798Z",
+        "feature": "store",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-02T02:14:11.597Z",
+        "feature": "store",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-02T02:14:17.470Z",
+        "feature": "store",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-02T02:16:45.721Z",
+        "feature": "teacher",
+        "phase": "do",
+        "action": "updated"
+      }
+    ]
+  }
+}

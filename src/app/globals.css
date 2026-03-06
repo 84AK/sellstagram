@@ -1,26 +1,307 @@
 @import "tailwindcss";
 
+/* ═══════════════════════════════════════════════
+   SELLSTAGRAM · 디자인 토큰 시스템 v2.0
+   컨셉: 에너지 넘치는 학습 게임 (Duolingo meets Notion)
+═══════════════════════════════════════════════ */
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* ── 배경 · 서피스 ── */
+  --background: #F7F6F3;
+  --surface: #FFFFFF;
+  --surface-2: #F1F0ED;
+  --surface-3: #E8E7E3;
+
+  /* ── 텍스트 ── */
+  --foreground: #1A1A2E;
+  --foreground-soft: #64748B;
+  --foreground-muted: #94A3B8;
+
+  /* ── Primary: 활력 오렌지 (창의, 에너지) ── */
+  --primary: #FF6B35;
+  --primary-hover: #E85A25;
+  --primary-light: #FFF0EB;
+  --primary-glow: rgba(255, 107, 53, 0.22);
+
+  /* ── Secondary: 인디고 블루 (지식, 신뢰) ── */
+  --secondary: #4361EE;
+  --secondary-hover: #3250D8;
+  --secondary-light: #EEF1FD;
+
+  /* ── Accent: 민트 그린 (성공, 달성) ── */
+  --accent: #06D6A0;
+  --accent-hover: #05B888;
+  --accent-light: #E6FBF5;
+
+  /* ── Highlight: 선샤인 옐로우 (보상, 축하) ── */
+  --highlight: #FFC233;
+  --highlight-light: #FFF8E0;
+  --highlight-dark: #92400E;
+
+  /* ── 레이아웃 ── */
+  --border: rgba(0, 0, 0, 0.07);
+  --card-bg: #FFFFFF;
+  --glass: rgba(255, 255, 255, 0.88);
+  --glass-border: rgba(0, 0, 0, 0.07);
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.08), 0 2px 4px rgba(0, 0, 0, 0.04);
+  --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.1), 0 4px 8px rgba(0, 0, 0, 0.04);
 }
 
+[data-theme='dark'] {
+  --background: #111827;
+  --surface: #1F2937;
+  --surface-2: #374151;
+  --surface-3: #4B5563;
+
+  --foreground: #F9FAFB;
+  --foreground-soft: #9CA3AF;
+  --foreground-muted: #6B7280;
+
+  --primary: #FF7A45;
+  --primary-hover: #FF8F5F;
+  --primary-light: rgba(255, 107, 53, 0.15);
+  --primary-glow: rgba(255, 107, 53, 0.32);
+
+  --secondary: #6B8FFF;
+  --secondary-hover: #7D9FFF;
+  --secondary-light: rgba(107, 143, 255, 0.15);
+
+  --accent: #2EEDC8;
+  --accent-hover: #45F0CD;
+  --accent-light: rgba(6, 214, 160, 0.13);
+
+  --highlight: #FFD166;
+  --highlight-light: rgba(255, 209, 102, 0.13);
+  --highlight-dark: #FDE68A;
+
+  --border: rgba(255, 255, 255, 0.08);
+  --card-bg: #1F2937;
+  --glass: rgba(31, 41, 55, 0.9);
+  --glass-border: rgba(255, 255, 255, 0.07);
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.5);
+}
+
+/* ═══ Tailwind 테마 토큰 등록 ═══ */
 @theme inline {
   --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-surface-3: var(--surface-3);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+  --color-foreground-soft: var(--foreground-soft);
+  --color-foreground-muted: var(--foreground-muted);
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+  --color-primary: var(--primary);
+  --color-primary-light: var(--primary-light);
+  --color-secondary: var(--secondary);
+  --color-secondary-light: var(--secondary-light);
+  --color-accent: var(--accent);
+  --color-accent-light: var(--accent-light);
+  --color-highlight: var(--highlight);
+  --color-highlight-light: var(--highlight-light);
+
+  --color-border: var(--border);
+  --color-card: var(--card-bg);
+
+  --font-sans: var(--font-inter), "Inter", ui-sans-serif, system-ui;
+  --font-outfit: var(--font-outfit), "Outfit", sans-serif;
+
+  /* ── 애니메이션 ── */
+  @keyframes pop-in {
+    0%   { transform: scale(0.75); opacity: 0; }
+    70%  { transform: scale(1.06); opacity: 1; }
+    100% { transform: scale(1);    opacity: 1; }
   }
+
+  @keyframes slide-up {
+    from { transform: translateY(12px); opacity: 0; }
+    to   { transform: translateY(0);    opacity: 1; }
+  }
+
+  @keyframes fade-in {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
+
+  @keyframes shimmer {
+    0%   { background-position: -200% 0; }
+    100% { background-position:  200% 0; }
+  }
+
+  @keyframes bounce-soft {
+    0%, 100% { transform: translateY(0); }
+    50%       { transform: translateY(-5px); }
+  }
+
+  @keyframes spin-slow {
+    from { transform: rotate(0deg); }
+    to   { transform: rotate(360deg); }
+  }
+
+  @keyframes pulse-ring {
+    0%   { box-shadow: 0 0 0 0   var(--primary-glow); }
+    70%  { box-shadow: 0 0 0 8px transparent; }
+    100% { box-shadow: 0 0 0 0   transparent; }
+  }
+
+  @keyframes marquee {
+    0%   { transform: translateX(100%); }
+    100% { transform: translateX(-100%); }
+  }
+
+  --animate-pop-in:      pop-in 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  --animate-slide-up:    slide-up 0.3s ease-out both;
+  --animate-fade-in:     fade-in 0.25s ease-out both;
+  --animate-shimmer:     shimmer 1.8s linear infinite;
+  --animate-bounce-soft: bounce-soft 2.5s infinite ease-in-out;
+  --animate-spin-slow:   spin-slow 8s linear infinite;
+  --animate-pulse-ring:  pulse-ring 2s infinite;
+  --animate-marquee:     marquee 10s linear infinite;
 }
 
+/* ═══ 글로벌 베이스 ═══ */
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans);
+  overflow-x: hidden;
+  -webkit-tap-highlight-color: transparent;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* ═══ 카드 컴포넌트 ═══ */
+
+/* Glass Card */
+.glass-morphism {
+  background: var(--glass);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--shadow-sm);
+}
+
+/* Solid Card */
+.edu-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 1.25rem;
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.edu-card:hover {
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
+}
+
+/* Flat Surface */
+.edu-flat {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 1.25rem;
+  overflow: hidden;
+}
+
+/* ═══ 뱃지 ═══ */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.18rem 0.6rem;
+  border-radius: 9999px;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.badge-primary   { background: var(--primary-light);   color: var(--primary); }
+.badge-secondary { background: var(--secondary-light); color: var(--secondary); }
+.badge-accent    { background: var(--accent-light);    color: var(--accent); }
+.badge-highlight { background: var(--highlight-light); color: var(--highlight-dark); }
+
+/* ═══ 버튼 ═══ */
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.7rem 1.4rem;
+  border-radius: 0.875rem;
+  background: var(--primary);
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 0.9rem;
+  border: none;
+  cursor: pointer;
+  transition: opacity 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+  box-shadow: 0 4px 12px var(--primary-glow);
+}
+.btn-primary:hover  { opacity: 0.9; transform: translateY(-1px); box-shadow: 0 6px 18px var(--primary-glow); }
+.btn-primary:active { transform: scale(0.97); }
+
+.btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.7rem 1.4rem;
+  border-radius: 0.875rem;
+  background: var(--surface-2);
+  color: var(--foreground);
+  font-weight: 600;
+  font-size: 0.9rem;
+  border: 1px solid var(--border);
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.15s ease;
+}
+.btn-secondary:hover  { background: var(--surface-3); }
+.btn-secondary:active { transform: scale(0.97); }
+
+/* ═══ 프로그레스 바 ═══ */
+.progress-track {
+  height: 8px;
+  background: var(--surface-2);
+  border-radius: 9999px;
+  overflow: hidden;
+}
+.progress-fill {
+  height: 100%;
+  border-radius: 9999px;
+  transition: width 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.progress-orange { background: linear-gradient(90deg, var(--primary), #FF9A72); }
+.progress-blue   { background: linear-gradient(90deg, var(--secondary), var(--accent)); }
+.progress-xp     { background: linear-gradient(90deg, var(--secondary), #8B5CF6, var(--accent)); }
+
+/* ═══ 스크롤바 ═══ */
+.custom-scrollbar::-webkit-scrollbar       { width: 4px; }
+.custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+.custom-scrollbar::-webkit-scrollbar-thumb { background: var(--border); border-radius: 9999px; }
+
+/* ═══ 스켈레톤 로딩 ═══ */
+.shimmer {
+  background: linear-gradient(90deg,
+    var(--surface-2) 25%,
+    var(--surface)   50%,
+    var(--surface-2) 75%
+  );
+  background-size: 200% 100%;
+  animation: var(--animate-shimmer);
+}
+
+/* ═══ 포인트 테두리 ═══ */
+.neon-border {
+  border: 1.5px solid var(--primary);
+  box-shadow: 0 0 10px var(--primary-glow);
+}
+
+/* ═══ Bento Grid ═══ */
+.bento-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 1.25rem;
 }
