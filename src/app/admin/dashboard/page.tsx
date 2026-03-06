@@ -17,6 +17,7 @@ interface Profile {
     points: number;
     rank: string;
     role: string;
+    is_leader: boolean;
     created_at: string;
 }
 
@@ -51,6 +52,8 @@ export default function AdminDashboard() {
     const [purchaseCount, setPurchaseCount] = useState(0);
     const [loading, setLoading] = useState(true);
     const [updatingRole, setUpdatingRole] = useState<string | null>(null);
+    const [updatingTeam, setUpdatingTeam] = useState<string | null>(null);
+    const [updatingLeader, setUpdatingLeader] = useState<string | null>(null);
     const [deletingPost, setDeletingPost] = useState<string | null>(null);
 
     // PIN 설정 상태
@@ -106,6 +109,21 @@ export default function AdminDashboard() {
         await supabase.from("profiles").update({ role: newRole }).eq("id", userId);
         setProfiles(prev => prev.map(p => p.id === userId ? { ...p, role: newRole } : p));
         setUpdatingRole(null);
+    };
+
+    const handleTeamChange = async (userId: string, newTeam: string) => {
+        setUpdatingTeam(userId);
+        await supabase.from("profiles").update({ team: newTeam }).eq("id", userId);
+        setProfiles(prev => prev.map(p => p.id === userId ? { ...p, team: newTeam } : p));
+        setUpdatingTeam(null);
+    };
+
+    const handleLeaderToggle = async (userId: string, currentIsLeader: boolean) => {
+        setUpdatingLeader(userId);
+        const newIsLeader = !currentIsLeader;
+        await supabase.from("profiles").update({ is_leader: newIsLeader }).eq("id", userId);
+        setProfiles(prev => prev.map(p => p.id === userId ? { ...p, is_leader: newIsLeader } : p));
+        setUpdatingLeader(null);
     };
 
     const handleSavePin = async () => {
@@ -274,32 +292,77 @@ export default function AdminDashboard() {
                         </div>
                         <div className="flex flex-col gap-2">
                             {profiles.map(p => (
-                                <div key={p.id} className="flex items-center gap-3 p-3.5 rounded-xl"
-                                    style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
-                                    <div className="w-9 h-9 rounded-xl flex items-center justify-center text-sm font-bold text-white shrink-0"
-                                        style={{ background: "linear-gradient(135deg, var(--secondary), var(--accent))" }}>
-                                        {p.name[0]}
+                                <div key={p.id} className="flex flex-col gap-2 p-3.5 rounded-xl"
+                                    style={{ background: "var(--surface)", border: `1px solid ${p.is_leader ? "rgba(255,194,51,0.4)" : "var(--border)"}` }}>
+                                    {/* 상단: 프로필 정보 */}
+                                    <div className="flex items-center gap-3">
+                                        <div className="relative shrink-0">
+                                            <div className="w-9 h-9 rounded-xl flex items-center justify-center text-sm font-bold text-white"
+                                                style={{ background: "linear-gradient(135deg, var(--secondary), var(--accent))" }}>
+                                                {p.name[0]}
+                                            </div>
+                                            {p.is_leader && (
+                                                <div className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full flex items-center justify-center"
+                                                    style={{ background: "var(--highlight)" }}>
+                                                    <Crown size={9} className="text-white" />
+                                                </div>
+                                            )}
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <p className="text-sm font-bold truncate" style={{ color: "var(--foreground)" }}>
+                                                {p.name}
+                                                {p.role === "teacher" && <span className="ml-1.5 text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-purple-100 text-purple-600">교사</span>}
+                                                {p.is_leader && <span className="ml-1.5 text-[9px] font-bold px-1.5 py-0.5 rounded-full" style={{ background: "rgba(255,194,51,0.15)", color: "#b45309" }}>리더</span>}
+                                            </p>
+                                            <p className="text-[11px]" style={{ color: "var(--foreground-muted)" }}>
+                                                @{p.handle} · {p.points} XP
+                                            </p>
+                                        </div>
+                                        {(updatingRole === p.id || updatingTeam === p.id || updatingLeader === p.id) && (
+                                            <Loader2 size={14} className="animate-spin shrink-0" style={{ color: "#7C3AED" }} />
+                                        )}
                                     </div>
-                                    <div className="flex-1 min-w-0">
-                                        <p className="text-sm font-bold truncate" style={{ color: "var(--foreground)" }}>
-                                            {p.name}
-                                            {p.role === "teacher" && <span className="ml-1.5 text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-purple-100 text-purple-600">교사</span>}
-                                        </p>
-                                        <p className="text-[11px]" style={{ color: "var(--foreground-muted)" }}>
-                                            @{p.handle} · {p.team} · {p.points} XP
-                                        </p>
+                                    {/* 하단: 팀 / 역할 / 리더 컨트롤 */}
+                                    <div className="flex items-center gap-2 pl-12">
+                                        {/* 팀 배정 */}
+                                        <select
+                                            value={p.team || "미배정"}
+                                            onChange={e => handleTeamChange(p.id, e.target.value)}
+                                            disabled={updatingTeam === p.id}
+                                            className="text-xs font-bold px-2 py-1.5 rounded-lg outline-none flex-1"
+                                            style={{ background: "var(--surface-2)", color: "var(--foreground)", border: "1px solid var(--border)" }}>
+                                            <option value="미배정">미배정</option>
+                                            <option value="A팀">A팀</option>
+                                            <option value="B팀">B팀</option>
+                                            <option value="C팀">C팀</option>
+                                            <option value="D팀">D팀</option>
+                                            <option value="E팀">E팀</option>
+                                            <option value="F팀">F팀</option>
+                                        </select>
+                                        {/* 역할 변경 */}
+                                        <select
+                                            value={p.role || "student"}
+                                            onChange={e => handleRoleChange(p.id, e.target.value)}
+                                            disabled={updatingRole === p.id}
+                                            className="text-xs font-bold px-2 py-1.5 rounded-lg outline-none"
+                                            style={{ background: "var(--surface-2)", color: "var(--foreground)", border: "1px solid var(--border)" }}>
+                                            <option value="student">학생</option>
+                                            <option value="teacher">교사</option>
+                                        </select>
+                                        {/* 리더 토글 */}
+                                        <button
+                                            onClick={() => handleLeaderToggle(p.id, p.is_leader)}
+                                            disabled={updatingLeader === p.id}
+                                            className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all"
+                                            style={{
+                                                background: p.is_leader ? "rgba(255,194,51,0.15)" : "var(--surface-2)",
+                                                color: p.is_leader ? "#b45309" : "var(--foreground-muted)",
+                                                border: `1px solid ${p.is_leader ? "rgba(255,194,51,0.4)" : "var(--border)"}`,
+                                            }}>
+                                            <Crown size={11} />
+                                            {p.is_leader ? "리더 해제" : "리더 지정"}
+                                        </button>
                                     </div>
-                                    {/* 역할 변경 */}
-                                    <select
-                                        value={p.role || "student"}
-                                        onChange={e => handleRoleChange(p.id, e.target.value)}
-                                        disabled={updatingRole === p.id}
-                                        className="text-xs font-bold px-2 py-1.5 rounded-lg outline-none"
-                                        style={{ background: "var(--surface-2)", color: "var(--foreground)", border: "1px solid var(--border)" }}>
-                                        <option value="student">학생</option>
-                                        <option value="teacher">교사</option>
-                                    </select>
-                                    {updatingRole === p.id && <Loader2 size={14} className="animate-spin shrink-0" style={{ color: "#7C3AED" }} />}
                                 </div>
                             ))}
                         </div>
@@ -339,8 +402,12 @@ export default function AdminDashboard() {
                                     {/* 팀원 목록 */}
                                     <div className="flex flex-wrap gap-1.5">
                                         {profiles.filter(p => p.team === t.team).map(p => (
-                                            <span key={p.id} className="text-[10px] font-semibold px-2 py-1 rounded-full"
-                                                style={{ background: "var(--surface-2)", color: "var(--foreground-soft)" }}>
+                                            <span key={p.id} className="flex items-center gap-1 text-[10px] font-semibold px-2 py-1 rounded-full"
+                                                style={{
+                                                    background: p.is_leader ? "rgba(255,194,51,0.15)" : "var(--surface-2)",
+                                                    color: p.is_leader ? "#b45309" : "var(--foreground-soft)",
+                                                }}>
+                                                {p.is_leader && <Crown size={9} />}
                                                 {p.name}
                                             </span>
                                         ))}

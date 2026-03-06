@@ -11,6 +11,7 @@ create table if not exists public.profiles (
     avatar text default '🦊',
     marketer_type text,   -- creator | analyst | storyteller | innovator
     team text default 'A팀',
+    is_leader boolean default false,
     points integer default 0,
     rank text default 'Beginner',
     created_at timestamptz default now()
