@@ -3,6 +3,7 @@ import { Inter, Outfit } from "next/font/google";
 import "./globals.css";
 import ThemeToggle from "@/components/common/ThemeToggle";
 import Sidebar from "@/components/layout/Sidebar";
+import ClientLayout from "@/components/layout/ClientLayout";
 import UploadModal from "@/components/feed/UploadModal";
 import GuideModal from "@/components/common/GuideModal";
 import AIReportModal from "@/components/feed/AIReportModal";
@@ -63,11 +64,7 @@ export default function RootLayout({
               <Sidebar />
 
               {/* Main Content Area */}
-              <main className="flex-1 flex flex-col md:ml-64 pb-24 md:pb-0">
-                <div className="w-full max-w-5xl mx-auto min-h-screen">
-                  {children}
-                </div>
-              </main>
+              <ClientLayout>{children}</ClientLayout>
             </div>
             <UploadModal />
             <AIReportModal />

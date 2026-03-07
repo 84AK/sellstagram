@@ -13,7 +13,7 @@ export default function LoginPage() {
     // 이미 로그인된 경우 바로 진입
     useEffect(() => {
         supabase.auth.getSession().then(({ data: { session } }) => {
-            if (session) router.push("/");
+            if (session) router.push("/feed");
         });
 
         const params = new URLSearchParams(window.location.search);

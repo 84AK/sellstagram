@@ -31,6 +31,10 @@ import {
     Trash2,
     X,
     Loader2,
+    ChevronUp,
+    ChevronDown,
+    Pencil,
+    Image as ImageIcon,
 } from "lucide-react";
 import { useGameStore } from "@/store/useGameStore";
 import { getSessionByWeek, THEME_COLORS } from "@/lib/curriculum/sessions";
@@ -1171,6 +1175,69 @@ interface DbProduct {
     category: string;
     xp_bonus: number;
     is_active: boolean;
+    image_url: string | null;
+    sort_order: number | null;
+}
+
+type ProductForm = {
+    name: string;
+    description: string;
+    price: number;
+    cost: number;
+    category: string;
+    xp_bonus: number;
+    image_url: string;
+};
+
+const EMPTY_PRODUCT_FORM: ProductForm = {
+    name: "", description: "", price: 50000, cost: 20000, category: "General", xp_bonus: 10, image_url: "",
+};
+
+const PRODUCT_INPUT_STYLE = { background: "var(--surface-2)", border: "2px solid transparent", color: "var(--foreground)" };
+
+function ProductFormFields({ f, onChange }: {
+    f: ProductForm;
+    onChange: (key: keyof ProductForm, value: string | number) => void;
+}) {
+    return (
+        <>
+            <input placeholder="상품명 *" value={f.name} onChange={e => onChange("name", e.target.value)}
+                className="w-full px-3 py-2.5 rounded-xl text-sm outline-none" style={PRODUCT_INPUT_STYLE} />
+            <textarea placeholder="상품 설명" value={f.description} onChange={e => onChange("description", e.target.value)}
+                rows={2} className="w-full px-3 py-2.5 rounded-xl text-sm outline-none resize-none" style={PRODUCT_INPUT_STYLE} />
+            <div className="flex items-center gap-2">
+                <ImageIcon size={14} style={{ color: "var(--foreground-muted)", flexShrink: 0 }} />
+                <input placeholder="이미지 URL (선택)" value={f.image_url} onChange={e => onChange("image_url", e.target.value)}
+                    className="flex-1 px-3 py-2.5 rounded-xl text-sm outline-none" style={PRODUCT_INPUT_STYLE} />
+            </div>
+            {f.image_url && (
+                <img src={f.image_url} alt="미리보기" className="w-full h-28 object-cover rounded-xl"
+                    onError={e => { (e.currentTarget as HTMLImageElement).style.display = "none"; }} />
+            )}
+            <div className="grid grid-cols-2 gap-2">
+                <div>
+                    <label className="text-[10px] font-bold mb-1 block" style={{ color: "var(--foreground-muted)" }}>판매가 (₩)</label>
+                    <input type="number" value={f.price} onChange={e => onChange("price", Number(e.target.value))}
+                        className="w-full px-3 py-2.5 rounded-xl text-sm outline-none" style={PRODUCT_INPUT_STYLE} />
+                </div>
+                <div>
+                    <label className="text-[10px] font-bold mb-1 block" style={{ color: "var(--foreground-muted)" }}>원가 (₩)</label>
+                    <input type="number" value={f.cost} onChange={e => onChange("cost", Number(e.target.value))}
+                        className="w-full px-3 py-2.5 rounded-xl text-sm outline-none" style={PRODUCT_INPUT_STYLE} />
+                </div>
+                <div>
+                    <label className="text-[10px] font-bold mb-1 block" style={{ color: "var(--foreground-muted)" }}>카테고리</label>
+                    <input value={f.category} onChange={e => onChange("category", e.target.value)}
+                        placeholder="예: Gadget, Fashion" className="w-full px-3 py-2.5 rounded-xl text-sm outline-none" style={PRODUCT_INPUT_STYLE} />
+                </div>
+                <div>
+                    <label className="text-[10px] font-bold mb-1 block" style={{ color: "var(--foreground-muted)" }}>XP 보너스</label>
+                    <input type="number" value={f.xp_bonus} onChange={e => onChange("xp_bonus", Number(e.target.value))}
+                        className="w-full px-3 py-2.5 rounded-xl text-sm outline-none" style={PRODUCT_INPUT_STYLE} />
+                </div>
+            </div>
+        </>
+    );
 }
 
 function ShopManageTab() {
@@ -1178,20 +1245,32 @@ function ShopManageTab() {
     const [loading, setLoading] = useState(true);
     const [showForm, setShowForm] = useState(false);
     const [saving, setSaving] = useState(false);
-    const [form, setForm] = useState({ name: "", description: "", price: 50000, cost: 20000, category: "General", xp_bonus: 10 });
+    const [form, setForm] = useState<ProductForm>(EMPTY_PRODUCT_FORM);
+    const [editingId, setEditingId] = useState<string | null>(null);
+    const [editForm, setEditForm] = useState<ProductForm>(EMPTY_PRODUCT_FORM);
 
     useEffect(() => {
-        supabase.from("products").select("id,name,description,price,cost,category,xp_bonus,is_active")
-            .order("created_at").then(({ data }) => { setProducts(data ?? []); setLoading(false); });
+        supabase.from("products")
+            .select("id,name,description,price,cost,category,xp_bonus,is_active,image_url,sort_order")
+            .order("sort_order", { ascending: true, nullsFirst: false })
+            .order("created_at")
+            .then(({ data }) => { setProducts(data ?? []); setLoading(false); });
     }, []);
 
     const handleCreate = async () => {
         if (!form.name.trim()) return;
         setSaving(true);
-        const { data } = await supabase.from("products").insert({ ...form, stock: 100, is_active: true }).select().single();
+        const maxOrder = products.reduce((max, p) => Math.max(max, p.sort_order ?? 0), 0);
+        const { data } = await supabase.from("products").insert({
+            ...form,
+            image_url: form.image_url || null,
+            stock: 100,
+            is_active: true,
+            sort_order: maxOrder + 1,
+        }).select().single();
         if (data) setProducts(prev => [...prev, data]);
         setShowForm(false);
-        setForm({ name: "", description: "", price: 50000, cost: 20000, category: "General", xp_bonus: 10 });
+        setForm(EMPTY_PRODUCT_FORM);
         setSaving(false);
     };
 
@@ -1206,48 +1285,67 @@ function ShopManageTab() {
         setProducts(prev => prev.filter(p => p.id !== id));
     };
 
-    const inputStyle = { background: "var(--surface-2)", border: "2px solid transparent", color: "var(--foreground)" };
+    const handleEditStart = (p: DbProduct) => {
+        setEditingId(p.id);
+        setEditForm({
+            name: p.name,
+            description: p.description,
+            price: p.price,
+            cost: p.cost,
+            category: p.category,
+            xp_bonus: p.xp_bonus,
+            image_url: p.image_url ?? "",
+        });
+    };
+
+    const handleEditSave = async (id: string) => {
+        setSaving(true);
+        await supabase.from("products").update({
+            ...editForm,
+            image_url: editForm.image_url || null,
+        }).eq("id", id);
+        setProducts(prev => prev.map(p => p.id === id
+            ? { ...p, ...editForm, image_url: editForm.image_url || null }
+            : p
+        ));
+        setEditingId(null);
+        setSaving(false);
+    };
+
+    const handleMove = async (index: number, dir: -1 | 1) => {
+        const target = index + dir;
+        if (target < 0 || target >= products.length) return;
+        const next = [...products];
+        const a = next[index];
+        const b = next[target];
+        next[index] = b;
+        next[target] = a;
+        setProducts(next);
+        await Promise.all([
+            supabase.from("products").update({ sort_order: target }).eq("id", a.id),
+            supabase.from("products").update({ sort_order: index }).eq("id", b.id),
+        ]);
+    };
 
     return (
         <div className="flex flex-col gap-4">
             <div className="flex items-center justify-between">
                 <p className="text-sm font-bold" style={{ color: "var(--foreground)" }}>등록된 상품 {products.length}개</p>
-                <button onClick={() => setShowForm(v => !v)}
+                <button onClick={() => { setShowForm(v => !v); setEditingId(null); }}
                     className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold text-white"
                     style={{ background: "linear-gradient(135deg, var(--primary), #FF9A72)" }}>
                     <Plus size={14} /> 상품 추가
                 </button>
             </div>
 
+            {/* 새 상품 등록 폼 */}
             {showForm && (
                 <div className="flex flex-col gap-3 p-4 rounded-2xl" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
                     <p className="text-sm font-bold" style={{ color: "var(--foreground)" }}>새 상품 등록</p>
-                    <input placeholder="상품명 *" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
-                        className="w-full px-3 py-2.5 rounded-xl text-sm outline-none" style={inputStyle} />
-                    <textarea placeholder="상품 설명" value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
-                        rows={2} className="w-full px-3 py-2.5 rounded-xl text-sm outline-none resize-none" style={inputStyle} />
-                    <div className="grid grid-cols-2 gap-2">
-                        <div>
-                            <label className="text-[10px] font-bold mb-1 block" style={{ color: "var(--foreground-muted)" }}>판매가 (₩)</label>
-                            <input type="number" value={form.price} onChange={e => setForm(f => ({ ...f, price: Number(e.target.value) }))}
-                                className="w-full px-3 py-2.5 rounded-xl text-sm outline-none" style={inputStyle} />
-                        </div>
-                        <div>
-                            <label className="text-[10px] font-bold mb-1 block" style={{ color: "var(--foreground-muted)" }}>원가 (₩)</label>
-                            <input type="number" value={form.cost} onChange={e => setForm(f => ({ ...f, cost: Number(e.target.value) }))}
-                                className="w-full px-3 py-2.5 rounded-xl text-sm outline-none" style={inputStyle} />
-                        </div>
-                        <div>
-                            <label className="text-[10px] font-bold mb-1 block" style={{ color: "var(--foreground-muted)" }}>카테고리</label>
-                            <input value={form.category} onChange={e => setForm(f => ({ ...f, category: e.target.value }))}
-                                placeholder="예: Gadget, Fashion" className="w-full px-3 py-2.5 rounded-xl text-sm outline-none" style={inputStyle} />
-                        </div>
-                        <div>
-                            <label className="text-[10px] font-bold mb-1 block" style={{ color: "var(--foreground-muted)" }}>XP 보너스</label>
-                            <input type="number" value={form.xp_bonus} onChange={e => setForm(f => ({ ...f, xp_bonus: Number(e.target.value) }))}
-                                className="w-full px-3 py-2.5 rounded-xl text-sm outline-none" style={inputStyle} />
-                        </div>
-                    </div>
+                    <ProductFormFields
+                        f={form}
+                        onChange={(key, val) => setForm(prev => ({ ...prev, [key]: val }))}
+                    />
                     <div className="flex gap-2">
                         <button onClick={() => setShowForm(false)} className="flex-1 py-2.5 rounded-xl text-sm font-bold"
                             style={{ background: "var(--surface-2)", color: "var(--foreground)" }}>취소</button>
@@ -1266,24 +1364,87 @@ function ShopManageTab() {
                 <p className="text-sm text-center py-10" style={{ color: "var(--foreground-muted)" }}>등록된 상품이 없어요</p>
             ) : (
                 <div className="flex flex-col gap-2">
-                    {products.map(p => (
-                        <div key={p.id} className="flex items-center justify-between p-3.5 rounded-xl" style={{ background: "var(--surface)", border: "1px solid var(--border)", opacity: p.is_active ? 1 : 0.5 }}>
-                            <div className="flex-1 min-w-0">
-                                <p className="text-sm font-bold truncate" style={{ color: "var(--foreground)" }}>{p.name}</p>
-                                <p className="text-[11px]" style={{ color: "var(--foreground-muted)" }}>
-                                    ₩{p.price.toLocaleString()} · {p.category} · +{p.xp_bonus}XP
-                                </p>
+                    {products.map((p, idx) => (
+                        <div key={p.id} className="flex flex-col rounded-xl overflow-hidden transition-opacity"
+                            style={{ background: "var(--surface)", border: "1px solid var(--border)", opacity: p.is_active ? 1 : 0.6 }}>
+
+                            {/* 상품 요약 행 */}
+                            <div className="flex items-center gap-2 p-3.5">
+                                {/* 순서 조정 버튼 */}
+                                <div className="flex flex-col gap-0.5 shrink-0">
+                                    <button onClick={() => handleMove(idx, -1)} disabled={idx === 0}
+                                        className="p-0.5 rounded disabled:opacity-20 hover:bg-[var(--surface-2)] transition-colors">
+                                        <ChevronUp size={13} style={{ color: "var(--foreground-muted)" }} />
+                                    </button>
+                                    <button onClick={() => handleMove(idx, 1)} disabled={idx === products.length - 1}
+                                        className="p-0.5 rounded disabled:opacity-20 hover:bg-[var(--surface-2)] transition-colors">
+                                        <ChevronDown size={13} style={{ color: "var(--foreground-muted)" }} />
+                                    </button>
+                                </div>
+
+                                {/* 썸네일 */}
+                                {p.image_url ? (
+                                    <img src={p.image_url} alt={p.name} className="w-10 h-10 rounded-lg object-cover shrink-0" />
+                                ) : (
+                                    <div className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0"
+                                        style={{ background: "var(--surface-2)" }}>
+                                        <ImageIcon size={16} style={{ color: "var(--foreground-muted)" }} />
+                                    </div>
+                                )}
+
+                                {/* 상품 정보 */}
+                                <div className="flex-1 min-w-0">
+                                    <p className="text-sm font-bold truncate" style={{ color: "var(--foreground)" }}>{p.name}</p>
+                                    <p className="text-[11px]" style={{ color: "var(--foreground-muted)" }}>
+                                        ₩{p.price.toLocaleString()} · {p.category} · +{p.xp_bonus}XP
+                                    </p>
+                                </div>
+
+                                {/* 액션 버튼 */}
+                                <div className="flex items-center gap-1.5 shrink-0">
+                                    <button onClick={() => handleToggle(p.id, p.is_active)}
+                                        className="text-[10px] font-bold px-2.5 py-1 rounded-full"
+                                        style={{
+                                            background: p.is_active ? "var(--accent-light)" : "var(--surface-2)",
+                                            color: p.is_active ? "var(--accent)" : "var(--foreground-muted)",
+                                        }}>
+                                        {p.is_active ? "활성" : "비활성"}
+                                    </button>
+                                    <button
+                                        onClick={() => editingId === p.id ? setEditingId(null) : handleEditStart(p)}
+                                        className="p-1.5 rounded-lg transition-colors"
+                                        style={{
+                                            background: editingId === p.id ? "var(--secondary-light)" : "transparent",
+                                            color: "var(--secondary)",
+                                        }}>
+                                        <Pencil size={14} />
+                                    </button>
+                                    <button onClick={() => handleDelete(p.id)} className="p-1.5 rounded-lg text-red-400 hover:bg-red-50 transition-colors">
+                                        <Trash2 size={14} />
+                                    </button>
+                                </div>
                             </div>
-                            <div className="flex items-center gap-2 shrink-0 ml-3">
-                                <button onClick={() => handleToggle(p.id, p.is_active)}
-                                    className="text-[10px] font-bold px-2.5 py-1 rounded-full"
-                                    style={{ background: p.is_active ? "var(--accent-light)" : "var(--surface-2)", color: p.is_active ? "var(--accent)" : "var(--foreground-muted)" }}>
-                                    {p.is_active ? "활성" : "비활성"}
-                                </button>
-                                <button onClick={() => handleDelete(p.id)} className="p-1.5 rounded-lg text-red-400 hover:bg-red-50 transition-colors">
-                                    <Trash2 size={14} />
-                                </button>
-                            </div>
+
+                            {/* 인라인 편집 폼 */}
+                            {editingId === p.id && (
+                                <div className="flex flex-col gap-3 px-4 pb-4 pt-3"
+                                    style={{ borderTop: "1px solid var(--border)" }}>
+                                    <p className="text-xs font-bold" style={{ color: "var(--foreground-muted)" }}>상품 수정</p>
+                                    <ProductFormFields
+                                        f={editForm}
+                                        onChange={(key, val) => setEditForm(prev => ({ ...prev, [key]: val }))}
+                                    />
+                                    <div className="flex gap-2">
+                                        <button onClick={() => setEditingId(null)} className="flex-1 py-2.5 rounded-xl text-sm font-bold"
+                                            style={{ background: "var(--surface-2)", color: "var(--foreground)" }}>취소</button>
+                                        <button onClick={() => handleEditSave(p.id)} disabled={!editForm.name.trim() || saving}
+                                            className="flex-1 py-2.5 rounded-xl text-sm font-bold text-white flex items-center justify-center gap-1.5 disabled:opacity-40"
+                                            style={{ background: "linear-gradient(135deg, var(--secondary), #6B8EFF)" }}>
+                                            {saving ? <><Loader2 size={14} className="animate-spin" /> 저장 중...</> : "저장"}
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     ))}
                 </div>

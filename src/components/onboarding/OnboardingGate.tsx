@@ -7,7 +7,7 @@ import { useGameStore } from "@/store/useGameStore";
 import OnboardingWizard from "./OnboardingWizard";
 import { Loader2 } from "lucide-react";
 
-// 인증 체크를 건너뛸 페이지 (로그인, 콜백, 교사 대시보드, 관리자)
+// 인증 체크를 건너뛸 페이지 (홈, 로그인, 콜백, 교사 대시보드, 관리자)
 const PUBLIC_PATHS = ["/login", "/auth/callback", "/teacher", "/admin"];
 
 type Status = "loading" | "needs-onboarding" | "ready";
@@ -20,7 +20,10 @@ export default function OnboardingGate({ children }: { children: React.ReactNode
     const pathname = usePathname();
     const { updateProfile } = useGameStore();
 
-    const isPublicPath = PUBLIC_PATHS.some(p => pathname?.startsWith(p));
+    // "/" 는 정확히 일치, 나머지는 startsWith 로 체크 (startsWith("/")는 모든 경로에 매칭되므로 제외)
+    const isPublicPath =
+        pathname === "/" ||
+        PUBLIC_PATHS.some(p => pathname?.startsWith(p));
 
     useEffect(() => {
         // 공개 페이지는 인증 체크 불필요
@@ -44,7 +47,7 @@ export default function OnboardingGate({ children }: { children: React.ReactNode
             const { data: { session } } = await supabase.auth.getSession();
 
             if (!session) {
-                router.push("/login");
+                router.push("/");
                 return;
             }
 
@@ -78,7 +81,17 @@ export default function OnboardingGate({ children }: { children: React.ReactNode
         const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
             // SIGNED_IN은 토큰 갱신 시에도 발생하므로, 이미 초기화된 경우 무시
             if (event === "SIGNED_IN" && !initializedRef.current) checkAuthAndProfile();
-            if (event === "SIGNED_OUT") router.push("/login");
+            if (event === "SIGNED_OUT") {
+                // 스토어 유저 정보 초기화
+                useGameStore.setState({
+                    user: { name: "", handle: "", avatar: "", rank: "Beginner", team: "", points: 0, role: "" },
+                    posts: [],
+                    insights: [],
+                    missions: [],
+                    balance: 1000000,
+                });
+                router.push("/");
+            }
         });
 
         return () => subscription.unsubscribe();

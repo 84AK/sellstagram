@@ -90,6 +90,7 @@ create table if not exists public.products (
     image_url text,
     xp_bonus integer default 10,
     is_active boolean default true,
+    sort_order integer,
     created_at timestamptz default now()
 );
 

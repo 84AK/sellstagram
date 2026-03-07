@@ -14,6 +14,7 @@ import {
     Zap,
     Shield,
     LogOut,
+    Globe,
 } from "lucide-react";
 import ThemeToggle from "@/components/common/ThemeToggle";
 import { useGameStore } from "@/store/useGameStore";
@@ -22,8 +23,15 @@ import { useEffect, useState } from "react";
 
 const navItems = [
     {
-        name: "홈 피드",
+        name: "홈",
         href: "/",
+        icon: Globe,
+        activeColor: "#FF6B35",
+        activeBg: "var(--primary-light)",
+    },
+    {
+        name: "홈 피드",
+        href: "/feed",
         icon: Home,
         activeColor: "#FF6B35",
         activeBg: "var(--primary-light)",
@@ -90,6 +98,9 @@ export default function Sidebar() {
         await supabase.auth.signOut();
         // OnboardingGate의 SIGNED_OUT 이벤트가 /login으로 리다이렉트 처리
     };
+
+    // 비로그인 상태에서 홈(/)은 Sidebar 숨김
+    if (pathname === "/" && !user.role) return null;
 
     const level = Math.floor(user.points / 100) + 1;
     const xpProgress = user.points % 100;

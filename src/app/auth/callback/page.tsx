@@ -13,13 +13,13 @@ export default function AuthCallback() {
         // onAuthStateChange로 세션 확인 후 리다이렉트
         const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
             if (event === "SIGNED_IN" && session) {
-                router.push("/");
+                router.push("/feed");
             }
         });
 
         // 이미 세션이 있는 경우 (자동 처리 완료)
         supabase.auth.getSession().then(({ data: { session } }) => {
-            if (session) router.push("/");
+            if (session) router.push("/feed");
         });
 
         // 5초 내 세션 없으면 로그인 페이지로
