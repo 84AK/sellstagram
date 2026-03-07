@@ -14,6 +14,7 @@ create table if not exists public.profiles (
     is_leader boolean default false,
     points integer default 0,
     rank text default 'Beginner',
+    balance integer default 1000000,
     created_at timestamptz default now()
 );
 
@@ -71,11 +72,12 @@ create table if not exists public.game_state (
     week integer default 1,
     is_session_active boolean default false,
     teacher_pin text default '1234',
+    initial_balance integer default 1000000,
     updated_at timestamptz default now()
 );
 
-insert into public.game_state (id, week, is_session_active, teacher_pin)
-values (1, 1, false, '1234')
+insert into public.game_state (id, week, is_session_active, teacher_pin, initial_balance)
+values (1, 1, false, '1234', 1000000)
 on conflict (id) do nothing;
 
 -- 6. Products (셀러샵 상품 - 교사가 관리)
@@ -192,3 +194,21 @@ $$;
 create trigger comments_count_trigger
 after insert or delete on public.comments
 for each row execute function public.update_post_comment_count();
+
+-- =====================================================
+-- app_settings: 수업 상태 관리 (선생님이 수업 시작/종료 제어)
+-- =====================================================
+create table if not exists public.app_settings (
+    id integer primary key default 1,
+    class_active boolean default false,
+    updated_at timestamptz default now()
+);
+
+-- 초기 데이터 (row는 항상 1개)
+insert into public.app_settings (id, class_active) values (1, false)
+on conflict (id) do nothing;
+
+-- RLS: 누구나 읽기 가능, 쓰기는 제한 없음 (관리자/선생님은 쿠키/role로 앱에서 제어)
+alter table public.app_settings enable row level security;
+create policy "app_settings_read" on public.app_settings for select using (true);
+create policy "app_settings_write" on public.app_settings for update using (true);

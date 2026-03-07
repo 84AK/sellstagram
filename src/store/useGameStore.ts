@@ -115,6 +115,7 @@ interface GameState {
     prevWeek: () => void;
     setWeek: (week: number) => void;
     resetPosts: () => void;
+    setBalance: (amount: number) => void;
 }
 
 // 미션 조건 충족 여부 판단
@@ -242,6 +243,8 @@ export const useGameStore = create<GameState>((set) => ({
     })),
 
     clearMissionCompletionQueue: () => set({ missionCompletionQueue: [] }),
+
+    setBalance: (amount) => set({ balance: amount }),
 
     setUploadModalOpen: (open, context = "general") => set({
         isUploadModalOpen: open,

@@ -50,7 +50,7 @@ export default function ProfilePage() {
 
     // 팀 멤버 로드
     useEffect(() => {
-        if (!user.team) return;
+        if (!user.team) { setLoadingTeam(false); return; }
 
         const fetchTeamMembers = async () => {
             setLoadingTeam(true);
@@ -188,12 +188,14 @@ export default function ProfilePage() {
                             >
                                 프로필 편집 <Settings size={14} />
                             </button>
-                            <button
-                                onClick={handleManageTeam}
-                                className="px-6 py-2.5 bg-foreground/5 border border-foreground/10 rounded-2xl text-xs font-black italic hover:bg-foreground/10 transition-all flex items-center gap-2 active:scale-[0.97]"
-                            >
-                                {isTeacher ? "교사 대시보드" : "워크스페이스 초대"} <Users size={14} />
-                            </button>
+                            {isTeacher && (
+                                <button
+                                    onClick={handleManageTeam}
+                                    className="px-6 py-2.5 bg-foreground/5 border border-foreground/10 rounded-2xl text-xs font-black italic hover:bg-foreground/10 transition-all flex items-center gap-2 active:scale-[0.97]"
+                                >
+                                    교사 대시보드 <Users size={14} />
+                                </button>
+                            )}
                         </div>
                     </div>
                 </div>
@@ -277,12 +279,14 @@ export default function ProfilePage() {
                                 <Users size={20} className="text-secondary" />
                                 팀 워크스페이스
                             </h2>
-                            <button
-                                onClick={handleManageTeam}
-                                className="text-[10px] font-bold text-primary italic hover:underline flex items-center gap-1 transition-opacity hover:opacity-70"
-                            >
-                                {isTeacher ? "대시보드" : "Manage Team"} <ChevronRight size={12} />
-                            </button>
+                            {isTeacher && (
+                                <button
+                                    onClick={handleManageTeam}
+                                    className="text-[10px] font-bold text-primary italic hover:underline flex items-center gap-1 transition-opacity hover:opacity-70"
+                                >
+                                    대시보드 <ChevronRight size={12} />
+                                </button>
+                            )}
                         </div>
 
                         <GlassCard className="flex flex-col gap-6 border-secondary/10">
@@ -309,6 +313,12 @@ export default function ProfilePage() {
                                 {loadingTeam ? (
                                     <div className="flex items-center justify-center py-8">
                                         <Loader2 size={20} className="animate-spin text-foreground/30" />
+                                    </div>
+                                ) : teamMembers.length === 0 ? (
+                                    <div className="flex flex-col items-center justify-center py-8 gap-2 text-center">
+                                        <Users size={24} className="text-foreground/20" />
+                                        <p className="text-xs font-semibold text-foreground/40">팀 배정 대기 중</p>
+                                        <p className="text-[10px] text-foreground/30">선생님이 팀을 배정하면 팀원이 표시돼요</p>
                                     </div>
                                 ) : (
                                     <div className="flex flex-col gap-2">

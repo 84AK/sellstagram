@@ -15,6 +15,7 @@ import {
     Shield,
     LogOut,
     Globe,
+    PlayCircle,
 } from "lucide-react";
 import ThemeToggle from "@/components/common/ThemeToggle";
 import { useGameStore } from "@/store/useGameStore";
@@ -288,6 +289,17 @@ export default function Sidebar() {
                         >
                             <Shield size={18} className="shrink-0" />
                             <span>교사 대시보드</span>
+                        </Link>
+                        <Link
+                            href="/class-guide"
+                            className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all"
+                            style={{
+                                background: pathname === "/class-guide" ? "rgba(67,97,238,0.12)" : "transparent",
+                                color: pathname === "/class-guide" ? "#4361EE" : "var(--foreground-soft)",
+                            }}
+                        >
+                            <PlayCircle size={18} className="shrink-0" />
+                            <span>수업 시뮬레이션</span>
                         </Link>
                         {isAdmin && (
                             <Link

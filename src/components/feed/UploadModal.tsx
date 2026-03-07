@@ -15,9 +15,14 @@ import {
     ArrowRight,
     Upload,
     Trash2,
+    TrendingUp,
+    Users,
+    Zap,
+    BarChart2,
 } from "lucide-react";
 import { useGameStore } from "@/store/useGameStore";
 import { supabase } from "@/lib/supabase/client";
+import { simulateMarketingEffect } from "@/lib/simulation/engine";
 
 export default function UploadModal() {
     const {
@@ -36,6 +41,10 @@ export default function UploadModal() {
     const [isUploading, setIsUploading] = useState(false);
     const [isSuccess, setIsSuccess] = useState(false);
     const [aiPreview, setAiPreview] = useState<string>("");
+    const [showResult, setShowResult] = useState(false);
+    const [simResult, setSimResult] = useState<{ impressions: number; engagementRate: number; clicks: number; revenue: number } | null>(null);
+    const [personaReactions, setPersonaReactions] = useState<{ name: string; comment: string; personaId: string }[]>([]);
+    const [loadingResult, setLoadingResult] = useState(false);
     const [isAnalyzing, setIsAnalyzing] = useState(false);
 
     // 이미지 업로드 관련
@@ -63,6 +72,9 @@ export default function UploadModal() {
         setAiPreview("");
         setSelectedFile(null);
         setPreviewUrl(null);
+        setShowResult(false);
+        setSimResult(null);
+        setPersonaReactions([]);
     };
 
     const handleFileSelect = (file: File) => {
@@ -185,15 +197,121 @@ export default function UploadModal() {
 
             setIsUploading(false);
             setIsSuccess(true);
+            setLoadingResult(true);
 
-            setTimeout(() => {
-                setIsSuccess(false);
-                onClose();
-            }, 1000);
+            // 시뮬레이션 + 페르소나 반응 병렬 실행
+            const tagList2 = tags.split(",").map(t => t.trim()).filter(Boolean);
+            const sim = simulateMarketingEffect({
+                caption,
+                hashtags: tagList2,
+                visualQuality: selectedFile ? 0.9 : 0.6,
+                baseFollowers: 500,
+            }, 30000);
+            setSimResult(sim);
+
+            try {
+                const res = await fetch("/api/ai/reactions", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ product: caption.slice(0, 40), tags: tagList2 }),
+                });
+                const data = await res.json();
+                setPersonaReactions(data.reactions ?? []);
+            } catch {
+                setPersonaReactions([]);
+            }
+
+            setLoadingResult(false);
+            setShowResult(true);
         } catch {
             setIsUploading(false);
         }
     };
+
+    // 업로드 결과 화면
+    if (showResult && simResult) {
+        const xpGained = isMissionMode ? 20 : 10;
+        const personaEmojis: Record<string, string> = { p1: "🛍️", p2: "💚", p3: "🔍", p4: "✨" };
+        return (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300">
+                <GlassCard className="w-full max-w-lg p-0 overflow-hidden border-foreground/10 shadow-2xl flex flex-col max-h-[90vh]">
+                    <div className="p-6 overflow-y-auto flex flex-col gap-5">
+                        {/* 성공 헤더 */}
+                        <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-2xl bg-accent/20 flex items-center justify-center">
+                                <CheckCircle size={20} className="text-accent" />
+                            </div>
+                            <div>
+                                <h3 className="text-lg font-black italic tracking-tighter">게시물 올라갔어요!</h3>
+                                <p className="text-[11px] text-foreground/50">+{xpGained} XP 획득 · 시뮬레이션 결과를 확인하세요</p>
+                            </div>
+                        </div>
+
+                        {/* 시뮬레이션 수치 */}
+                        <div className="grid grid-cols-3 gap-3">
+                            {[
+                                { icon: TrendingUp, label: "예상 노출", value: simResult.impressions.toLocaleString(), unit: "명", color: "var(--primary)" },
+                                { icon: BarChart2, label: "인게이지먼트", value: simResult.engagementRate.toFixed(1), unit: "%", color: "var(--secondary)" },
+                                { icon: Zap, label: "예상 클릭", value: simResult.clicks.toLocaleString(), unit: "회", color: "var(--accent)" },
+                            ].map(({ icon: Icon, label, value, unit, color }) => (
+                                <div key={label} className="flex flex-col items-center gap-1.5 p-3 rounded-2xl" style={{ background: "var(--surface-2)" }}>
+                                    <Icon size={16} style={{ color }} />
+                                    <span className="text-[9px] font-bold uppercase tracking-widest text-foreground/40">{label}</span>
+                                    <span className="text-xl font-black" style={{ color }}>{value}<span className="text-sm">{unit}</span></span>
+                                </div>
+                            ))}
+                        </div>
+
+                        {/* AI 페르소나 반응 */}
+                        {loadingResult ? (
+                            <div className="flex items-center gap-2 py-2">
+                                <Loader2 size={14} className="animate-spin text-foreground/40" />
+                                <span className="text-xs text-foreground/40">고객 반응 시뮬레이션 중...</span>
+                            </div>
+                        ) : personaReactions.length > 0 && (
+                            <div className="flex flex-col gap-3">
+                                <div className="flex items-center gap-2">
+                                    <Users size={14} className="text-foreground/40" />
+                                    <span className="text-[10px] font-black uppercase tracking-widest text-foreground/40">첫 고객 반응</span>
+                                </div>
+                                <div className="flex flex-col gap-2">
+                                    {personaReactions.slice(0, 3).map((r, i) => (
+                                        <div key={i} className="flex items-start gap-2.5 p-3 rounded-2xl" style={{ background: "var(--surface-2)" }}>
+                                            <span className="text-base mt-0.5">{personaEmojis[r.personaId] ?? "👤"}</span>
+                                            <div>
+                                                <span className="text-[10px] font-black text-foreground/60">{r.name}</span>
+                                                <p className="text-xs text-foreground/80 mt-0.5">{r.comment}</p>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* 코칭 한마디 */}
+                        <div className="flex items-start gap-2.5 p-4 rounded-2xl" style={{ background: "var(--primary-light)", border: "1px solid rgba(255,107,53,0.2)" }}>
+                            <Sparkles size={14} className="text-primary mt-0.5 shrink-0" />
+                            <p className="text-[11px] text-foreground/70 leading-relaxed">
+                                {simResult.engagementRate >= 8
+                                    ? "인게이지먼트가 높아요! 이미지 퀄리티와 해시태그 전략이 잘 맞았어요. 다음엔 업로드 시간도 최적화해보세요."
+                                    : simResult.engagementRate >= 4
+                                        ? "괜찮은 출발이에요. 더 구체적인 혜택을 캡션에 담으면 클릭률을 높일 수 있어요."
+                                        : "캡션을 조금 더 다듬어 보세요. 질문형 문장이나 감성적인 표현이 반응을 높여줘요."}
+                            </p>
+                        </div>
+
+                        <button
+                            onClick={onClose}
+                            className="w-full py-3 rounded-2xl font-black text-sm text-background transition-all hover:opacity-90"
+                            style={{ background: "var(--foreground)" }}
+                        >
+                            확인
+                        </button>
+                    </div>
+                </GlassCard>
+            </div>
+        );
+    }
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300">

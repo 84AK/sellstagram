@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
+import { supabase } from "@/lib/supabase/client";
 import {
     GraduationCap,
     ChevronRight,
@@ -18,6 +19,7 @@ import {
     Zap,
     Trophy,
     Users,
+    BarChart2,
 } from "lucide-react";
 import {
     CURRICULUM,
@@ -27,12 +29,26 @@ import {
     ACTIVITY_ICONS,
 } from "@/lib/curriculum/sessions";
 import { useGameStore } from "@/store/useGameStore";
+import WeeklyReportModal from "@/components/feed/WeeklyReportModal";
 
 export default function SessionPage() {
-    const { week: currentWeek, setUploadModalOpen } = useGameStore();
+    const { week: currentWeek, setUploadModalOpen, user } = useGameStore();
     const [viewWeek, setViewWeek] = useState(currentWeek);
     const [expandedActivity, setExpandedActivity] = useState<number | null>(0);
     const [showCurriculumMap, setShowCurriculumMap] = useState(false);
+    const [showReport, setShowReport] = useState(false);
+    const [teamMembers, setTeamMembers] = useState<{ name: string; avatar: string }[]>([]);
+
+    useEffect(() => {
+        if (!user.team) return;
+        supabase
+            .from("profiles")
+            .select("name, avatar")
+            .eq("team", user.team)
+            .then(({ data }) => {
+                if (data) setTeamMembers(data);
+            });
+    }, [user.team]);
 
     const session = getSessionByWeek(viewWeek);
     const isCurrentSession = viewWeek === currentWeek;
@@ -43,6 +59,14 @@ export default function SessionPage() {
     const themeStyle = THEME_COLORS[session.theme];
 
     return (
+        <>
+        {showReport && (
+            <WeeklyReportModal
+                weekNumber={viewWeek}
+                sessionTitle={session.title}
+                onClose={() => setShowReport(false)}
+            />
+        )}
         <div className="flex flex-col gap-6 p-4 pt-6 max-w-3xl mx-auto pb-24">
 
             {/* ── 헤더 ── */}
@@ -444,6 +468,30 @@ export default function SessionPage() {
                 </Link>
             </div>
 
+            {/* ── 이번 주 성과 리포트 CTA ── */}
+            {(isCurrentSession || isPastSession) && (
+                <button
+                    onClick={() => setShowReport(true)}
+                    className="w-full flex items-center justify-between p-4 rounded-2xl transition-all hover:scale-[1.01] active:scale-[0.99]"
+                    style={{ background: "var(--secondary-light)", border: "1px solid rgba(67,97,238,0.15)" }}
+                >
+                    <div className="flex items-center gap-3">
+                        <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: "var(--secondary)" }}>
+                            <BarChart2 size={16} className="text-white" />
+                        </div>
+                        <div className="text-left">
+                            <p className="text-sm font-black" style={{ color: "var(--secondary)" }}>
+                                {viewWeek}회차 성과 리포트
+                            </p>
+                            <p className="text-[10px]" style={{ color: "var(--foreground-soft)" }}>
+                                AI 코치의 이번 주 마케팅 피드백 받기
+                            </p>
+                        </div>
+                    </div>
+                    <ChevronRight size={16} style={{ color: "var(--secondary)" }} />
+                </button>
+            )}
+
             {/* ── 팀 현황 미니 ── */}
             <div
                 className="rounded-2xl p-4"
@@ -455,31 +503,44 @@ export default function SessionPage() {
                         팀 참여 현황
                     </h3>
                 </div>
-                <div className="flex items-center gap-3">
-                    <div className="flex -space-x-2">
-                        {["🦊", "🐺", "🦋", "🐬"].map((emoji, i) => (
-                            <div
-                                key={i}
-                                className="w-8 h-8 rounded-full border-2 flex items-center justify-center text-sm"
-                                style={{ background: "var(--surface-2)", borderColor: "var(--surface)" }}
-                            >
-                                {emoji}
-                            </div>
-                        ))}
+                {teamMembers.length === 0 ? (
+                    <p className="text-xs" style={{ color: "var(--foreground-muted)" }}>
+                        팀원 정보를 불러오는 중...
+                    </p>
+                ) : (
+                    <div className="flex items-center gap-3">
+                        <div className="flex -space-x-2">
+                            {teamMembers.slice(0, 5).map((m, i) => (
+                                <div
+                                    key={i}
+                                    className="w-8 h-8 rounded-full border-2 flex items-center justify-center text-sm"
+                                    style={{ background: "var(--surface-2)", borderColor: "var(--surface)" }}
+                                    title={m.name}
+                                >
+                                    {m.avatar}
+                                </div>
+                            ))}
+                            {teamMembers.length > 5 && (
+                                <div
+                                    className="w-8 h-8 rounded-full border-2 flex items-center justify-center text-xs font-bold"
+                                    style={{ background: "var(--surface-2)", borderColor: "var(--surface)", color: "var(--foreground-muted)" }}
+                                >
+                                    +{teamMembers.length - 5}
+                                </div>
+                            )}
+                        </div>
+                        <div>
+                            <p className="text-xs font-bold" style={{ color: "var(--foreground)" }}>
+                                {user.team} · {teamMembers.length}명
+                            </p>
+                            <p className="text-[10px]" style={{ color: "var(--foreground-muted)" }}>
+                                {teamMembers.map(m => m.name).join(", ")}
+                            </p>
+                        </div>
                     </div>
-                    <div>
-                        <p className="text-xs font-bold" style={{ color: "var(--foreground)" }}>
-                            팀원 4명 접속 중
-                        </p>
-                        <p className="text-[10px]" style={{ color: "var(--foreground-muted)" }}>
-                            모두 준비됐어요!
-                        </p>
-                    </div>
-                    <div className="ml-auto">
-                        <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse inline-block" />
-                    </div>
-                </div>
+                )}
             </div>
         </div>
+        </>
     );
 }

@@ -187,8 +187,13 @@ function Dashboard({ onLogout }: { onLogout: () => void }) {
     } = useGameStore();
 
     const [activeTab, setActiveTab] = useState<Tab>("class");
-    const [classActive, setClassActive] = useState(true);
+    const [classActive, setClassActive] = useState(false);
+    const [classActiveLoading, setClassActiveLoading] = useState(false);
     const [showResetConfirm, setShowResetConfirm] = useState(false);
+    const [initialBalance, setInitialBalance] = useState(1000000);
+    const [balanceInput, setBalanceInput] = useState("1000000");
+    const [isSavingBalance, setIsSavingBalance] = useState(false);
+    const [balanceSaved, setBalanceSaved] = useState(false);
     const [highlightedPost, setHighlightedPost] = useState<string | null>(null);
     const [teamStats, setTeamStats] = useState<TeamStat[]>([]);
     const [isLoadingTeams, setIsLoadingTeams] = useState(true);
@@ -324,9 +329,49 @@ function Dashboard({ onLogout }: { onLogout: () => void }) {
         setShowResetConfirm(false);
     };
 
+    // 초기 잔액 저장 + 전체 학생 잔액 일괄 업데이트
+    const handleSaveBalance = async () => {
+        const parsed = parseInt(balanceInput.replace(/,/g, ""), 10);
+        if (isNaN(parsed) || parsed < 0) return;
+        setIsSavingBalance(true);
+        // game_state에 initial_balance 저장
+        await supabase.from("game_state").update({ initial_balance: parsed }).eq("id", 1);
+        // 모든 학생 profiles의 balance를 새 금액으로 리셋
+        await supabase.from("profiles").update({ balance: parsed }).neq("id", "00000000-0000-0000-0000-000000000000");
+        setInitialBalance(parsed);
+        setIsSavingBalance(false);
+        setBalanceSaved(true);
+        setTimeout(() => setBalanceSaved(false), 2500);
+    };
+
+    // 수업 상태 토글 (Supabase 저장)
+    const handleClassToggle = async () => {
+        setClassActiveLoading(true);
+        const next = !classActive;
+        const { error } = await supabase
+            .from("app_settings")
+            .update({ class_active: next, updated_at: new Date().toISOString() })
+            .eq("id", 1);
+        if (!error) setClassActive(next);
+        setClassActiveLoading(false);
+    };
+
     useEffect(() => {
         loadTeamStats();
         loadMissionsFromDB();
+
+        // 수업 상태 로드
+        supabase.from("app_settings").select("class_active").eq("id", 1).single()
+            .then(({ data }) => { if (data) setClassActive(data.class_active); });
+
+        // 초기 잔액 로드
+        supabase.from("game_state").select("initial_balance").eq("id", 1).single()
+            .then(({ data }) => {
+                if (data?.initial_balance != null) {
+                    setInitialBalance(data.initial_balance);
+                    setBalanceInput(String(data.initial_balance));
+                }
+            });
 
         // 새 게시물이 업로드되면 팀 통계 갱신
         const ch = supabase.channel("teacher-posts")
@@ -382,8 +427,9 @@ function Dashboard({ onLogout }: { onLogout: () => void }) {
                 <div className="flex items-center gap-3">
                     {/* 수업 상태 */}
                     <button
-                        onClick={() => setClassActive(!classActive)}
-                        className="flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-sm transition-all"
+                        onClick={handleClassToggle}
+                        disabled={classActiveLoading}
+                        className="flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-sm transition-all disabled:opacity-60"
                         style={{
                             background: classActive ? "var(--accent-light)" : "var(--surface-2)",
                             color: classActive ? "var(--accent)" : "var(--foreground-muted)",
@@ -391,7 +437,7 @@ function Dashboard({ onLogout }: { onLogout: () => void }) {
                         }}
                     >
                         {classActive ? <Play size={14} /> : <Pause size={14} />}
-                        {classActive ? "수업 중" : "수업 종료"}
+                        {classActiveLoading ? "저장 중..." : classActive ? "수업 중" : "수업 종료"}
                     </button>
 
                     <button
@@ -548,6 +594,54 @@ function Dashboard({ onLogout }: { onLogout: () => void }) {
                 {/* ══════════ TAB 1: 수업 현황 ══════════ */}
                 {activeTab === "class" && (
                     <div className="flex flex-col gap-4">
+
+                        {/* 초기 잔액 설정 */}
+                        <div className="rounded-2xl p-5"
+                            style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
+                            <div className="flex items-center justify-between mb-3">
+                                <div>
+                                    <h3 className="text-base font-black" style={{ color: "var(--foreground)" }}>
+                                        학생 초기 잔액 설정
+                                    </h3>
+                                    <p className="text-xs mt-0.5" style={{ color: "var(--foreground-muted)" }}>
+                                        현재 설정: ₩{initialBalance.toLocaleString()} · 저장 시 전체 학생 잔액이 이 금액으로 리셋됩니다
+                                    </p>
+                                </div>
+                                {balanceSaved && (
+                                    <span className="text-xs font-bold px-2.5 py-1 rounded-full"
+                                        style={{ background: "var(--accent-light)", color: "var(--accent)" }}>
+                                        ✓ 저장됨
+                                    </span>
+                                )}
+                            </div>
+                            <div className="flex gap-2">
+                                <div className="flex-1 relative">
+                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-bold"
+                                        style={{ color: "var(--foreground-muted)" }}>₩</span>
+                                    <input
+                                        type="number"
+                                        value={balanceInput}
+                                        onChange={(e) => setBalanceInput(e.target.value)}
+                                        min={0}
+                                        step={100000}
+                                        className="w-full pl-7 pr-4 py-2.5 rounded-xl text-sm font-bold outline-none"
+                                        style={{
+                                            background: "var(--surface-2)",
+                                            border: "1px solid var(--border)",
+                                            color: "var(--foreground)",
+                                        }}
+                                    />
+                                </div>
+                                <button
+                                    onClick={handleSaveBalance}
+                                    disabled={isSavingBalance}
+                                    className="px-5 py-2.5 rounded-xl font-bold text-sm text-white transition-all hover:opacity-90 disabled:opacity-60"
+                                    style={{ background: "var(--secondary)" }}
+                                >
+                                    {isSavingBalance ? "저장 중..." : "전체 적용"}
+                                </button>
+                            </div>
+                        </div>
 
                         {/* 팀 리더보드 */}
                         <div className="rounded-2xl overflow-hidden"

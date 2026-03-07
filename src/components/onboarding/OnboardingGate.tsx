@@ -53,13 +53,24 @@ export default function OnboardingGate({ children }: { children: React.ReactNode
 
             const { data: profile } = await supabase
                 .from("profiles")
-                .select("id, name, handle, avatar, marketer_type, team, points, rank, role")
+                .select("id, name, handle, avatar, marketer_type, team, points, rank, role, balance")
                 .eq("id", session.user.id)
                 .single();
 
             if (!profile) {
                 setStatus("needs-onboarding");
                 return;
+            }
+
+            // balance가 null이면 game_state의 initial_balance를 기본값으로 사용
+            let balance = profile.balance;
+            if (balance === null || balance === undefined) {
+                const { data: gs } = await supabase
+                    .from("game_state")
+                    .select("initial_balance")
+                    .eq("id", 1)
+                    .single();
+                balance = gs?.initial_balance ?? 1000000;
             }
 
             updateProfile({
@@ -71,6 +82,7 @@ export default function OnboardingGate({ children }: { children: React.ReactNode
                 points: profile.points ?? 0,
                 role: profile.role ?? "student",
             });
+            useGameStore.setState({ balance });
 
             initializedRef.current = true;
             setStatus("ready");

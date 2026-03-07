@@ -20,17 +20,6 @@ export default function MissionsPage() {
                     <p className="text-sm text-foreground/70 leading-relaxed max-w-lg italic">
                         "실제 시장 데이터를 기반으로 설계된 주간 미션입니다. 미션을 완료하고 마케팅 예산과 포인트를 획득하여 랭킹을 올리세요!"
                     </p>
-                    <div className="flex gap-4 mt-2">
-                        <div className="flex flex-col">
-                            <span className="text-[10px] font-bold text-foreground/40 uppercase">This Week Reward</span>
-                            <span className="text-lg font-black italic text-primary">₩2,500,000 P</span>
-                        </div>
-                        <div className="w-[1px] h-full bg-foreground/10 mx-2" />
-                        <div className="flex flex-col">
-                            <span className="text-[10px] font-bold text-foreground/40 uppercase">Time Remaining</span>
-                            <span className="text-lg font-black italic text-secondary">04:12:44</span>
-                        </div>
-                    </div>
                 </div>
                 <Sparkles className="absolute -right-6 -bottom-6 w-48 h-48 text-primary/5 group-hover:scale-125 transition-transform duration-1000" />
             </GlassCard>

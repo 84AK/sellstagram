@@ -83,14 +83,17 @@ export default function ShopPage() {
         });
 
         if (!error) {
-            // 잔액 차감 + XP 지급
+            const newBalance = balance - product.price;
+            const newPoints = user.points + product.xp_bonus;
+
+            // Zustand 업데이트
             addFunds(-product.price);
             addPoints(product.xp_bonus);
 
-            // 프로필 XP 업데이트
+            // DB에 잔액 차감 + XP 저장
             await supabase
                 .from("profiles")
-                .update({ points: user.points + product.xp_bonus })
+                .update({ balance: newBalance, points: newPoints })
                 .eq("id", session.user.id);
 
             setOwnedIds(prev => new Set([...prev, product.id]));

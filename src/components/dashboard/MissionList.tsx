@@ -73,7 +73,7 @@ export default function MissionList() {
             <div className="grid grid-cols-1 gap-4">
                 {missions.map((mission) => {
                     const { current, target } = getMissionProgress(mission, posts);
-                    const pct = mission.isCompleted ? 100 : Math.min(100, Math.round((current / target) * 100));
+                    const pct = mission.isCompleted ? 100 : target > 0 ? Math.min(100, Math.round((current / target) * 100)) : 0;
 
                     return (
                     <GlassCard

@@ -61,6 +61,7 @@ export default function FeedPage() {
     const { setUploadModalOpen, setGuideModalOpen, posts, week, user, addPost, setWeek } = useGameStore();
     const [feedFilter, setFeedFilter] = useState<"latest" | "hot">("latest");
     const [teamRank, setTeamRank] = useState<number | null>(null);
+    const [classActive, setClassActive] = useState(false);
 
     useEffect(() => {
         const calcTeamRank = async () => {
@@ -114,6 +115,10 @@ export default function FeedPage() {
         loadPosts();
         loadGameState();
 
+        // 수업 상태 초기 로드
+        supabase.from("app_settings").select("class_active").eq("id", 1).single()
+            .then(({ data }) => { if (data) setClassActive(data.class_active); });
+
         const postChannel = supabase
             .channel("posts-feed")
             .on("postgres_changes", { event: "INSERT", schema: "public", table: "posts" }, (payload) => {
@@ -129,9 +134,20 @@ export default function FeedPage() {
             })
             .subscribe();
 
+        // 수업 상태 실시간 구독
+        const classChannel = supabase
+            .channel("class-state")
+            .on("postgres_changes", { event: "UPDATE", schema: "public", table: "app_settings" }, (payload) => {
+                if (typeof payload.new?.class_active === "boolean") {
+                    setClassActive(payload.new.class_active);
+                }
+            })
+            .subscribe();
+
         return () => {
             supabase.removeChannel(postChannel);
             supabase.removeChannel(gameChannel);
+            supabase.removeChannel(classChannel);
         };
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
@@ -169,33 +185,38 @@ export default function FeedPage() {
                     </div>
                 </header>
 
-                {/* 수업 진행 배너 */}
-                <div
-                    className="flex items-center justify-between px-4 py-3 rounded-2xl"
-                    style={{ background: "var(--secondary-light)", border: "1px solid rgba(67,97,238,0.15)" }}
-                >
-                    <div className="flex items-center gap-2.5">
-                        <div className="w-8 h-8 rounded-xl flex items-center justify-center" style={{ background: "var(--secondary)" }}>
-                            <GraduationCap size={16} className="text-white" />
-                        </div>
-                        <div>
-                            <p className="text-xs font-bold" style={{ color: "var(--secondary)" }}>
-                                {week}회차 수업 진행 중
-                            </p>
-                            <p className="text-[10px]" style={{ color: "var(--foreground-soft)" }}>
-                                {user.team} · {user.name}
-                            </p>
-                        </div>
-                    </div>
-                    <Link
-                        href="/session"
-                        className="flex items-center gap-1 text-xs font-bold px-3 py-1.5 rounded-xl transition-all hover:opacity-80"
-                        style={{ background: "var(--secondary)", color: "white" }}
+                {/* 수업 진행 배너 — 선생님이 수업 시작 눌렀을 때만 표시 */}
+                {classActive ? (
+                    <div
+                        className="flex items-center justify-between px-4 py-3 rounded-2xl"
+                        style={{ background: "var(--secondary-light)", border: "1.5px solid rgba(67,97,238,0.3)" }}
                     >
-                        수업 보기
-                        <ChevronRight size={13} />
-                    </Link>
-                </div>
+                        <div className="flex items-center gap-2.5">
+                            <div className="w-8 h-8 rounded-xl flex items-center justify-center" style={{ background: "var(--secondary)" }}>
+                                <GraduationCap size={16} className="text-white" />
+                            </div>
+                            <div>
+                                <div className="flex items-center gap-1.5">
+                                    <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse inline-block" />
+                                    <p className="text-xs font-bold" style={{ color: "var(--secondary)" }}>
+                                        {week}회차 수업 진행 중
+                                    </p>
+                                </div>
+                                <p className="text-[10px]" style={{ color: "var(--foreground-soft)" }}>
+                                    {user.team} · {user.name}
+                                </p>
+                            </div>
+                        </div>
+                        <Link
+                            href="/session"
+                            className="flex items-center gap-1 text-xs font-bold px-3 py-1.5 rounded-xl transition-all hover:opacity-80"
+                            style={{ background: "var(--secondary)", color: "white" }}
+                        >
+                            수업 보기
+                            <ChevronRight size={13} />
+                        </Link>
+                    </div>
+                ) : null}
 
                 {/* 스토리 바 */}
                 <StoryBar />

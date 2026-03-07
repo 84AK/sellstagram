@@ -40,6 +40,24 @@ export const AI_PROMPTS = {
     3. 반드시 JSON 리스트 형식으로만 답변하세요.
   `,
 
+  WEEKLY_REPORT: (weekNumber: number, sessionTitle: string, postCount: number, avgEngagement: number, totalLikes: number, bestCaption: string) => `
+    당신은 Sellstagram 마케팅 실습 플랫폼의 AI 코치입니다.
+    학생의 ${weekNumber}회차 수업(${sessionTitle}) 마케팅 활동을 분석해주세요.
+
+    [이번 주 성과]
+    - 업로드 게시물: ${postCount}개
+    - 평균 인게이지먼트: ${avgEngagement.toFixed(1)}%
+    - 총 좋아요: ${totalLikes}개
+    - 가장 잘 된 게시물 캡션: "${bestCaption || "없음"}"
+
+    [작성 규칙]
+    1. 고등학생에게 친근하게 말해주세요 (형/누나 말투)
+    2. 구체적인 숫자를 언급하며 칭찬하거나 개선점을 제안하세요
+    3. 다음 수업을 위한 한 가지 실행 가능한 팁을 주세요
+    4. 200자 이내로 간결하게 작성하세요
+    5. 마크다운 없이 자연스러운 텍스트로만 작성하세요
+  `,
+
   VISION_ANALYSIS: (imageDescription: string) => `
     이미지 분석 결과: "${imageDescription}"
     이 이미지를 마케팅 관점에서 분석하세요. 구도, 색감, 타겟팅 적합성을 1줄로 요약하세요.
