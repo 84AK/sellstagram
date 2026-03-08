@@ -1,15 +1,17 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import GlassCard from "@/components/common/GlassCard";
 import {
     Trophy,
     Target,
     CheckCircle2,
     Sparkles,
-    Coins
+    Coins,
+    Loader2,
 } from "lucide-react";
 import { useGameStore } from "@/store/useGameStore";
+import { supabase } from "@/lib/supabase/client";
 
 type Mission = {
     id: string;
@@ -19,6 +21,9 @@ type Mission = {
     targetEngagement?: number;
     isCompleted: boolean;
     isActive: boolean;
+    title: string;
+    description: string;
+    reward: number;
 };
 
 type Post = {
@@ -55,7 +60,56 @@ function getMissionProgress(mission: Mission, posts: Post[]): { current: number;
 }
 
 export default function MissionList() {
-    const { missions, posts } = useGameStore();
+    const { posts } = useGameStore();
+    const [missions, setMissions] = useState<Mission[]>([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        supabase
+            .from("missions")
+            .select("*")
+            .eq("is_active", true)
+            .order("created_at", { ascending: true })
+            .then(({ data }) => {
+                if (data) {
+                    setMissions(data.map((m) => ({
+                        id: m.id,
+                        title: m.title,
+                        description: m.description,
+                        type: (m.mission_type ?? "revenue") as Mission["type"],
+                        targetRevenue: m.target_revenue ?? 0,
+                        targetCount: m.target_count ?? undefined,
+                        reward: m.reward ?? 0,
+                        isCompleted: false,
+                        isActive: m.is_active,
+                    })));
+                }
+                setLoading(false);
+            });
+    }, []);
+
+    if (loading) {
+        return (
+            <div className="flex items-center justify-center py-16 gap-3" style={{ color: "var(--foreground-muted)" }}>
+                <Loader2 size={20} className="animate-spin" />
+                <span className="text-sm font-semibold">미션 불러오는 중...</span>
+            </div>
+        );
+    }
+
+    if (missions.length === 0) {
+        return (
+            <div className="flex flex-col items-center justify-center py-16 gap-3 text-center">
+                <Trophy size={40} style={{ color: "var(--foreground-muted)", opacity: 0.3 }} />
+                <p className="text-base font-bold" style={{ color: "var(--foreground-muted)" }}>
+                    등록된 미션이 없어요
+                </p>
+                <p className="text-sm" style={{ color: "var(--foreground-muted)", opacity: 0.7 }}>
+                    선생님이 미션을 등록하면 여기에 표시됩니다
+                </p>
+            </div>
+        );
+    }
 
     return (
         <div className="flex flex-col gap-6">
