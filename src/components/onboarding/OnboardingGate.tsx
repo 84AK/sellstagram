@@ -96,7 +96,7 @@ export default function OnboardingGate({ children }: { children: React.ReactNode
             if (event === "SIGNED_OUT") {
                 // 스토어 유저 정보 초기화
                 useGameStore.setState({
-                    user: { name: "", handle: "", avatar: "", rank: "Beginner", team: "", points: 0, role: "" },
+                    user: { name: "", handle: "", avatar: "", rank: "Beginner", team: "", points: 0, role: "", skillXP: { copywriting: 0, analytics: 0, creative: 0 } },
                     posts: [],
                     insights: [],
                     missions: [],

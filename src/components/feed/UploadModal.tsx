@@ -34,6 +34,7 @@ export default function UploadModal() {
         addInsight,
         setAIReportModal,
         addPoints,
+        addSkillXP,
         startCampaign,
         user
     } = useGameStore();
@@ -199,6 +200,11 @@ export default function UploadModal() {
             // 포인트 지급: 게시물 +10 XP, 미션 모드 +20 XP, 챌린지 참여 추가 보너스
             const xp = (isMissionMode ? 20 : 10) + (challengeMode ? todayChallenge.bonusXP : 0);
             addPoints(xp);
+
+            // 스킬 XP 적립
+            addSkillXP("copywriting", isMissionMode ? 20 : 15);
+            addSkillXP("creative", selectedFile ? 20 : 10);
+            if (challengeMode) addSkillXP("analytics", 15);
 
             setIsUploading(false);
             setIsSuccess(true);

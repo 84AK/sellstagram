@@ -67,7 +67,7 @@ export default function FeedCard({ id, user, content, stats, timeAgo }: FeedCard
     const [aiReactions, setAiReactions] = useState<ConsumerReaction[]>([]);
     const [showAllReactions, setShowAllReactions] = useState(false);
 
-    const { addFunds, addInsight, startCampaign, setAIReportModal, user: currentUser } = useGameStore();
+    const { addFunds, addInsight, startCampaign, setAIReportModal, addSkillXP, user: currentUser } = useGameStore();
     const isMyPost = user.handle === currentUser.handle;
     const [showMenu, setShowMenu] = useState(false);
     const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -143,6 +143,7 @@ export default function FeedCard({ id, user, content, stats, timeAgo }: FeedCard
                 date: new Date().toISOString().split("T")[0],
             };
             addInsight(newInsight);
+            addSkillXP("analytics", 25);
             setAIReportModal(true, newInsight);
         } catch {
             // 실패 시 무시

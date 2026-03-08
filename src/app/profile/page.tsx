@@ -4,6 +4,7 @@ import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import GlassCard from "@/components/common/GlassCard";
 import EditProfileModal from "@/components/profile/EditProfileModal";
+import SkillTree from "@/components/profile/SkillTree";
 import {
     User,
     Settings,
@@ -18,6 +19,7 @@ import {
     Crown,
     Bookmark,
     Image as ImageIcon,
+    TrendingUp,
 } from "lucide-react";
 import { useGameStore } from "@/store/useGameStore";
 import { supabase, isSupabaseConfigured, DbProfile } from "@/lib/supabase/client";
@@ -38,7 +40,7 @@ export default function ProfilePage() {
     const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
     const [teamCreatedAt, setTeamCreatedAt] = useState<string | null>(null);
     const [loadingTeam, setLoadingTeam] = useState(true);
-    const [activeTab, setActiveTab] = useState<"team" | "bookmarks">("team");
+    const [activeTab, setActiveTab] = useState<"team" | "skills" | "bookmarks">("team");
     const [bookmarkedPosts, setBookmarkedPosts] = useState<{ id: string; image_url: string | null; caption: string | null; likes: number }[]>([]);
     const [loadingBookmarks, setLoadingBookmarks] = useState(false);
 
@@ -217,6 +219,7 @@ export default function ProfilePage() {
                 <div className="flex gap-1 p-1 rounded-2xl w-fit" style={{ background: "var(--surface-2)" }}>
                     {([
                         { key: "team", label: "팀 워크스페이스", icon: Users },
+                        { key: "skills", label: "스킬 트리", icon: TrendingUp },
                         { key: "bookmarks", label: "북마크", icon: Bookmark },
                     ] as const).map(({ key, label, icon: Icon }) => (
                         <button
@@ -237,6 +240,17 @@ export default function ProfilePage() {
 
                 {/* Main Content Area: Team & Activity */}
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    {/* 스킬 트리 탭 */}
+                    {activeTab === "skills" && (
+                        <div className="lg:col-span-3 flex flex-col gap-4">
+                            <div className="flex items-center gap-2 px-1">
+                                <TrendingUp size={20} style={{ color: "var(--primary)" }} />
+                                <h2 className="text-xl font-black italic">마케팅 스킬 트리</h2>
+                            </div>
+                            <SkillTree skillXP={user.skillXP ?? { copywriting: 0, analytics: 0, creative: 0 }} />
+                        </div>
+                    )}
+
                     {/* 북마크 탭 */}
                     {activeTab === "bookmarks" && (
                         <div className="lg:col-span-3 flex flex-col gap-4">

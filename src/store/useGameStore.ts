@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { SkillXP, DEFAULT_SKILL_XP, SkillKey } from "@/lib/skills/skillTree";
 
 interface Product {
     id: string;
@@ -40,6 +41,7 @@ interface UserProfile {
     team: string;
     points: number;
     role: "student" | "teacher" | "";
+    skillXP: SkillXP;
 }
 
 interface Post {
@@ -107,6 +109,7 @@ interface GameState {
     addInsight: (insight: AIInsight) => void;
     updateProfile: (data: Partial<UserProfile>) => void;
     addPoints: (amount: number) => void;
+    addSkillXP: (skill: SkillKey, amount: number) => void;
     clearMissionCompletionQueue: () => void;
     setUploadModalOpen: (open: boolean, context?: "general" | "mission") => void;
     setGuideModalOpen: (open: boolean) => void;
@@ -182,6 +185,7 @@ export const useGameStore = create<GameState>((set) => ({
         team: "",
         points: 0,
         role: "",
+        skillXP: DEFAULT_SKILL_XP,
     },
     missions: [],
 
@@ -240,6 +244,16 @@ export const useGameStore = create<GameState>((set) => ({
 
     addPoints: (amount) => set((state) => ({
         user: { ...state.user, points: state.user.points + amount }
+    })),
+
+    addSkillXP: (skill, amount) => set((state) => ({
+        user: {
+            ...state.user,
+            skillXP: {
+                ...state.user.skillXP,
+                [skill]: (state.user.skillXP[skill] ?? 0) + amount,
+            },
+        },
     })),
 
     clearMissionCompletionQueue: () => set({ missionCompletionQueue: [] }),

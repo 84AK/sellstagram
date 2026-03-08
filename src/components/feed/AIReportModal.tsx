@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import GlassCard from "../common/GlassCard";
 import { X, Sparkles, BookOpen, Calendar, Share2, Download, Copy, Check } from "lucide-react";
 import ReactMarkdown from "react-markdown";
@@ -8,9 +8,17 @@ import remarkGfm from "remark-gfm";
 import { useGameStore } from "@/store/useGameStore";
 
 export default function AIReportModal() {
-    const { isAIReportModalOpen, activeInsight, setAIReportModal } = useGameStore();
+    const { isAIReportModalOpen, activeInsight, setAIReportModal, addSkillXP } = useGameStore();
     const [copied, setCopied] = useState(false);
     const [shared, setShared] = useState(false);
+
+    // 리포트 열람 시 analytics XP 지급 (중복 방지: 모달 열릴 때 1회)
+    useEffect(() => {
+        if (isAIReportModalOpen && activeInsight) {
+            addSkillXP("analytics", 10);
+        }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [isAIReportModalOpen, activeInsight?.id]);
 
     if (!isAIReportModalOpen || !activeInsight) return null;
 
