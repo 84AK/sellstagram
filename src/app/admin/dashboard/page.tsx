@@ -105,17 +105,22 @@ export default function AdminDashboard() {
     };
 
     const adminUpdateProfile = async (userId: string, field: string, value: unknown) => {
-        const res = await fetch("/api/admin/update-profile", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ userId, field, value }),
-        });
-        if (!res.ok) {
-            const { error } = await res.json();
-            console.error("프로필 업데이트 실패:", error);
+        try {
+            const res = await fetch("/api/admin/update-profile", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ userId, field, value }),
+            });
+            if (!res.ok) {
+                const body = await res.json().catch(() => ({ error: "서버 오류" }));
+                console.error("프로필 업데이트 실패:", body.error);
+                return false;
+            }
+            return true;
+        } catch (err) {
+            console.error("프로필 업데이트 오류:", err);
             return false;
         }
-        return true;
     };
 
     const handleRoleChange = async (userId: string, newRole: string) => {

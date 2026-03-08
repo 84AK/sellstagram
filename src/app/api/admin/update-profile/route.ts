@@ -22,15 +22,20 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: "Invalid field" }, { status: 400 });
     }
 
-    const supabaseAdmin = createAdminClient();
-    const { error } = await supabaseAdmin
-        .from("profiles")
-        .update({ [field]: value })
-        .eq("id", userId);
+    try {
+        const supabaseAdmin = createAdminClient();
+        const { error } = await supabaseAdmin
+            .from("profiles")
+            .update({ [field]: value })
+            .eq("id", userId);
 
-    if (error) {
-        return NextResponse.json({ error: error.message }, { status: 500 });
+        if (error) {
+            return NextResponse.json({ error: error.message }, { status: 500 });
+        }
+
+        return NextResponse.json({ ok: true });
+    } catch (err) {
+        const message = err instanceof Error ? err.message : "Unknown error";
+        return NextResponse.json({ error: message }, { status: 500 });
     }
-
-    return NextResponse.json({ ok: true });
 }

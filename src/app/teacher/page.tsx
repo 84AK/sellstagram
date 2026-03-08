@@ -66,7 +66,6 @@ interface StudentProfile {
     handle: string;
     team: string | null;
     points: number;
-    avatar_type?: string;
 }
 
 type Tab = "class" | "feed" | "mission" | "shop";
@@ -318,7 +317,7 @@ function Dashboard({ onLogout }: { onLogout: () => void }) {
         setIsLoadingStudents(true);
         const { data } = await supabase
             .from("profiles")
-            .select("id, name, handle, team, points, avatar_type")
+            .select("id, name, handle, team, points")
             .order("name");
         if (data) setStudents(data);
         setIsLoadingStudents(false);
