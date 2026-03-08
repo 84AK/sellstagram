@@ -20,7 +20,7 @@ export interface SkillDef {
     levels: SkillLevel[];
 }
 
-const LEVELS: SkillLevel[] = [
+export const LEVELS: SkillLevel[] = [
     { level: 1, label: "견습생",      minXP: 0,   color: "#9CA3AF", unlock: "기본 AI 분석 1회" },
     { level: 2, label: "성장 중",     minXP: 100, color: "#60A5FA", unlock: "AI 리포트 전략 팁 추가" },
     { level: 3, label: "실전 마케터", minXP: 250, color: "#34D399", unlock: "챌린지 보너스 XP +10%" },

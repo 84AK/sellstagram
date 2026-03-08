@@ -43,6 +43,8 @@ export default function ProfilePage() {
     const [activeTab, setActiveTab] = useState<"team" | "skills" | "bookmarks">("team");
     const [bookmarkedPosts, setBookmarkedPosts] = useState<{ id: string; image_url: string | null; caption: string | null; likes: number }[]>([]);
     const [loadingBookmarks, setLoadingBookmarks] = useState(false);
+    const [recentPosts, setRecentPosts] = useState<{ id: string; caption: string | null; image_url: string | null; likes: number; engagement_rate: string; created_at: string; week: number | null }[]>([]);
+    const [loadingActivity, setLoadingActivity] = useState(true);
 
     const stats = [
         { label: "실습 상품", value: inventory.length, icon: Zap },
@@ -116,6 +118,22 @@ export default function ProfilePage() {
 
         fetchTeamMembers();
     }, [user.team, user.name, user.avatar, user.rank]);
+
+    // 최근 활동: 본인 게시물 로드
+    useEffect(() => {
+        if (!user.handle) return;
+        setLoadingActivity(true);
+        supabase
+            .from("posts")
+            .select("id, caption, image_url, likes, engagement_rate, created_at, week")
+            .eq("user_handle", user.handle)
+            .order("created_at", { ascending: false })
+            .limit(5)
+            .then(({ data }) => {
+                setRecentPosts(data ?? []);
+                setLoadingActivity(false);
+            });
+    }, [user.handle]);
 
     // 북마크 탭 선택 시 로드
     useEffect(() => {
@@ -371,47 +389,56 @@ export default function ProfilePage() {
                         </GlassCard>
                     </div>}
 
-                    {/* Activity Feed / Mini Insights */}
+                    {/* Activity Feed */}
                     {activeTab === "team" && <div className="flex flex-col gap-6">
                         <h2 className="text-xl font-black italic flex items-center gap-2">
                             <Activity size={20} className="text-primary" />
-                            최근 활동
+                            최근 업로드
                         </h2>
-                        <div className="flex flex-col gap-4">
-                            {campaigns.length > 0 ? (
-                                campaigns.slice(0, 3).map((c, i) => {
-                                    const d = new Date();
-                                    return (
-                                        <div key={c.id} className="flex gap-4 p-4 rounded-2xl bg-foreground/5 border border-foreground/5 relative overflow-hidden group">
-                                            <div className="flex flex-col gap-1 items-center justify-center shrink-0">
-                                                <span className="text-[9px] font-black text-foreground/30 uppercase">
-                                                    {d.toLocaleString("en", { month: "short" })}
-                                                </span>
-                                                <span className="text-lg font-black italic leading-none">
-                                                    {String(d.getDate() - i).padStart(2, "0")}
-                                                </span>
-                                            </div>
-                                            <div className="flex flex-col gap-1">
-                                                <span className="text-[11px] font-black leading-snug">캠페인 최적화 완료</span>
-                                                <span className="text-[9px] text-foreground/40 font-bold">
-                                                    ROI +{Math.round(c.efficiency * 10)}% Efficiency
-                                                </span>
-                                            </div>
-                                            <div className="absolute right-0 top-0 h-full w-1 bg-primary scale-y-0 group-hover:scale-y-100 transition-transform origin-top" />
-                                        </div>
-                                    );
-                                })
-                            ) : (
+                        <div className="flex flex-col gap-3">
+                            {loadingActivity ? (
+                                <div className="flex justify-center py-8">
+                                    <Loader2 size={20} className="animate-spin text-foreground/30" />
+                                </div>
+                            ) : recentPosts.length === 0 ? (
                                 <div className="flex flex-col items-center justify-center py-8 gap-2 text-center">
                                     <Activity size={24} className="text-foreground/20" />
-                                    <p className="text-xs text-foreground/40 font-semibold">
-                                        아직 활동이 없어요
-                                    </p>
-                                    <p className="text-[10px] text-foreground/30">
-                                        캠페인을 시작하면 여기에 기록돼요
-                                    </p>
+                                    <p className="text-xs text-foreground/40 font-semibold">아직 활동이 없어요</p>
+                                    <p className="text-[10px] text-foreground/30">게시물을 올리면 여기에 기록돼요</p>
                                 </div>
-                            )}
+                            ) : recentPosts.map((post) => {
+                                const d = new Date(post.created_at);
+                                return (
+                                    <div key={post.id} className="flex items-center gap-3 p-3 rounded-2xl bg-foreground/5 border border-foreground/5">
+                                        {post.image_url ? (
+                                            <img src={post.image_url} alt="" className="w-12 h-12 rounded-xl object-cover shrink-0" />
+                                        ) : (
+                                            <div className="w-12 h-12 rounded-xl bg-foreground/10 shrink-0 flex items-center justify-center">
+                                                <ImageIcon size={18} className="text-foreground/20" />
+                                            </div>
+                                        )}
+                                        <div className="flex-1 min-w-0">
+                                            <p className="text-xs font-bold truncate" style={{ color: "var(--foreground)" }}>
+                                                {post.caption ?? "게시물"}
+                                            </p>
+                                            <div className="flex items-center gap-2 mt-0.5">
+                                                <span className="text-[10px]" style={{ color: "var(--foreground-muted)" }}>
+                                                    ❤️ {post.likes} · 📈 {post.engagement_rate}
+                                                </span>
+                                                {post.week && (
+                                                    <span className="text-[9px] px-1.5 py-0.5 rounded-full font-bold"
+                                                        style={{ background: "var(--primary-light)", color: "var(--primary)" }}>
+                                                        {post.week}주차
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </div>
+                                        <span className="text-[9px] shrink-0" style={{ color: "var(--foreground-muted)" }}>
+                                            {d.toLocaleString("ko-KR", { month: "short", day: "numeric" })}
+                                        </span>
+                                    </div>
+                                );
+                            })}
                         </div>
                     </div>}
                 </div>

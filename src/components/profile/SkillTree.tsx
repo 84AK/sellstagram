@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { SKILLS, getSkillLevel, getSkillProgress, SkillXP } from "@/lib/skills/skillTree";
+import { SKILLS, LEVELS, getSkillLevel, getSkillProgress, SkillXP } from "@/lib/skills/skillTree";
 
 interface SkillTreeProps {
     skillXP: SkillXP;
@@ -9,16 +9,13 @@ interface SkillTreeProps {
 
 export default function SkillTree({ skillXP }: SkillTreeProps) {
     return (
-        <div className="flex flex-col gap-4">
-            <p className="text-xs font-semibold px-1" style={{ color: "var(--foreground-muted)" }}>
-                게시물 업로드, AI 분석, 챌린지 참여로 스킬 XP를 쌓고 마케팅 마스터가 되어보세요!
-            </p>
-
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {SKILLS.map((skill) => {
                 const xp = skillXP?.[skill.key] ?? 0;
                 const level = getSkillLevel(xp);
                 const progress = getSkillProgress(xp);
-                const isMaxLevel = level.level === 5;
+                const isMax = level.level === 5;
+                const nextLevel = LEVELS.find(l => l.level === level.level + 1);
 
                 return (
                     <div
@@ -26,58 +23,59 @@ export default function SkillTree({ skillXP }: SkillTreeProps) {
                         className="rounded-2xl p-5 flex flex-col gap-4"
                         style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
                     >
-                        {/* 스킬 헤더 */}
-                        <div className="flex items-center justify-between">
+                        {/* 헤더 */}
+                        <div className="flex items-start justify-between gap-2">
                             <div className="flex items-center gap-3">
                                 <div
-                                    className="w-10 h-10 rounded-xl flex items-center justify-center text-xl"
+                                    className="w-11 h-11 rounded-2xl flex items-center justify-center text-2xl shrink-0"
                                     style={{ background: skill.bgColor }}
                                 >
                                     {skill.icon}
                                 </div>
                                 <div>
-                                    <div className="flex items-center gap-2">
-                                        <span className="text-sm font-black" style={{ color: "var(--foreground)" }}>
-                                            {skill.name}
-                                        </span>
-                                        <span
-                                            className="text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-full"
-                                            style={{ background: skill.bgColor, color: skill.color }}
-                                        >
-                                            {skill.nameEn}
-                                        </span>
-                                    </div>
-                                    <p className="text-[10px]" style={{ color: "var(--foreground-muted)" }}>
+                                    <p className="text-sm font-black" style={{ color: "var(--foreground)" }}>
+                                        {skill.name}
+                                    </p>
+                                    <p className="text-[10px] mt-0.5" style={{ color: "var(--foreground-muted)" }}>
                                         {skill.description}
                                     </p>
                                 </div>
                             </div>
-
-                            {/* 레벨 배지 */}
-                            <div className="flex flex-col items-end gap-0.5 shrink-0">
-                                <div
-                                    className="px-2.5 py-1 rounded-full text-[10px] font-black"
-                                    style={{ background: level.color + "20", color: level.color }}
-                                >
-                                    Lv.{level.level}
-                                </div>
-                                <span className="text-[9px] font-bold" style={{ color: "var(--foreground-muted)" }}>
-                                    {level.label}
-                                </span>
-                            </div>
                         </div>
 
-                        {/* 진행 바 */}
-                        <div className="flex flex-col gap-1.5">
-                            <div className="flex justify-between items-center">
-                                <span className="text-[10px] font-bold" style={{ color: "var(--foreground-muted)" }}>
-                                    {isMaxLevel ? "최고 레벨 달성!" : `${progress.current} / ${progress.next} XP`}
-                                </span>
-                                <span className="text-[10px] font-black" style={{ color: skill.color }}>
-                                    {isMaxLevel ? "MAX" : `${progress.percent}%`}
-                                </span>
+                        {/* 레벨 + 도트 */}
+                        <div className="flex items-center justify-between">
+                            <div className="flex gap-1.5">
+                                {LEVELS.map((lv) => {
+                                    const reached = level.level >= lv.level;
+                                    return (
+                                        <div
+                                            key={lv.level}
+                                            className="w-6 h-6 rounded-full flex items-center justify-center text-[9px] font-black transition-all"
+                                            style={{
+                                                background: reached ? lv.color : "var(--surface-2)",
+                                                color: reached ? "white" : "var(--foreground-muted)",
+                                            }}
+                                        >
+                                            {lv.level}
+                                        </div>
+                                    );
+                                })}
                             </div>
-                            <div className="h-2 rounded-full overflow-hidden" style={{ background: "var(--surface-2)" }}>
+                            <span
+                                className="text-[10px] font-black px-2 py-0.5 rounded-full"
+                                style={{ background: level.color + "20", color: level.color }}
+                            >
+                                {level.label}
+                            </span>
+                        </div>
+
+                        {/* XP 바 */}
+                        <div className="flex flex-col gap-1.5">
+                            <div
+                                className="h-2 rounded-full overflow-hidden"
+                                style={{ background: "var(--surface-2)" }}
+                            >
                                 <div
                                     className="h-full rounded-full transition-all duration-700"
                                     style={{
@@ -86,54 +84,28 @@ export default function SkillTree({ skillXP }: SkillTreeProps) {
                                     }}
                                 />
                             </div>
+                            <div className="flex justify-between">
+                                <span className="text-[10px] font-bold" style={{ color: "var(--foreground-muted)" }}>
+                                    {isMax ? "MAX" : `${progress.current} / ${progress.next} XP`}
+                                </span>
+                                <span className="text-[10px] font-black" style={{ color: skill.color }}>
+                                    {isMax ? "🏆 완성" : `${progress.percent}%`}
+                                </span>
+                            </div>
                         </div>
 
-                        {/* 레벨별 단계 표시 */}
-                        <div className="flex gap-1.5">
-                            {skill.levels.map((lv) => {
-                                const reached = level.level >= lv.level;
-                                return (
-                                    <div
-                                        key={lv.level}
-                                        className="flex-1 flex flex-col items-center gap-1"
-                                    >
-                                        <div
-                                            className="w-full h-1.5 rounded-full transition-colors duration-500"
-                                            style={{ background: reached ? lv.color : "var(--border)" }}
-                                        />
-                                        <span
-                                            className="text-[8px] font-bold"
-                                            style={{ color: reached ? lv.color : "var(--foreground-muted)" }}
-                                        >
-                                            {lv.level}
-                                        </span>
-                                    </div>
-                                );
-                            })}
-                        </div>
-
-                        {/* 다음 레벨 해금 안내 */}
-                        {!isMaxLevel && (
+                        {/* 다음 해금 */}
+                        {!isMax && nextLevel && (
                             <div
-                                className="flex items-center gap-2 px-3 py-2 rounded-xl"
+                                className="flex items-center gap-2 px-3 py-2 rounded-xl text-[10px]"
                                 style={{ background: "var(--surface-2)" }}
                             >
-                                <span className="text-sm">🔓</span>
-                                <div>
-                                    <span className="text-[9px] font-black uppercase tracking-wider" style={{ color: "var(--foreground-muted)" }}>
-                                        다음 레벨 해금
-                                    </span>
-                                    <p className="text-[10px] font-semibold" style={{ color: "var(--foreground-soft)" }}>
-                                        {skill.levels.find(l => l.level === level.level + 1)?.unlock}
-                                    </p>
-                                </div>
+                                <span>🔓</span>
+                                <span className="font-semibold" style={{ color: "var(--foreground-soft)" }}>
+                                    Lv.{nextLevel.level} 달성 시 — {nextLevel.unlock}
+                                </span>
                             </div>
                         )}
-
-                        {/* XP 획득 방법 */}
-                        <p className="text-[9px] font-semibold" style={{ color: "var(--foreground-muted)" }}>
-                            💡 {skill.howToEarn}
-                        </p>
                     </div>
                 );
             })}
