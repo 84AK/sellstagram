@@ -53,6 +53,7 @@ export interface DbPost {
     sales: string | null;
     highlighted: boolean;
     created_at: string;
+    week: number | null;
 }
 
 export interface DbMission {

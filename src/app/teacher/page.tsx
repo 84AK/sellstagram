@@ -221,6 +221,10 @@ function Dashboard({ onLogout }: { onLogout: () => void }) {
     const [isLoadingStudents, setIsLoadingStudents] = useState(true);
     const [updatingTeamId, setUpdatingTeamId] = useState<string | null>(null);
 
+    // 피드 모니터링용 Supabase 게시물
+    const [dbPosts, setDbPosts] = useState<DbPost[]>([]);
+    const [isLoadingPosts, setIsLoadingPosts] = useState(true);
+
     // Supabase: 팀 현황 로드 (profiles + posts)
     const loadTeamStats = async () => {
         setIsLoadingTeams(true);
@@ -431,9 +435,24 @@ function Dashboard({ onLogout }: { onLogout: () => void }) {
                 }
             });
 
-        // 새 게시물이 업로드되면 팀 통계 갱신
+        // 피드 모니터링: Supabase에서 전체 게시물 로드
+        const loadDbPosts = async () => {
+            setIsLoadingPosts(true);
+            const { data } = await supabase.from("posts").select("*").order("created_at", { ascending: false });
+            setDbPosts(data ?? []);
+            setIsLoadingPosts(false);
+        };
+        loadDbPosts();
+
+        // 새 게시물이 업로드되면 팀 통계 + 피드 갱신
         const ch = supabase.channel("teacher-posts")
-            .on("postgres_changes", { event: "INSERT", schema: "public", table: "posts" }, () => loadTeamStats())
+            .on("postgres_changes", { event: "INSERT", schema: "public", table: "posts" }, (payload) => {
+                loadTeamStats();
+                setDbPosts(prev => [payload.new as DbPost, ...prev]);
+            })
+            .on("postgres_changes", { event: "UPDATE", schema: "public", table: "posts" }, (payload) => {
+                setDbPosts(prev => prev.map(p => p.id === (payload.new as DbPost).id ? payload.new as DbPost : p));
+            })
             .subscribe();
 
         return () => { supabase.removeChannel(ch); };
@@ -444,7 +463,7 @@ function Dashboard({ onLogout }: { onLogout: () => void }) {
     const themeStyle = session ? THEME_COLORS[session.theme] : THEME_COLORS.intro;
 
     const totalRevenue = campaigns.reduce((acc, c) => acc + c.revenue, 0);
-    const totalPosts = posts.length;
+    const totalPosts = dbPosts.length;
     const activeMissions = missions.filter((m) => m.isActive).length;
     const completedMissions = missions.filter((m) => m.isCompleted).length;
 
@@ -1004,7 +1023,11 @@ function Dashboard({ onLogout }: { onLogout: () => void }) {
                             </span>
                         </div>
 
-                        {posts.length === 0 ? (
+                        {isLoadingPosts ? (
+                            <div className="flex justify-center py-16">
+                                <Loader2 size={24} className="animate-spin" style={{ color: "var(--primary)" }} />
+                            </div>
+                        ) : dbPosts.length === 0 ? (
                             <div className="py-16 flex flex-col items-center gap-3"
                                 style={{ color: "var(--foreground-muted)" }}>
                                 <Megaphone size={40} style={{ opacity: 0.3 }} />
@@ -1012,8 +1035,8 @@ function Dashboard({ onLogout }: { onLogout: () => void }) {
                                 <p className="text-sm">학생들이 셀스타그램에 콘텐츠를 올리면 여기에 표시돼요</p>
                             </div>
                         ) : (
-                            posts.map((post) => {
-                                const isHighlighted = highlightedPost === post.id;
+                            dbPosts.map((post) => {
+                                const isHighlighted = highlightedPost === post.id || post.highlighted;
                                 return (
                                     <div key={post.id}
                                         className="rounded-2xl p-5 transition-all"
@@ -1029,14 +1052,15 @@ function Dashboard({ onLogout }: { onLogout: () => void }) {
                                             <div className="flex items-center gap-3">
                                                 <div className="w-10 h-10 rounded-xl flex items-center justify-center font-black text-base"
                                                     style={{ background: "var(--secondary-light)", color: "var(--secondary)" }}>
-                                                    {post.user.name[0]}
+                                                    {post.user_name?.[0] ?? "?"}
                                                 </div>
                                                 <div>
                                                     <p className="font-bold text-sm" style={{ color: "var(--foreground)" }}>
-                                                        {post.user.name}
+                                                        {post.user_name}
                                                     </p>
                                                     <p className="text-xs" style={{ color: "var(--foreground-muted)" }}>
-                                                        @{post.user.handle} · {post.timeAgo}
+                                                        @{post.user_handle} · {new Date(post.created_at).toLocaleString("ko-KR", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
+                                                        {post.week && <span className="ml-1.5 px-1.5 py-0.5 rounded-full text-[9px] font-bold" style={{ background: "var(--surface-2)", color: "var(--foreground-muted)" }}>{post.week}주차</span>}
                                                     </p>
                                                 </div>
                                             </div>
@@ -1061,11 +1085,16 @@ function Dashboard({ onLogout }: { onLogout: () => void }) {
                                             </div>
                                         </div>
 
+                                        {/* 이미지 */}
+                                        {post.image_url && (
+                                            <img src={post.image_url} alt="" className="w-full rounded-xl object-cover max-h-[240px] mb-4" />
+                                        )}
+
                                         {/* 캡션 */}
-                                        {post.content && (
+                                        {post.caption && (
                                             <p className="text-sm leading-relaxed mb-4"
                                                 style={{ color: "var(--foreground-soft)" }}>
-                                                {post.content.caption}
+                                                {post.caption}
                                             </p>
                                         )}
                                         {post.description && (
@@ -1076,9 +1105,9 @@ function Dashboard({ onLogout }: { onLogout: () => void }) {
                                         )}
 
                                         {/* 해시태그 */}
-                                        {post.content?.tags && (
+                                        {post.tags && post.tags.length > 0 && (
                                             <div className="flex flex-wrap gap-1.5 mb-4">
-                                                {post.content.tags.map((tag) => (
+                                                {post.tags.map((tag: string) => (
                                                     <span key={tag} className="text-xs font-bold px-2 py-0.5 rounded-full"
                                                         style={{ background: "var(--secondary-light)", color: "var(--secondary)" }}>
                                                         #{tag}
@@ -1093,22 +1122,22 @@ function Dashboard({ onLogout }: { onLogout: () => void }) {
                                             <div className="flex items-center gap-1.5">
                                                 <BarChart2 size={14} style={{ color: "var(--primary)" }} />
                                                 <span className="text-sm font-bold" style={{ color: "var(--foreground)" }}>
-                                                    {post.stats.likes} 좋아요
+                                                    {post.likes} 좋아요
                                                 </span>
                                             </div>
-                                            {post.stats.engagement && (
+                                            {post.engagement_rate && (
                                                 <div className="flex items-center gap-1.5">
                                                     <TrendingUp size={14} style={{ color: "var(--accent)" }} />
                                                     <span className="text-sm font-bold" style={{ color: "var(--foreground)" }}>
-                                                        참여율 {post.stats.engagement}
+                                                        참여율 {post.engagement_rate}
                                                     </span>
                                                 </div>
                                             )}
-                                            {post.stats.sales && (
+                                            {post.sales && post.sales !== "₩0" && (
                                                 <div className="flex items-center gap-1.5">
                                                     <Zap size={14} style={{ color: "#D97706" }} />
                                                     <span className="text-sm font-bold" style={{ color: "var(--foreground)" }}>
-                                                        {post.stats.sales}
+                                                        {post.sales}
                                                     </span>
                                                 </div>
                                             )}
