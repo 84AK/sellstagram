@@ -326,10 +326,23 @@ function Dashboard({ onLogout }: { onLogout: () => void }) {
     // Supabase: 팀 배정 업데이트
     const handleUpdateTeam = async (studentId: string, newTeam: string) => {
         setUpdatingTeamId(studentId);
-        await supabase.from("profiles").update({ team: newTeam }).eq("id", studentId);
-        setStudents(prev => prev.map(s => s.id === studentId ? { ...s, team: newTeam } : s));
+        try {
+            const res = await fetch("/api/teacher/update-team", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ studentId, team: newTeam }),
+            });
+            if (res.ok) {
+                setStudents(prev => prev.map(s => s.id === studentId ? { ...s, team: newTeam } : s));
+                loadTeamStats();
+            } else {
+                const { error } = await res.json().catch(() => ({ error: "서버 오류" }));
+                console.error("팀 배정 실패:", error);
+            }
+        } catch (err) {
+            console.error("팀 배정 오류:", err);
+        }
         setUpdatingTeamId(null);
-        loadTeamStats();
     };
 
     // Supabase: 주차 변경 동기화

@@ -24,5 +24,12 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ valid: false }, { status: 401 });
     }
 
-    return NextResponse.json({ valid: true });
+    const res = NextResponse.json({ valid: true });
+    res.cookies.set("teacher_auth", "true", {
+        httpOnly: true,
+        sameSite: "lax",
+        path: "/",
+        maxAge: 60 * 60 * 8, // 8시간
+    });
+    return res;
 }
