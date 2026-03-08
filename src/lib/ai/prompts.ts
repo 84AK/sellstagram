@@ -66,5 +66,98 @@ export const AI_PROMPTS = {
     이미지 분석 결과: "${imageDescription}"
     이 이미지를 마케팅 관점에서 분석하세요. 구도, 색감, 타겟팅 적합성을 1줄로 요약하세요.
     (예: "비비드한 컬러감이 Z세대의 시선을 끌기에 충분하며, 중앙 집중형 구도가 제품을 강조합니다.")
+  `,
+
+  DRAFT_CONTENT: (
+    productName: string,
+    targetAudience: string,
+    strategyTheme: string,
+    strategyNameEn: string,
+    strategyDescription: string,
+    strategyTip: string,
+    strategyKeywords: string[],
+    tone: string
+  ) => `
+    당신은 Z세대 SNS 마케팅 전문가이자 고등학생 마케팅 선생님입니다.
+    고등학생이 SNS 마케팅을 배우는 실습 플랫폼에서 사용할 캡션 초안 3개를 만들어주세요.
+
+    [제품 정보]
+    - 제품명: ${productName}
+    - 타겟 고객: ${targetAudience}
+    - 마케팅 전략: ${strategyTheme} (${strategyNameEn})
+    - 전략 설명: ${strategyDescription}
+    - 핵심 키워드: ${strategyKeywords.join(", ")}
+    - 전략 팁: ${strategyTip}
+    - 톤앤매너: ${tone}
+
+    [초안 작성 규칙]
+    1. A안: 감성적 접근, B안: 이성적/정보 접근, C안: 유머/재치 접근으로 각각 다르게 작성
+    2. 각 캡션은 120자 이내, 이모지 1~2개 포함
+    3. 해시태그는 캡션과 별도로 3~5개 제안 (# 포함하지 말고 단어만)
+    4. strategyPoint: 이 전략 팁을 어떻게 반영했는지 1문장 설명
+    5. marketingTip: 고등학생이 실제로 배울 수 있는 마케팅 인사이트 1문장
+
+    [출력 형식 — 반드시 JSON만 출력, 다른 텍스트 없이]
+    {
+      "drafts": [
+        {
+          "id": "a",
+          "label": "감성 어프로치",
+          "caption": "캡션 내용",
+          "strategyPoint": "이 전략의 포인트: ...",
+          "hashtags": ["태그1", "태그2", "태그3"],
+          "marketingTip": "💡 마케팅 팁: ..."
+        },
+        {
+          "id": "b",
+          "label": "정보 어프로치",
+          "caption": "캡션 내용",
+          "strategyPoint": "이 전략의 포인트: ...",
+          "hashtags": ["태그1", "태그2", "태그3"],
+          "marketingTip": "💡 마케팅 팁: ..."
+        },
+        {
+          "id": "c",
+          "label": "유머 어프로치",
+          "caption": "캡션 내용",
+          "strategyPoint": "이 전략의 포인트: ...",
+          "hashtags": ["태그1", "태그2", "태그3"],
+          "marketingTip": "💡 마케팅 팁: ..."
+        }
+      ],
+      "promptSummary": "${productName}을(를) ${targetAudience}에게 ${strategyTheme} 전략으로 ${tone} 톤으로 홍보해달라고 요청했어요."
+    }
+  `,
+
+  REFINE_CONTENT: (
+    currentCaption: string,
+    feedback: string,
+    productName: string,
+    strategyTheme: string,
+    strategyKeywords: string[],
+    tone: string
+  ) => `
+    당신은 마케팅 카피라이팅 전문가입니다. 학생의 SNS 캡션을 피드백에 맞게 개선해주세요.
+
+    [현재 캡션]
+    "${currentCaption}"
+
+    [학생의 피드백 요청]
+    "${feedback}"
+
+    [유지해야 할 조건]
+    - 제품: ${productName}
+    - 전략: ${strategyTheme}
+    - 핵심 키워드 중 하나 이상 포함: ${strategyKeywords.join(", ")}
+    - 톤앤매너: ${tone}
+    - 캡션 120자 이내
+
+    [출력 형식 — 반드시 JSON만 출력, 다른 텍스트 없이]
+    {
+      "caption": "개선된 캡션",
+      "hashtags": ["태그1", "태그2", "태그3"],
+      "changeLog": "이렇게 바꿨어요: ...",
+      "promptHint": "💡 더 좋은 AI 요청 팁: ..."
+    }
   `
 };

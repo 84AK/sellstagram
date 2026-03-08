@@ -93,6 +93,9 @@ interface GameState {
     isAIReportModalOpen: boolean;
     activeInsight: AIInsight | null;
     uploadContext: "general" | "mission";
+    isAIStudioOpen: boolean;
+    aiStudioDraftCaption: string;
+    aiStudioDraftTags: string;
 
     missionCompletionQueue: Mission[];  // 방금 완료된 미션 토스트용
 
@@ -114,6 +117,8 @@ interface GameState {
     setUploadModalOpen: (open: boolean, context?: "general" | "mission") => void;
     setGuideModalOpen: (open: boolean) => void;
     setAIReportModal: (open: boolean, insight?: AIInsight | null) => void;
+    setAIStudioOpen: (open: boolean) => void;
+    setAIStudioDraft: (caption: string, tags: string) => void;
     nextWeek: () => void;
     prevWeek: () => void;
     setWeek: (week: number) => void;
@@ -177,6 +182,9 @@ export const useGameStore = create<GameState>((set) => ({
     isAIReportModalOpen: false,
     activeInsight: null,
     uploadContext: "general",
+    isAIStudioOpen: false,
+    aiStudioDraftCaption: "",
+    aiStudioDraftTags: "",
     user: {
         name: "",
         handle: "",
@@ -285,6 +293,9 @@ export const useGameStore = create<GameState>((set) => ({
     })),
 
     setMissions: (missions) => set({ missions }),
+
+    setAIStudioOpen: (open) => set({ isAIStudioOpen: open }),
+    setAIStudioDraft: (caption, tags) => set({ aiStudioDraftCaption: caption, aiStudioDraftTags: tags }),
 
     nextWeek: () => set((state) => ({ week: Math.min(29, state.week + 1) })),
     prevWeek: () => set((state) => ({ week: Math.max(1, state.week - 1) })),

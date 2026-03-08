@@ -24,6 +24,7 @@ import { useGameStore } from "@/store/useGameStore";
 import { supabase } from "@/lib/supabase/client";
 import { simulateMarketingEffect } from "@/lib/simulation/engine";
 import { getTodayChallenge } from "@/lib/challenges/dailyChallenges";
+import AIContentStudio from "./AIContentStudio";
 
 export default function UploadModal() {
     const {
@@ -57,6 +58,7 @@ export default function UploadModal() {
     const [personaReactions, setPersonaReactions] = useState<{ name: string; comment: string; personaId: string }[]>([]);
     const [loadingResult, setLoadingResult] = useState(false);
     const [isAnalyzing, setIsAnalyzing] = useState(false);
+    const [isAIStudioOpen, setIsAIStudioOpen] = useState(false);
 
     // 이미지 업로드 관련
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -378,6 +380,17 @@ export default function UploadModal() {
     }
 
     return (
+        <>
+        {isAIStudioOpen && (
+            <AIContentStudio
+                onApply={(appliedCaption, appliedTags) => {
+                    setCaption(appliedCaption);
+                    setTags(appliedTags);
+                    setIsAIStudioOpen(false);
+                }}
+                onClose={() => setIsAIStudioOpen(false)}
+            />
+        )}
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300">
             <GlassCard className="w-full max-w-lg p-0 overflow-hidden border-foreground/10 shadow-2xl flex flex-col max-h-[90vh]">
                 {/* Modal Header */}
@@ -470,9 +483,18 @@ export default function UploadModal() {
                     {/* Inputs */}
                     <div className="flex flex-col gap-4">
                         <div className="flex flex-col gap-2">
-                            <label className="text-[10px] font-bold text-foreground/40 uppercase tracking-widest ml-1">
-                                {uploadType === "post" ? "Caption" : "Video Description"}
-                            </label>
+                            <div className="flex items-center justify-between ml-1">
+                                <label className="text-[10px] font-bold text-foreground/40 uppercase tracking-widest">
+                                    {uploadType === "post" ? "Caption" : "Video Description"}
+                                </label>
+                                <button
+                                    onClick={() => setIsAIStudioOpen(true)}
+                                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-black text-white transition-all hover:opacity-90 active:scale-95"
+                                    style={{ background: "linear-gradient(135deg,#FF6B35,#4361EE)" }}
+                                >
+                                    <Sparkles size={10} /> AI와 함께 만들기
+                                </button>
+                            </div>
                             <textarea
                                 placeholder={uploadType === "post" ? "Z세대를 사로잡을 매력적인 카피를 작성하세요..." : "릴스 알고리즘을 타기 위한 핵심 설명과 키워드를 입력하세요..."}
                                 value={caption}
@@ -626,5 +648,6 @@ export default function UploadModal() {
                 </div>
             </GlassCard>
         </div>
+        </>
     );
 }
