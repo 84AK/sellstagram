@@ -1,16 +1,103 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import GlassCard from "../common/GlassCard";
-import { X, Sparkles, BookOpen, Calendar, Share2, Download } from "lucide-react";
+import { X, Sparkles, BookOpen, Calendar, Share2, Download, Copy, Check } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { useGameStore } from "@/store/useGameStore";
 
 export default function AIReportModal() {
     const { isAIReportModalOpen, activeInsight, setAIReportModal } = useGameStore();
+    const [copied, setCopied] = useState(false);
+    const [shared, setShared] = useState(false);
 
     if (!isAIReportModalOpen || !activeInsight) return null;
+
+    // 클립보드 복사
+    const handleCopy = async () => {
+        try {
+            await navigator.clipboard.writeText(activeInsight.content);
+            setCopied(true);
+            setTimeout(() => setCopied(false), 2000);
+        } catch {
+            // fallback: textarea 방식
+            const el = document.createElement("textarea");
+            el.value = activeInsight.content;
+            document.body.appendChild(el);
+            el.select();
+            document.execCommand("copy");
+            document.body.removeChild(el);
+            setCopied(true);
+            setTimeout(() => setCopied(false), 2000);
+        }
+    };
+
+    // 공유하기
+    const handleShare = async () => {
+        const text = `📊 ${activeInsight.title}\n\n${activeInsight.content.slice(0, 200)}...`;
+        if (navigator.share) {
+            try {
+                await navigator.share({ title: activeInsight.title, text });
+            } catch {
+                // 취소 등 무시
+            }
+        } else {
+            // 브라우저 미지원 → 텍스트 클립보드 복사로 fallback
+            await navigator.clipboard.writeText(text).catch(() => {});
+            setShared(true);
+            setTimeout(() => setShared(false), 2000);
+        }
+    };
+
+    // PDF 저장 (브라우저 프린트 다이얼로그 → PDF로 저장)
+    const handlePDF = () => {
+        const win = window.open("", "_blank", "width=800,height=900");
+        if (!win) return;
+        win.document.write(`
+            <!DOCTYPE html>
+            <html lang="ko">
+            <head>
+                <meta charset="UTF-8" />
+                <title>${activeInsight.title}</title>
+                <style>
+                    body { font-family: 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif; padding: 48px; max-width: 720px; margin: 0 auto; color: #1a1a1a; line-height: 1.7; }
+                    h1 { font-size: 28px; font-weight: 900; color: #FF6B35; margin-bottom: 8px; }
+                    h2 { font-size: 20px; font-weight: 800; margin-top: 36px; margin-bottom: 12px; }
+                    h3 { font-size: 16px; font-weight: 700; margin-top: 24px; margin-bottom: 8px; }
+                    p  { font-size: 15px; margin-bottom: 16px; }
+                    ul { padding-left: 20px; margin-bottom: 20px; }
+                    li { font-size: 15px; margin-bottom: 8px; }
+                    strong { color: #FF6B35; background: #FFF0EB; padding: 1px 4px; border-radius: 3px; }
+                    blockquote { border-left: 4px solid #4361EE; padding: 12px 20px; background: #f5f7ff; margin: 24px 0; border-radius: 0 8px 8px 0; font-style: italic; }
+                    hr { border: none; border-top: 1px solid #eee; margin: 32px 0; }
+                    .footer { font-size: 11px; color: #aaa; margin-top: 48px; border-top: 1px solid #eee; padding-top: 12px; }
+                    @media print { body { padding: 24px; } }
+                </style>
+            </head>
+            <body>
+                <h1>${activeInsight.title}</h1>
+                <p style="font-size:12px;color:#888;margin-bottom:32px">${activeInsight.date} · AI Marketing Report</p>
+                ${activeInsight.content
+                    .replace(/^### (.+)$/gm, "<h3>$1</h3>")
+                    .replace(/^## (.+)$/gm, "<h2>$1</h2>")
+                    .replace(/^# (.+)$/gm, "<h1>$1</h1>")
+                    .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
+                    .replace(/^> (.+)$/gm, "<blockquote>$1</blockquote>")
+                    .replace(/^- (.+)$/gm, "<li>$1</li>")
+                    .replace(/(<li>.*<\/li>\n?)+/g, (m) => `<ul>${m}</ul>`)
+                    .replace(/^---$/gm, "<hr>")
+                    .replace(/\n\n/g, "</p><p>")
+                    .replace(/^(?!<[hupbli])/gm, "<p>")
+                    .replace(/(?<![>])$/gm, "</p>")
+                }
+                <div class="footer">* 본 리포트는 2026년 마케팅 트렌드 데이터를 기반으로 AI가 생성했습니다.</div>
+                <script>window.onload = () => { window.print(); }</script>
+            </body>
+            </html>
+        `);
+        win.document.close();
+    };
 
     return (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-8 bg-black/80 backdrop-blur-md animate-in fade-in zoom-in duration-300">
@@ -65,16 +152,42 @@ export default function AIReportModal() {
                 </div>
 
                 {/* Footer Actions */}
-                <div className="p-6 md:p-8 border-t border-foreground/5 bg-foreground/[0.02] flex items-center justify-between">
-                    <p className="text-xs font-bold text-foreground/30 italic">
+                <div className="p-6 md:p-8 border-t border-foreground/5 bg-foreground/[0.02] flex items-center justify-between gap-4">
+                    <p className="text-xs font-bold text-foreground/30 italic hidden md:block">
                         * 본 리포트는 2026년 마케팅 트렌드 데이터를 기반으로 AI가 생성했습니다.
                     </p>
-                    <div className="flex gap-4">
-                        <button className="flex items-center gap-2 px-6 py-3 rounded-2xl bg-foreground/5 hover:bg-foreground/10 text-xs font-black italic transition-all active:scale-95">
-                            <Share2 size={16} /> 공유하기
+                    <div className="flex gap-2 ml-auto">
+                        {/* 복사하기 */}
+                        <button
+                            onClick={handleCopy}
+                            className="flex items-center gap-2 px-4 py-3 rounded-2xl text-xs font-black italic transition-all active:scale-95"
+                            style={{
+                                background: copied ? "rgba(6,214,160,0.15)" : "var(--surface-2)",
+                                color: copied ? "var(--accent)" : "var(--foreground-soft)",
+                            }}
+                        >
+                            {copied ? <Check size={15} /> : <Copy size={15} />}
+                            {copied ? "복사됨!" : "내용 복사"}
                         </button>
-                        <button className="flex items-center gap-2 px-6 py-3 rounded-2xl bg-primary text-white hover:bg-primary/90 text-xs font-black italic transition-all shadow-lg shadow-primary/20 active:scale-95">
-                            <Download size={16} /> PDF 저장
+                        {/* 공유하기 */}
+                        <button
+                            onClick={handleShare}
+                            className="flex items-center gap-2 px-4 py-3 rounded-2xl text-xs font-black italic transition-all active:scale-95"
+                            style={{
+                                background: shared ? "rgba(6,214,160,0.15)" : "var(--surface-2)",
+                                color: shared ? "var(--accent)" : "var(--foreground-soft)",
+                            }}
+                        >
+                            {shared ? <Check size={15} /> : <Share2 size={15} />}
+                            {shared ? "복사됨!" : "공유하기"}
+                        </button>
+                        {/* PDF 저장 */}
+                        <button
+                            onClick={handlePDF}
+                            className="flex items-center gap-2 px-5 py-3 rounded-2xl text-xs font-black italic transition-all active:scale-95 text-white"
+                            style={{ background: "var(--primary)" }}
+                        >
+                            <Download size={15} /> PDF 저장
                         </button>
                     </div>
                 </div>
