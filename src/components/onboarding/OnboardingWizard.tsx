@@ -281,9 +281,8 @@ export default function OnboardingWizard({ onComplete }: { onComplete?: () => vo
                                     type="password"
                                     value={teacherPin}
                                     onChange={e => setTeacherPin(e.target.value)}
-                                    placeholder="PIN 번호 입력"
-                                    maxLength={4}
-                                    className="w-full px-4 py-4 rounded-xl text-center text-2xl font-black tracking-widest outline-none transition-all"
+                                    placeholder="비밀번호 입력"
+                                    className="w-full px-4 py-4 rounded-xl text-base font-medium outline-none transition-all"
                                     style={{
                                         background: "var(--surface-2)",
                                         border: pinError ? "2px solid #EF4444" : "2px solid var(--secondary)",
