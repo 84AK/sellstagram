@@ -38,15 +38,21 @@ export default function SessionPage() {
     const [showCurriculumMap, setShowCurriculumMap] = useState(false);
     const [showReport, setShowReport] = useState(false);
     const [teamMembers, setTeamMembers] = useState<{ name: string; avatar: string }[]>([]);
+    const [loadingTeam, setLoadingTeam] = useState(true);
 
     useEffect(() => {
-        if (!user.team) return;
+        if (!user.team) {
+            setLoadingTeam(false);
+            return;
+        }
+        setLoadingTeam(true);
         supabase
             .from("profiles")
             .select("name, avatar")
             .eq("team", user.team)
             .then(({ data }) => {
                 if (data) setTeamMembers(data);
+                setLoadingTeam(false);
             });
     }, [user.team]);
 
@@ -503,9 +509,17 @@ export default function SessionPage() {
                         팀 참여 현황
                     </h3>
                 </div>
-                {teamMembers.length === 0 ? (
+                {loadingTeam ? (
                     <p className="text-xs" style={{ color: "var(--foreground-muted)" }}>
                         팀원 정보를 불러오는 중...
+                    </p>
+                ) : !user.team ? (
+                    <p className="text-xs" style={{ color: "var(--foreground-muted)" }}>
+                        아직 팀에 배정되지 않았어요. 선생님께 문의하세요.
+                    </p>
+                ) : teamMembers.length === 0 ? (
+                    <p className="text-xs" style={{ color: "var(--foreground-muted)" }}>
+                        같은 팀 학생이 없어요.
                     </p>
                 ) : (
                     <div className="flex items-center gap-3">
