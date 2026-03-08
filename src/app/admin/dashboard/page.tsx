@@ -6,8 +6,10 @@ import {
     Shield, Users, FileText, Trophy, MessageSquare,
     LogOut, Loader2, Trash2, Crown, RefreshCw,
     TrendingUp, ShoppingBag, BarChart3, Settings, Eye, EyeOff, Check,
+    Lock, Unlock,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase/client";
+import { CURRICULUM } from "@/lib/curriculum/sessions";
 
 interface Profile {
     id: string;
@@ -64,6 +66,10 @@ export default function AdminDashboard() {
     const [pinSaving, setPinSaving] = useState(false);
     const [pinResult, setPinResult] = useState<{ ok: boolean; msg: string } | null>(null);
 
+    // 회차 열람 관리 상태
+    const [unlockedWeeks, setUnlockedWeeks] = useState<number[]>([]);
+    const [togglingWeek, setTogglingWeek] = useState<number | null>(null);
+
     // 관리자 인증 확인
     useEffect(() => {
         fetch("/api/auth/admin-check").then(r => r.json()).then(({ isAdmin }) => {
@@ -82,18 +88,23 @@ export default function AdminDashboard() {
                 { count: commentCnt },
                 { count: purchaseCnt },
                 { data: gameState },
+                { data: appSettings },
             ] = await Promise.all([
                 supabase.from("profiles").select("*").order("created_at"),
                 supabase.from("posts").select("id,user_name,user_handle,caption,description,likes,type,created_at").order("created_at", { ascending: false }).limit(50),
                 supabase.from("comments").select("id", { count: "exact", head: true }),
                 supabase.from("purchases").select("id", { count: "exact", head: true }),
                 supabase.from("game_state").select("teacher_pin").eq("id", 1).single(),
+                supabase.from("app_settings").select("unlocked_weeks").eq("id", 1).single(),
             ]);
             setProfiles(profileData ?? []);
             setPosts(postData ?? []);
             setCommentCount(commentCnt ?? 0);
             setPurchaseCount(purchaseCnt ?? 0);
             setCurrentPin(gameState?.teacher_pin ?? "");
+            if (Array.isArray(appSettings?.unlocked_weeks)) {
+                setUnlockedWeeks(appSettings.unlocked_weeks);
+            }
             setLoading(false);
         };
         load();
@@ -170,6 +181,37 @@ export default function AdminDashboard() {
         }
         setPinSaving(false);
         setTimeout(() => setPinResult(null), 3000);
+    };
+
+    // 회차 열람 토글
+    const updateUnlockedWeeks = async (next: number[]) => {
+        const res = await fetch("/api/admin/update-settings", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ field: "unlocked_weeks", value: next }),
+        });
+        return res.ok;
+    };
+
+    const handleToggleLock = async (w: number) => {
+        setTogglingWeek(w);
+        const next = unlockedWeeks.includes(w)
+            ? unlockedWeeks.filter(v => v !== w)
+            : [...unlockedWeeks, w].sort((a, b) => a - b);
+        const ok = await updateUnlockedWeeks(next);
+        if (ok) setUnlockedWeeks(next);
+        setTogglingWeek(null);
+    };
+
+    const handleUnlockAll = async () => {
+        const all = Array.from({ length: 29 }, (_, i) => i + 1);
+        const ok = await updateUnlockedWeeks(all);
+        if (ok) setUnlockedWeeks(all);
+    };
+
+    const handleLockAll = async () => {
+        const ok = await updateUnlockedWeeks([]);
+        if (ok) setUnlockedWeeks([]);
     };
 
     const handleDeletePost = async (postId: string) => {
@@ -475,7 +517,7 @@ export default function AdminDashboard() {
                 )}
                 {/* ── 설정 탭 ── */}
                 {activeTab === "settings" && (
-                    <div className="flex flex-col gap-6 max-w-md">
+                    <div className="flex flex-col gap-6 max-w-2xl">
                         <div className="flex flex-col gap-4 p-5 rounded-2xl"
                             style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
                             <div className="flex items-center gap-2">
@@ -552,6 +594,127 @@ export default function AdminDashboard() {
                                 {pinSaving ? <Loader2 size={15} className="animate-spin" /> : <Check size={15} />}
                                 {pinSaving ? "저장 중..." : "PIN 변경 저장"}
                             </button>
+                        </div>
+
+                        {/* 회차 열람 관리 */}
+                        <div className="flex flex-col gap-4 p-5 rounded-2xl"
+                            style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
+                            <div className="flex items-center justify-between gap-2">
+                                <div className="flex items-center gap-2">
+                                    <Unlock size={16} style={{ color: "#7C3AED" }} />
+                                    <h3 className="text-sm font-black" style={{ color: "var(--foreground)" }}>
+                                        회차 열람 관리
+                                    </h3>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <span className="text-xs font-semibold" style={{ color: "var(--foreground-muted)" }}>
+                                        {unlockedWeeks.length}/29 열림
+                                    </span>
+                                    <button
+                                        onClick={handleUnlockAll}
+                                        className="px-3 py-1.5 rounded-lg text-xs font-bold transition-all hover:opacity-80"
+                                        style={{ background: "rgba(6,214,160,0.15)", color: "var(--accent)" }}>
+                                        전체 열기
+                                    </button>
+                                    <button
+                                        onClick={handleLockAll}
+                                        className="px-3 py-1.5 rounded-lg text-xs font-bold transition-all hover:opacity-80"
+                                        style={{ background: "var(--surface-2)", color: "var(--foreground-muted)" }}>
+                                        전체 잠금
+                                    </button>
+                                </div>
+                            </div>
+                            <p className="text-xs" style={{ color: "var(--foreground-muted)" }}>
+                                열린 회차만 학생이 세션 페이지에서 볼 수 있습니다.
+                            </p>
+
+                            {/* 1학기 */}
+                            <div>
+                                <p className="text-[10px] font-black uppercase tracking-wider mb-2"
+                                    style={{ color: "var(--foreground-muted)" }}>1학기 (1~15회)</p>
+                                <div className="flex flex-col gap-1.5">
+                                    {CURRICULUM.filter(s => s.semester === 1).map(s => {
+                                        const isOpen = unlockedWeeks.includes(s.week);
+                                        const isToggling = togglingWeek === s.week;
+                                        return (
+                                            <div key={s.week}
+                                                className="flex items-center gap-3 px-3 py-2.5 rounded-xl transition-colors"
+                                                style={{
+                                                    background: isOpen ? "rgba(6,214,160,0.06)" : "var(--surface-2)",
+                                                    border: `1px solid ${isOpen ? "rgba(6,214,160,0.25)" : "transparent"}`,
+                                                }}>
+                                                <span className="text-xs font-black w-10 shrink-0"
+                                                    style={{ color: isOpen ? "var(--accent)" : "var(--foreground-muted)" }}>
+                                                    {s.week}회
+                                                </span>
+                                                <span className="flex-1 text-xs font-semibold truncate"
+                                                    style={{ color: isOpen ? "var(--foreground)" : "var(--foreground-muted)" }}>
+                                                    {s.title}
+                                                </span>
+                                                <button
+                                                    onClick={() => handleToggleLock(s.week)}
+                                                    disabled={isToggling}
+                                                    className="shrink-0 flex items-center gap-1 px-3 py-1 rounded-lg text-xs font-bold transition-all hover:opacity-80 disabled:opacity-40"
+                                                    style={{
+                                                        background: isOpen ? "rgba(6,214,160,0.15)" : "var(--border)",
+                                                        color: isOpen ? "var(--accent)" : "var(--foreground-muted)",
+                                                    }}>
+                                                    {isToggling
+                                                        ? <Loader2 size={11} className="animate-spin" />
+                                                        : isOpen
+                                                            ? <><Unlock size={11} /> 열림</>
+                                                            : <><Lock size={11} /> 잠김</>
+                                                    }
+                                                </button>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+
+                            {/* 2학기 */}
+                            <div>
+                                <p className="text-[10px] font-black uppercase tracking-wider mb-2"
+                                    style={{ color: "var(--foreground-muted)" }}>2학기 (16~29회)</p>
+                                <div className="flex flex-col gap-1.5">
+                                    {CURRICULUM.filter(s => s.semester === 2).map(s => {
+                                        const isOpen = unlockedWeeks.includes(s.week);
+                                        const isToggling = togglingWeek === s.week;
+                                        return (
+                                            <div key={s.week}
+                                                className="flex items-center gap-3 px-3 py-2.5 rounded-xl transition-colors"
+                                                style={{
+                                                    background: isOpen ? "rgba(6,214,160,0.06)" : "var(--surface-2)",
+                                                    border: `1px solid ${isOpen ? "rgba(6,214,160,0.25)" : "transparent"}`,
+                                                }}>
+                                                <span className="text-xs font-black w-10 shrink-0"
+                                                    style={{ color: isOpen ? "var(--accent)" : "var(--foreground-muted)" }}>
+                                                    {s.week}회
+                                                </span>
+                                                <span className="flex-1 text-xs font-semibold truncate"
+                                                    style={{ color: isOpen ? "var(--foreground)" : "var(--foreground-muted)" }}>
+                                                    {s.title}
+                                                </span>
+                                                <button
+                                                    onClick={() => handleToggleLock(s.week)}
+                                                    disabled={isToggling}
+                                                    className="shrink-0 flex items-center gap-1 px-3 py-1 rounded-lg text-xs font-bold transition-all hover:opacity-80 disabled:opacity-40"
+                                                    style={{
+                                                        background: isOpen ? "rgba(6,214,160,0.15)" : "var(--border)",
+                                                        color: isOpen ? "var(--accent)" : "var(--foreground-muted)",
+                                                    }}>
+                                                    {isToggling
+                                                        ? <Loader2 size={11} className="animate-spin" />
+                                                        : isOpen
+                                                            ? <><Unlock size={11} /> 열림</>
+                                                            : <><Lock size={11} /> 잠김</>
+                                                    }
+                                                </button>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </div>
                         </div>
                     </div>
                 )}
