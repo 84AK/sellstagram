@@ -33,7 +33,7 @@ interface Product {
 }
 
 export default function ShopPage() {
-    const { balance, addFunds, addPoints, user } = useGameStore();
+    const { balance, addFunds, addPoints, user, setUploadModalOpen } = useGameStore();
     const [products, setProducts] = useState<Product[]>([]);
     const [ownedIds, setOwnedIds] = useState<Set<string>>(new Set());
     const [loading, setLoading] = useState(true);
@@ -109,15 +109,22 @@ export default function ShopPage() {
             {/* 구매 완료 토스트 */}
             {toast && (
                 <div
-                    className="fixed top-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 px-5 py-3 rounded-2xl shadow-2xl"
-                    style={{ background: "var(--accent)", color: "white" }}
+                    className="fixed top-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-4 px-5 py-4 rounded-2xl shadow-2xl"
+                    style={{ background: "var(--accent)", color: "white", minWidth: "320px" }}
                 >
-                    <CheckCircle size={18} />
-                    <div>
+                    <CheckCircle size={20} className="shrink-0" />
+                    <div className="flex-1">
                         <p className="text-sm font-black">{toast.name} 구매 완료!</p>
-                        <p className="text-[11px] opacity-80">+{toast.xp} XP 획득</p>
+                        <p className="text-xs opacity-80 mt-0.5">+{toast.xp} XP 획득 · 이제 마케팅 콘텐츠를 올려보세요</p>
                     </div>
-                    <Sparkles size={16} />
+                    <button
+                        onClick={() => { setToast(null); setUploadModalOpen(true, "mission"); }}
+                        className="shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-black transition-all hover:opacity-80"
+                        style={{ background: "rgba(255,255,255,0.25)", color: "white" }}
+                    >
+                        콘텐츠 만들기
+                        <ArrowRight size={13} />
+                    </button>
                 </div>
             )}
 
@@ -263,34 +270,36 @@ export default function ShopPage() {
                                         </div>
                                     </div>
 
-                                    {/* 구매 버튼 */}
-                                    <button
-                                        disabled={isOwned || !canAfford || isBuying}
-                                        onClick={() => handlePurchase(product)}
-                                        className="w-full py-3 rounded-xl flex items-center justify-center gap-2 font-bold text-sm transition-all active:scale-[0.98] disabled:cursor-not-allowed"
-                                        style={{
-                                            background: isOwned
-                                                ? "var(--accent-light)"
-                                                : canAfford
-                                                    ? "var(--foreground)"
-                                                    : "var(--surface-2)",
-                                            color: isOwned
-                                                ? "var(--accent)"
-                                                : canAfford
-                                                    ? "var(--background)"
-                                                    : "var(--foreground-muted)",
-                                        }}
-                                    >
-                                        {isBuying ? (
-                                            <><Loader2 size={15} className="animate-spin" /> 구매 중...</>
-                                        ) : isOwned ? (
-                                            <><CheckCircle size={15} /> 보유 중 — 실습 가능</>
-                                        ) : canAfford ? (
-                                            <>구매 및 실습 등록 <ArrowRight size={15} /></>
-                                        ) : (
-                                            <><AlertCircle size={15} /> 잔액 부족 (₩{(product.price - balance).toLocaleString()} 부족)</>
-                                        )}
-                                    </button>
+                                    {/* 구매 / 실습 버튼 */}
+                                    {isOwned ? (
+                                        <button
+                                            onClick={() => setUploadModalOpen(true, "mission")}
+                                            className="w-full py-3 rounded-xl flex items-center justify-center gap-2 font-bold text-sm transition-all hover:opacity-90 active:scale-[0.98]"
+                                            style={{ background: "var(--accent)", color: "white" }}
+                                        >
+                                            <Zap size={15} />
+                                            지금 콘텐츠 만들기
+                                            <ArrowRight size={15} />
+                                        </button>
+                                    ) : (
+                                        <button
+                                            disabled={!canAfford || isBuying}
+                                            onClick={() => handlePurchase(product)}
+                                            className="w-full py-3 rounded-xl flex items-center justify-center gap-2 font-bold text-sm transition-all active:scale-[0.98] disabled:cursor-not-allowed"
+                                            style={{
+                                                background: canAfford ? "var(--foreground)" : "var(--surface-2)",
+                                                color: canAfford ? "var(--background)" : "var(--foreground-muted)",
+                                            }}
+                                        >
+                                            {isBuying ? (
+                                                <><Loader2 size={15} className="animate-spin" /> 구매 중...</>
+                                            ) : canAfford ? (
+                                                <>구매 및 실습 등록 <ArrowRight size={15} /></>
+                                            ) : (
+                                                <><AlertCircle size={15} /> 잔액 부족 (₩{(product.price - balance).toLocaleString()} 부족)</>
+                                            )}
+                                        </button>
+                                    )}
                                 </div>
                             </GlassCard>
                         );
