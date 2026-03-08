@@ -39,6 +39,12 @@ export default function UploadModal() {
         user
     } = useGameStore();
     const [uploadType, setUploadType] = useState<"post" | "video">("post");
+    const [currentWeek, setCurrentWeek] = useState<number>(1);
+
+    useEffect(() => {
+        supabase.from("app_settings").select("current_week").eq("id", 1).single()
+            .then(({ data }) => { if (data?.current_week) setCurrentWeek(data.current_week); });
+    }, []);
     const [challengeMode, setChallengeMode] = useState(false);
     const todayChallenge = getTodayChallenge();
     const [caption, setCaption] = useState("");
@@ -180,6 +186,7 @@ export default function UploadModal() {
                 shares: 0,
                 engagement_rate: "0%",
                 sales: uploadType === "post" ? "₩0" : null,
+                week: currentWeek,
             }).select().single();
 
             if (error || !inserted) {
@@ -380,12 +387,18 @@ export default function UploadModal() {
                             <Sparkles size={20} className="text-primary" />
                             {isMissionMode ? "주간 미션 게시물 생성" : "새 게시물 생성"}
                         </h3>
-                        {isMissionMode && (
-                            <div className="flex items-center gap-1.5">
-                                <span className="w-1.5 h-1.5 bg-primary rounded-full animate-pulse" />
-                                <span className="text-[10px] font-bold text-primary uppercase tracking-widest">Weekly Mission Mode</span>
+                        <div className="flex items-center gap-2">
+                            {isMissionMode && (
+                                <div className="flex items-center gap-1.5">
+                                    <span className="w-1.5 h-1.5 bg-primary rounded-full animate-pulse" />
+                                    <span className="text-[10px] font-bold text-primary uppercase tracking-widest">Weekly Mission Mode</span>
+                                </div>
+                            )}
+                            <div className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold"
+                                style={{ background: "var(--surface-2)", color: "var(--foreground-muted)" }}>
+                                📅 {currentWeek}주차
                             </div>
-                        )}
+                        </div>
                     </div>
                     <button onClick={onClose} className="p-2 hover:bg-foreground/5 rounded-full transition-colors">
                         <X size={20} className="text-foreground/40" />

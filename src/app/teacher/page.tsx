@@ -68,7 +68,7 @@ interface StudentProfile {
     points: number;
 }
 
-type Tab = "class" | "feed" | "mission" | "shop" | "reward";
+type Tab = "class" | "feed" | "mission" | "shop" | "reward" | "weekly";
 
 /* ─────────────────── PIN 화면 ─────────────────── */
 function PinScreen({ onAuth }: { onAuth: () => void }) {
@@ -450,6 +450,7 @@ function Dashboard({ onLogout }: { onLogout: () => void }) {
 
     const tabs: { id: Tab; label: string; emoji: string }[] = [
         { id: "class", label: "수업 현황", emoji: "🎓" },
+        { id: "weekly", label: "주차별 결과", emoji: "📊" },
         { id: "feed", label: "피드 모니터링", emoji: "📱" },
         { id: "mission", label: "미션 관리", emoji: "🏆" },
         { id: "shop", label: "상품 관리", emoji: "🛍️" },
@@ -982,6 +983,11 @@ function Dashboard({ onLogout }: { onLogout: () => void }) {
                             </div>
                         )}
                     </div>
+                )}
+
+                {/* ══════════ TAB: 주차별 결과 ══════════ */}
+                {activeTab === "weekly" && (
+                    <WeeklyResultsTab />
                 )}
 
                 {/* ══════════ TAB 2: 피드 모니터링 ══════════ */}
@@ -1803,6 +1809,7 @@ function RewardManageTab() {
     const [saving, setSaving] = useState(false);
     const [showForm, setShowForm] = useState(false);
     const [form, setForm] = useState(EMPTY_REWARD_FORM);
+    const [editingId, setEditingId] = useState<string | null>(null);
     const [activeSection, setActiveSection] = useState<"items" | "history">("items");
 
     useEffect(() => {
@@ -1828,16 +1835,38 @@ function RewardManageTab() {
             type: form.type,
             cost_points: Number(form.cost_points) || 500,
             quantity_limit: form.quantity_limit === "" ? null : Number(form.quantity_limit),
-            quantity_used: 0,
-            is_active: true,
         };
-        const { data, error } = await supabase.from("reward_items").insert(payload).select().single();
-        if (!error && data) {
-            setItems(prev => [...prev, data]);
-            setForm(EMPTY_REWARD_FORM);
-            setShowForm(false);
+
+        if (editingId) {
+            const { data, error } = await supabase.from("reward_items").update(payload).eq("id", editingId).select().single();
+            if (!error && data) {
+                setItems(prev => prev.map(i => i.id === editingId ? data : i));
+                setForm(EMPTY_REWARD_FORM);
+                setEditingId(null);
+                setShowForm(false);
+            }
+        } else {
+            const { data, error } = await supabase.from("reward_items").insert({ ...payload, quantity_used: 0, is_active: true }).select().single();
+            if (!error && data) {
+                setItems(prev => [...prev, data]);
+                setForm(EMPTY_REWARD_FORM);
+                setShowForm(false);
+            }
         }
         setSaving(false);
+    };
+
+    const handleEdit = (item: RewardItem) => {
+        setForm({
+            name: item.name,
+            description: item.description,
+            icon: item.icon,
+            type: item.type,
+            cost_points: item.cost_points,
+            quantity_limit: item.quantity_limit ?? "",
+        });
+        setEditingId(item.id);
+        setShowForm(true);
     };
 
     const handleToggle = async (item: RewardItem) => {
@@ -1875,18 +1904,22 @@ function RewardManageTab() {
                 <div className="flex flex-col gap-4">
                     {/* 추가 버튼 */}
                     <button
-                        onClick={() => setShowForm(v => !v)}
+                        onClick={() => {
+                            setForm(EMPTY_REWARD_FORM);
+                            setEditingId(null);
+                            setShowForm(v => !v);
+                        }}
                         className="flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-sm w-fit"
                         style={{ background: "var(--primary)", color: "white" }}
                     >
                         <Plus size={16} /> 새 리워드 아이템 추가
                     </button>
 
-                    {/* 추가 폼 */}
+                    {/* 추가/수정 폼 */}
                     {showForm && (
                         <div className="p-5 rounded-2xl flex flex-col gap-4"
                             style={{ background: "var(--surface-2)", border: "1px solid var(--border)" }}>
-                            <h3 className="text-sm font-black">새 리워드 아이템</h3>
+                            <h3 className="text-sm font-black">{editingId ? "리워드 아이템 수정" : "새 리워드 아이템"}</h3>
                             <div className="grid grid-cols-2 gap-3">
                                 <div className="flex flex-col gap-1">
                                     <label className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "var(--foreground-muted)" }}>아이콘 (이모지)</label>
@@ -1939,7 +1972,7 @@ function RewardManageTab() {
                                     style={{ background: "var(--primary)" }}>
                                     {saving ? "저장 중..." : "저장"}
                                 </button>
-                                <button onClick={() => setShowForm(false)}
+                                <button onClick={() => { setShowForm(false); setEditingId(null); setForm(EMPTY_REWARD_FORM); }}
                                     className="px-4 py-2.5 rounded-xl text-sm font-bold"
                                     style={{ background: "var(--surface)", color: "var(--foreground-muted)" }}>
                                     취소
@@ -1988,6 +2021,11 @@ function RewardManageTab() {
                                             }}>
                                             {item.is_active ? "활성" : "비활성"}
                                         </button>
+                                        <button onClick={() => handleEdit(item)}
+                                            className="p-1.5 rounded-lg transition-colors hover:bg-blue-50"
+                                            style={{ color: "var(--secondary)" }}>
+                                            <Pencil size={14} />
+                                        </button>
                                         <button onClick={() => handleDelete(item.id)}
                                             className="p-1.5 rounded-lg transition-colors hover:bg-red-50"
                                             style={{ color: "var(--foreground-muted)" }}>
@@ -2030,6 +2068,178 @@ function RewardManageTab() {
                     )}
                 </div>
             )}
+        </div>
+    );
+}
+
+/* ─────────────────── 주차별 결과 탭 ─────────────────── */
+interface WeekPost {
+    id: string;
+    user_name: string;
+    caption: string | null;
+    description: string | null;
+    image_url: string | null;
+    likes: number;
+    engagement_rate: string;
+    sales: string | null;
+    created_at: string;
+    week: number | null;
+}
+
+function WeeklyResultsTab() {
+    const [currentWeek, setCurrentWeekState] = useState<number>(1);
+    const [viewWeek, setViewWeek] = useState<number>(1);
+    const [posts, setPosts] = useState<WeekPost[]>([]);
+    const [postsLoading, setPostsLoading] = useState(false);
+    const [loading, setLoading] = useState(true);
+    const [saving, setSaving] = useState(false);
+    const [saved, setSaved] = useState(false);
+
+    useEffect(() => {
+        supabase.from("app_settings").select("current_week").eq("id", 1).single()
+            .then(({ data }) => {
+                if (data?.current_week) {
+                    setCurrentWeekState(data.current_week);
+                    setViewWeek(data.current_week);
+                }
+                setLoading(false);
+            });
+    }, []);
+
+    useEffect(() => {
+        setPostsLoading(true);
+        supabase.from("posts").select("*").eq("week", viewWeek).order("created_at", { ascending: false })
+            .then(({ data }) => { setPosts(data ?? []); setPostsLoading(false); });
+    }, [viewWeek]);
+
+    const handleSetCurrentWeek = async (w: number) => {
+        setSaving(true);
+        await supabase.from("app_settings").update({ current_week: w }).eq("id", 1);
+        setCurrentWeekState(w);
+        setSaving(false);
+        setSaved(true);
+        setTimeout(() => setSaved(false), 2000);
+    };
+
+    if (loading) return (
+        <div className="flex justify-center py-20">
+            <Loader2 size={24} className="animate-spin" style={{ color: "var(--primary)" }} />
+        </div>
+    );
+
+    const windowStart = Math.max(1, currentWeek - 2);
+
+    return (
+        <div className="flex flex-col gap-6">
+            {/* 현재 주차 제어 */}
+            <div className="p-5 rounded-2xl flex flex-col gap-4"
+                style={{ background: "var(--surface-2)", border: "1px solid var(--border)" }}>
+                <div className="flex items-center justify-between">
+                    <div>
+                        <p className="text-xs font-black uppercase tracking-widest" style={{ color: "var(--foreground-muted)" }}>현재 수업 주차</p>
+                        <p className="text-3xl font-black mt-1" style={{ color: "var(--primary)" }}>{currentWeek}주차</p>
+                        <p className="text-xs mt-0.5" style={{ color: "var(--foreground-muted)" }}>학생 업로드 시 이 주차가 자동 태그됩니다</p>
+                    </div>
+                    {saved && (
+                        <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold text-white"
+                            style={{ background: "var(--accent)" }}>
+                            <CheckCircle2 size={13} /> 저장됨
+                        </div>
+                    )}
+                </div>
+                <div className="flex items-center gap-2">
+                    <button onClick={() => handleSetCurrentWeek(Math.max(1, currentWeek - 1))}
+                        disabled={saving || currentWeek <= 1}
+                        className="p-2 rounded-xl disabled:opacity-30"
+                        style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
+                        <ChevronLeft size={18} />
+                    </button>
+                    <div className="flex-1 flex gap-1.5">
+                        {Array.from({ length: 5 }, (_, i) => windowStart + i).filter(w => w <= 29).map(w => (
+                            <button key={w} onClick={() => handleSetCurrentWeek(w)} disabled={saving}
+                                className="flex-1 py-2 rounded-xl text-sm font-black transition-all"
+                                style={{
+                                    background: w === currentWeek ? "var(--primary)" : "var(--surface)",
+                                    color: w === currentWeek ? "white" : "var(--foreground-muted)",
+                                    border: "1px solid var(--border)",
+                                }}>
+                                {w}주
+                            </button>
+                        ))}
+                    </div>
+                    <button onClick={() => handleSetCurrentWeek(Math.min(29, currentWeek + 1))}
+                        disabled={saving || currentWeek >= 29}
+                        className="p-2 rounded-xl disabled:opacity-30"
+                        style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
+                        <ChevronRight size={18} />
+                    </button>
+                </div>
+            </div>
+
+            {/* 주차별 결과 조회 */}
+            <div className="flex flex-col gap-4">
+                <div className="flex items-center justify-between flex-wrap gap-2">
+                    <p className="text-sm font-black" style={{ color: "var(--foreground)" }}>
+                        {viewWeek}주차 업로드 결과
+                        <span className="ml-2 text-xs font-bold px-2 py-0.5 rounded-full"
+                            style={{ background: "var(--surface-2)", color: "var(--foreground-muted)" }}>
+                            총 {posts.length}개
+                        </span>
+                    </p>
+                    <div className="flex gap-1">
+                        {Array.from({ length: 5 }, (_, i) => windowStart + i).filter(w => w <= 29).map(w => (
+                            <button key={w} onClick={() => setViewWeek(w)}
+                                className="px-2.5 py-1 rounded-lg text-xs font-bold transition-all"
+                                style={{
+                                    background: w === viewWeek ? "var(--secondary)" : "var(--surface-2)",
+                                    color: w === viewWeek ? "white" : "var(--foreground-muted)",
+                                }}>
+                                {w}주
+                            </button>
+                        ))}
+                    </div>
+                </div>
+
+                {postsLoading ? (
+                    <div className="flex justify-center py-10">
+                        <Loader2 size={20} className="animate-spin" style={{ color: "var(--primary)" }} />
+                    </div>
+                ) : posts.length === 0 ? (
+                    <div className="text-center py-16 flex flex-col items-center gap-3">
+                        <BarChart2 size={36} style={{ color: "var(--foreground-muted)" }} />
+                        <p className="text-sm font-semibold" style={{ color: "var(--foreground-muted)" }}>
+                            {viewWeek}주차에 업로드된 게시물이 없어요
+                        </p>
+                    </div>
+                ) : (
+                    <div className="flex flex-col gap-2">
+                        {posts.map(post => (
+                            <div key={post.id} className="flex items-start gap-3 p-4 rounded-xl"
+                                style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
+                                {post.image_url && (
+                                    <img src={post.image_url} alt="" className="w-14 h-14 rounded-xl object-cover shrink-0" />
+                                )}
+                                <div className="flex-1 min-w-0">
+                                    <p className="text-[10px] font-black mb-0.5" style={{ color: "var(--foreground-muted)" }}>{post.user_name}</p>
+                                    <p className="text-xs font-bold line-clamp-2" style={{ color: "var(--foreground)" }}>
+                                        {post.caption ?? post.description ?? "—"}
+                                    </p>
+                                    <div className="flex items-center gap-3 mt-1.5">
+                                        <span className="text-[10px] font-bold" style={{ color: "var(--primary)" }}>❤️ {post.likes}</span>
+                                        <span className="text-[10px] font-bold" style={{ color: "var(--secondary)" }}>📈 {post.engagement_rate}</span>
+                                        {post.sales && post.sales !== "₩0" && (
+                                            <span className="text-[10px] font-bold" style={{ color: "var(--accent)" }}>💰 {post.sales}</span>
+                                        )}
+                                        <span className="text-[9px]" style={{ color: "var(--foreground-muted)" }}>
+                                            {new Date(post.created_at).toLocaleString("ko-KR", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </div>
         </div>
     );
 }
