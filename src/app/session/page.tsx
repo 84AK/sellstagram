@@ -39,6 +39,7 @@ export default function SessionPage() {
     const [showReport, setShowReport] = useState(false);
     const [teamMembers, setTeamMembers] = useState<{ name: string; avatar: string }[]>([]);
     const [loadingTeam, setLoadingTeam] = useState(true);
+    const [previewAllowed, setPreviewAllowed] = useState(false);
 
     useEffect(() => {
         if (!user.team) {
@@ -55,6 +56,14 @@ export default function SessionPage() {
                 setLoadingTeam(false);
             });
     }, [user.team]);
+
+    useEffect(() => {
+        supabase.from("app_settings").select("preview_allowed").eq("id", 1).single()
+            .then(({ data }) => { if (data?.preview_allowed != null) setPreviewAllowed(data.preview_allowed); });
+    }, []);
+
+    const maxAccessibleWeek = currentWeek + (previewAllowed ? 1 : 0);
+    const isLocked = viewWeek > maxAccessibleWeek;
 
     const session = getSessionByWeek(viewWeek);
     const isCurrentSession = viewWeek === currentWeek;
@@ -124,20 +133,20 @@ export default function SessionPage() {
                                 const tc = THEME_COLORS[s.theme];
                                 const isDone = s.week < currentWeek;
                                 const isCurrent = s.week === currentWeek;
+                                const locked = s.week > maxAccessibleWeek;
                                 return (
                                     <button
                                         key={s.week}
-                                        onClick={() => { setViewWeek(s.week); setShowCurriculumMap(false); setExpandedActivity(0); }}
-                                        className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-[10px] font-bold transition-all hover:scale-105"
+                                        onClick={() => { if (!locked) { setViewWeek(s.week); setShowCurriculumMap(false); setExpandedActivity(0); } }}
+                                        disabled={locked}
+                                        className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-[10px] font-bold transition-all hover:scale-105 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100"
                                         style={{
-                                            background: isCurrent ? tc.color : isDone ? tc.bg : "var(--surface-2)",
-                                            color: isCurrent ? "white" : isDone ? tc.color : "var(--foreground-muted)",
-                                            border: isCurrent ? "none" : `1.5px solid ${isDone ? tc.color + "44" : "transparent"}`,
+                                            background: locked ? "var(--surface-2)" : isCurrent ? tc.color : isDone ? tc.bg : "var(--surface-2)",
+                                            color: locked ? "var(--foreground-muted)" : isCurrent ? "white" : isDone ? tc.color : "var(--foreground-muted)",
+                                            border: locked ? "1.5px solid transparent" : isCurrent ? "none" : `1.5px solid ${isDone ? tc.color + "44" : "transparent"}`,
                                         }}
                                     >
-                                        {isDone && <CheckCircle2 size={9} />}
-                                        {isCurrent && <Play size={9} />}
-                                        {!isDone && !isCurrent && <Lock size={9} />}
+                                        {locked ? <Lock size={9} /> : isDone ? <CheckCircle2 size={9} /> : isCurrent ? <Play size={9} /> : <Lock size={9} />}
                                         {s.week}회
                                     </button>
                                 );
@@ -216,7 +225,7 @@ export default function SessionPage() {
 
                 <button
                     onClick={() => { setViewWeek((w) => Math.min(29, w + 1)); setExpandedActivity(0); }}
-                    disabled={viewWeek >= 29}
+                    disabled={viewWeek >= 29 || viewWeek >= maxAccessibleWeek}
                     className="w-9 h-9 rounded-xl flex items-center justify-center transition-all disabled:opacity-30"
                     style={{ background: "var(--surface-2)" }}
                 >
@@ -298,6 +307,33 @@ export default function SessionPage() {
                 )}
             </div>
 
+            {/* ── 잠금 오버레이 ── */}
+            {isLocked && (
+                <div
+                    className="rounded-2xl p-8 flex flex-col items-center gap-4 text-center"
+                    style={{ background: "var(--surface)", border: "2px dashed var(--border)" }}
+                >
+                    <div className="w-16 h-16 rounded-2xl flex items-center justify-center"
+                        style={{ background: "var(--surface-2)" }}>
+                        <Lock size={28} style={{ color: "var(--foreground-muted)" }} />
+                    </div>
+                    <div>
+                        <p className="text-base font-black mb-1" style={{ color: "var(--foreground)" }}>
+                            {viewWeek}회차 수업은 아직 잠겨 있어요
+                        </p>
+                        <p className="text-sm" style={{ color: "var(--foreground-soft)" }}>
+                            선생님이 수업을 진행하면 자동으로 공개됩니다
+                        </p>
+                    </div>
+                    <div className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold"
+                        style={{ background: "var(--surface-2)", color: "var(--foreground-muted)" }}>
+                        <GraduationCap size={13} />
+                        현재 {currentWeek}회차 수업 진행 중
+                    </div>
+                </div>
+            )}
+
+            {!isLocked && <>
             {/* ── 학습 목표 ── */}
             <div
                 className="rounded-2xl p-4"
@@ -497,6 +533,8 @@ export default function SessionPage() {
                     <ChevronRight size={16} style={{ color: "var(--secondary)" }} />
                 </button>
             )}
+
+            </>}
 
             {/* ── 팀 현황 미니 ── */}
             <div

@@ -35,6 +35,7 @@ import {
     ChevronDown,
     Pencil,
     Image as ImageIcon,
+    BookOpen,
 } from "lucide-react";
 import { useGameStore } from "@/store/useGameStore";
 import { getSessionByWeek, THEME_COLORS } from "@/lib/curriculum/sessions";
@@ -197,6 +198,8 @@ function Dashboard({ onLogout }: { onLogout: () => void }) {
     const [activeTab, setActiveTab] = useState<Tab>("class");
     const [classActive, setClassActive] = useState(false);
     const [classActiveLoading, setClassActiveLoading] = useState(false);
+    const [previewAllowed, setPreviewAllowed] = useState(false);
+    const [previewLoading, setPreviewLoading] = useState(false);
     const [showResetConfirm, setShowResetConfirm] = useState(false);
     const [initialBalance, setInitialBalance] = useState(1000000);
     const [balanceInput, setBalanceInput] = useState("1000000");
@@ -408,14 +411,31 @@ function Dashboard({ onLogout }: { onLogout: () => void }) {
         setClassActiveLoading(false);
     };
 
+    // 예습 허용 토글
+    const handlePreviewToggle = async () => {
+        setPreviewLoading(true);
+        const next = !previewAllowed;
+        const { error } = await supabase
+            .from("app_settings")
+            .update({ preview_allowed: next, updated_at: new Date().toISOString() })
+            .eq("id", 1);
+        if (!error) setPreviewAllowed(next);
+        setPreviewLoading(false);
+    };
+
     useEffect(() => {
         loadTeamStats();
         loadStudents();
         loadMissionsFromDB();
 
-        // 수업 상태 로드
-        supabase.from("app_settings").select("class_active").eq("id", 1).single()
-            .then(({ data }) => { if (data) setClassActive(data.class_active); });
+        // 수업 상태 + 예습 허용 로드
+        supabase.from("app_settings").select("class_active, preview_allowed").eq("id", 1).single()
+            .then(({ data }) => {
+                if (data) {
+                    setClassActive(data.class_active);
+                    if (data.preview_allowed != null) setPreviewAllowed(data.preview_allowed);
+                }
+            });
 
         // 초기 잔액 로드
         supabase.from("game_state").select("initial_balance").eq("id", 1).single()
@@ -478,6 +498,21 @@ function Dashboard({ onLogout }: { onLogout: () => void }) {
                 </div>
 
                 <div className="flex items-center gap-3">
+                    {/* 예습 허용 */}
+                    <button
+                        onClick={handlePreviewToggle}
+                        disabled={previewLoading}
+                        className="flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-sm transition-all disabled:opacity-60"
+                        style={{
+                            background: previewAllowed ? "var(--highlight-light)" : "var(--surface-2)",
+                            color: previewAllowed ? "#D97706" : "var(--foreground-muted)",
+                            border: previewAllowed ? "1.5px solid #FFC233" : "1.5px solid transparent",
+                        }}
+                    >
+                        <BookOpen size={14} />
+                        {previewLoading ? "저장 중..." : previewAllowed ? "예습 허용 ON" : "예습 허용 OFF"}
+                    </button>
+
                     {/* 수업 상태 */}
                     <button
                         onClick={handleClassToggle}
