@@ -16,6 +16,7 @@ import {
     LogOut,
     Globe,
     PlayCircle,
+    Gift,
 } from "lucide-react";
 import ThemeToggle from "@/components/common/ThemeToggle";
 import { useGameStore } from "@/store/useGameStore";
@@ -66,6 +67,14 @@ const navItems = [
         icon: ShoppingBag,
         activeColor: "#FF6B35",
         activeBg: "var(--primary-light)",
+    },
+    {
+        name: "리워드 마켓",
+        href: "/rewards",
+        icon: Gift,
+        activeColor: "#FFC233",
+        activeBg: "rgba(255,194,51,0.12)",
+        badge: "NEW",
     },
     {
         name: "프로필",

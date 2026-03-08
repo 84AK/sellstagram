@@ -68,7 +68,7 @@ interface StudentProfile {
     points: number;
 }
 
-type Tab = "class" | "feed" | "mission" | "shop";
+type Tab = "class" | "feed" | "mission" | "shop" | "reward";
 
 /* ─────────────────── PIN 화면 ─────────────────── */
 function PinScreen({ onAuth }: { onAuth: () => void }) {
@@ -453,6 +453,7 @@ function Dashboard({ onLogout }: { onLogout: () => void }) {
         { id: "feed", label: "피드 모니터링", emoji: "📱" },
         { id: "mission", label: "미션 관리", emoji: "🏆" },
         { id: "shop", label: "상품 관리", emoji: "🛍️" },
+        { id: "reward", label: "리워드 관리", emoji: "🎁" },
     ];
 
     return (
@@ -1408,6 +1409,11 @@ function Dashboard({ onLogout }: { onLogout: () => void }) {
                     <ShopManageTab />
                 )}
 
+                {/* ══════════ TAB 5: 리워드 관리 ══════════ */}
+                {activeTab === "reward" && (
+                    <RewardManageTab />
+                )}
+
             </div>
         </div>
     );
@@ -1756,4 +1762,274 @@ export default function TeacherPage() {
     }
 
     return <Dashboard onLogout={handleLogout} />;
+}
+
+/* ─────────────────── 리워드 관리 탭 컴포넌트 ─────────────────── */
+interface RewardItem {
+    id: string;
+    name: string;
+    description: string;
+    icon: string;
+    type: string;
+    cost_points: number;
+    quantity_limit: number | null;
+    quantity_used: number;
+    is_active: boolean;
+}
+
+interface RewardPurchase {
+    id: string;
+    user_name: string;
+    item_name: string;
+    purchased_at: string;
+}
+
+const REWARD_TYPES = [
+    { value: "virtual", label: "🌟 가상 아이템" },
+    { value: "frame",   label: "👑 프로필 프레임" },
+    { value: "boost",   label: "⚡ 피드 부스트" },
+    { value: "real",    label: "🎫 실물 보상 (선생님 설정)" },
+];
+
+const EMPTY_REWARD_FORM = {
+    name: "", description: "", icon: "🎁", type: "real",
+    cost_points: 500, quantity_limit: "" as string | number,
+};
+
+function RewardManageTab() {
+    const [items, setItems] = useState<RewardItem[]>([]);
+    const [purchases, setPurchases] = useState<RewardPurchase[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [saving, setSaving] = useState(false);
+    const [showForm, setShowForm] = useState(false);
+    const [form, setForm] = useState(EMPTY_REWARD_FORM);
+    const [activeSection, setActiveSection] = useState<"items" | "history">("items");
+
+    useEffect(() => {
+        const load = async () => {
+            const [{ data: rewardItems }, { data: purchaseHistory }] = await Promise.all([
+                supabase.from("reward_items").select("*").order("cost_points"),
+                supabase.from("reward_purchases").select("*").order("purchased_at", { ascending: false }).limit(50),
+            ]);
+            setItems(rewardItems ?? []);
+            setPurchases(purchaseHistory ?? []);
+            setLoading(false);
+        };
+        load();
+    }, []);
+
+    const handleSave = async () => {
+        if (!form.name.trim()) return;
+        setSaving(true);
+        const payload = {
+            name: form.name,
+            description: form.description,
+            icon: form.icon || "🎁",
+            type: form.type,
+            cost_points: Number(form.cost_points) || 500,
+            quantity_limit: form.quantity_limit === "" ? null : Number(form.quantity_limit),
+            quantity_used: 0,
+            is_active: true,
+        };
+        const { data, error } = await supabase.from("reward_items").insert(payload).select().single();
+        if (!error && data) {
+            setItems(prev => [...prev, data]);
+            setForm(EMPTY_REWARD_FORM);
+            setShowForm(false);
+        }
+        setSaving(false);
+    };
+
+    const handleToggle = async (item: RewardItem) => {
+        await supabase.from("reward_items").update({ is_active: !item.is_active }).eq("id", item.id);
+        setItems(prev => prev.map(i => i.id === item.id ? { ...i, is_active: !i.is_active } : i));
+    };
+
+    const handleDelete = async (id: string) => {
+        if (!confirm("이 리워드 아이템을 삭제할까요?")) return;
+        await supabase.from("reward_items").delete().eq("id", id);
+        setItems(prev => prev.filter(i => i.id !== id));
+    };
+
+    return (
+        <div className="flex flex-col gap-5">
+            {/* 섹션 토글 */}
+            <div className="flex gap-1 p-1 rounded-xl w-fit" style={{ background: "var(--surface-2)" }}>
+                {([["items", "🎁 아이템 관리"], ["history", "📋 구매 내역"]] as const).map(([key, label]) => (
+                    <button
+                        key={key}
+                        onClick={() => setActiveSection(key)}
+                        className="px-4 py-1.5 rounded-lg text-xs font-bold transition-all"
+                        style={{
+                            background: activeSection === key ? "var(--background)" : "transparent",
+                            color: activeSection === key ? "var(--foreground)" : "var(--foreground-muted)",
+                        }}
+                    >
+                        {label}
+                    </button>
+                ))}
+            </div>
+
+            {/* 아이템 관리 */}
+            {activeSection === "items" && (
+                <div className="flex flex-col gap-4">
+                    {/* 추가 버튼 */}
+                    <button
+                        onClick={() => setShowForm(v => !v)}
+                        className="flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-sm w-fit"
+                        style={{ background: "var(--primary)", color: "white" }}
+                    >
+                        <Plus size={16} /> 새 리워드 아이템 추가
+                    </button>
+
+                    {/* 추가 폼 */}
+                    {showForm && (
+                        <div className="p-5 rounded-2xl flex flex-col gap-4"
+                            style={{ background: "var(--surface-2)", border: "1px solid var(--border)" }}>
+                            <h3 className="text-sm font-black">새 리워드 아이템</h3>
+                            <div className="grid grid-cols-2 gap-3">
+                                <div className="flex flex-col gap-1">
+                                    <label className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "var(--foreground-muted)" }}>아이콘 (이모지)</label>
+                                    <input value={form.icon} onChange={e => setForm(p => ({ ...p, icon: e.target.value }))}
+                                        className="p-2.5 rounded-xl text-sm outline-none text-center text-2xl"
+                                        style={{ background: "var(--surface)", border: "1px solid var(--border)" }} maxLength={4} />
+                                </div>
+                                <div className="flex flex-col gap-1">
+                                    <label className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "var(--foreground-muted)" }}>타입</label>
+                                    <select value={form.type} onChange={e => setForm(p => ({ ...p, type: e.target.value }))}
+                                        className="p-2.5 rounded-xl text-sm outline-none"
+                                        style={{ background: "var(--surface)", border: "1px solid var(--border)", color: "var(--foreground)" }}>
+                                        {REWARD_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+                                    </select>
+                                </div>
+                            </div>
+                            <div className="flex flex-col gap-1">
+                                <label className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "var(--foreground-muted)" }}>아이템 이름</label>
+                                <input value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))}
+                                    placeholder="예) 발표 면제권, 골드 프레임..."
+                                    className="p-2.5 rounded-xl text-sm outline-none"
+                                    style={{ background: "var(--surface)", border: "1px solid var(--border)", color: "var(--foreground)" }} />
+                            </div>
+                            <div className="flex flex-col gap-1">
+                                <label className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "var(--foreground-muted)" }}>설명</label>
+                                <textarea value={form.description} onChange={e => setForm(p => ({ ...p, description: e.target.value }))}
+                                    placeholder="이 리워드로 무엇을 얻을 수 있는지 설명해주세요"
+                                    rows={2} className="p-2.5 rounded-xl text-sm outline-none resize-none"
+                                    style={{ background: "var(--surface)", border: "1px solid var(--border)", color: "var(--foreground)" }} />
+                            </div>
+                            <div className="grid grid-cols-2 gap-3">
+                                <div className="flex flex-col gap-1">
+                                    <label className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "var(--foreground-muted)" }}>필요 포인트</label>
+                                    <input type="number" value={form.cost_points} onChange={e => setForm(p => ({ ...p, cost_points: Number(e.target.value) }))}
+                                        className="p-2.5 rounded-xl text-sm outline-none"
+                                        style={{ background: "var(--surface)", border: "1px solid var(--border)", color: "var(--foreground)" }} />
+                                </div>
+                                <div className="flex flex-col gap-1">
+                                    <label className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "var(--foreground-muted)" }}>수량 제한 (없으면 빈칸)</label>
+                                    <input type="number" value={form.quantity_limit}
+                                        onChange={e => setForm(p => ({ ...p, quantity_limit: e.target.value }))}
+                                        placeholder="무제한"
+                                        className="p-2.5 rounded-xl text-sm outline-none"
+                                        style={{ background: "var(--surface)", border: "1px solid var(--border)", color: "var(--foreground)" }} />
+                                </div>
+                            </div>
+                            <div className="flex gap-2">
+                                <button onClick={handleSave} disabled={saving || !form.name.trim()}
+                                    className="flex-1 py-2.5 rounded-xl text-sm font-bold text-white disabled:opacity-50"
+                                    style={{ background: "var(--primary)" }}>
+                                    {saving ? "저장 중..." : "저장"}
+                                </button>
+                                <button onClick={() => setShowForm(false)}
+                                    className="px-4 py-2.5 rounded-xl text-sm font-bold"
+                                    style={{ background: "var(--surface)", color: "var(--foreground-muted)" }}>
+                                    취소
+                                </button>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* 아이템 목록 */}
+                    {loading ? (
+                        <div className="flex justify-center py-10"><Loader2 size={24} className="animate-spin" style={{ color: "var(--primary)" }} /></div>
+                    ) : items.length === 0 ? (
+                        <div className="text-center py-12">
+                            <p className="text-sm font-semibold" style={{ color: "var(--foreground-muted)" }}>등록된 리워드 아이템이 없어요</p>
+                            <p className="text-xs mt-1" style={{ color: "var(--foreground-muted)" }}>위 버튼으로 첫 번째 아이템을 추가해보세요</p>
+                        </div>
+                    ) : (
+                        <div className="flex flex-col gap-2">
+                            {items.map(item => (
+                                <div key={item.id} className="flex items-center gap-3 p-4 rounded-xl"
+                                    style={{ background: "var(--surface)", border: "1px solid var(--border)", opacity: item.is_active ? 1 : 0.5 }}>
+                                    <span className="text-2xl shrink-0">{item.icon}</span>
+                                    <div className="flex-1 min-w-0">
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-sm font-black truncate" style={{ color: "var(--foreground)" }}>{item.name}</span>
+                                            <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full shrink-0"
+                                                style={{ background: "var(--surface-2)", color: "var(--foreground-muted)" }}>
+                                                {REWARD_TYPES.find(t => t.value === item.type)?.label ?? item.type}
+                                            </span>
+                                        </div>
+                                        <div className="flex items-center gap-3 mt-0.5">
+                                            <span className="text-[10px] font-bold" style={{ color: "var(--highlight)" }}>{item.cost_points.toLocaleString()}P</span>
+                                            {item.quantity_limit !== null && (
+                                                <span className="text-[10px]" style={{ color: "var(--foreground-muted)" }}>
+                                                    {item.quantity_used}/{item.quantity_limit}개 판매됨
+                                                </span>
+                                            )}
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-1.5 shrink-0">
+                                        <button onClick={() => handleToggle(item)}
+                                            className="px-2.5 py-1.5 rounded-lg text-[10px] font-bold transition-all"
+                                            style={{
+                                                background: item.is_active ? "rgba(6,214,160,0.12)" : "var(--surface-2)",
+                                                color: item.is_active ? "var(--accent)" : "var(--foreground-muted)",
+                                            }}>
+                                            {item.is_active ? "활성" : "비활성"}
+                                        </button>
+                                        <button onClick={() => handleDelete(item.id)}
+                                            className="p-1.5 rounded-lg transition-colors hover:bg-red-50"
+                                            style={{ color: "var(--foreground-muted)" }}>
+                                            <Trash2 size={14} />
+                                        </button>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            )}
+
+            {/* 구매 내역 */}
+            {activeSection === "history" && (
+                <div className="flex flex-col gap-3">
+                    <p className="text-xs font-semibold px-1" style={{ color: "var(--foreground-muted)" }}>
+                        학생들이 구매한 리워드 내역입니다. 실물 보상은 직접 확인 후 지급해주세요.
+                    </p>
+                    {purchases.length === 0 ? (
+                        <div className="text-center py-12">
+                            <p className="text-sm font-semibold" style={{ color: "var(--foreground-muted)" }}>아직 구매 내역이 없어요</p>
+                        </div>
+                    ) : (
+                        <div className="flex flex-col gap-2">
+                            {purchases.map(p => (
+                                <div key={p.id} className="flex items-center justify-between px-4 py-3 rounded-xl"
+                                    style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
+                                    <div>
+                                        <span className="text-sm font-bold" style={{ color: "var(--foreground)" }}>{p.user_name}</span>
+                                        <span className="text-xs mx-2" style={{ color: "var(--foreground-muted)" }}>→</span>
+                                        <span className="text-sm font-semibold" style={{ color: "var(--secondary)" }}>{p.item_name}</span>
+                                    </div>
+                                    <span className="text-[10px]" style={{ color: "var(--foreground-muted)" }}>
+                                        {new Date(p.purchased_at).toLocaleString("ko-KR", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
+                                    </span>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            )}
+        </div>
+    );
 }
