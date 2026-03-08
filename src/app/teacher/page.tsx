@@ -35,10 +35,10 @@ import {
     ChevronDown,
     Pencil,
     Image as ImageIcon,
-    BookOpen,
+    Lock,
 } from "lucide-react";
 import { useGameStore } from "@/store/useGameStore";
-import { getSessionByWeek, THEME_COLORS } from "@/lib/curriculum/sessions";
+import { getSessionByWeek, THEME_COLORS, CURRICULUM } from "@/lib/curriculum/sessions";
 import { supabase, DbPost, DbProfile, DbMission } from "@/lib/supabase/client";
 
 
@@ -198,8 +198,8 @@ function Dashboard({ onLogout }: { onLogout: () => void }) {
     const [activeTab, setActiveTab] = useState<Tab>("class");
     const [classActive, setClassActive] = useState(false);
     const [classActiveLoading, setClassActiveLoading] = useState(false);
-    const [previewAllowed, setPreviewAllowed] = useState(false);
-    const [previewLoading, setPreviewLoading] = useState(false);
+    const [unlockedWeeks, setUnlockedWeeks] = useState<number[]>([]);
+    const [togglingWeek, setTogglingWeek] = useState<number | null>(null);
     const [showResetConfirm, setShowResetConfirm] = useState(false);
     const [initialBalance, setInitialBalance] = useState(1000000);
     const [balanceInput, setBalanceInput] = useState("1000000");
@@ -411,16 +411,32 @@ function Dashboard({ onLogout }: { onLogout: () => void }) {
         setClassActiveLoading(false);
     };
 
-    // 예습 허용 토글
-    const handlePreviewToggle = async () => {
-        setPreviewLoading(true);
-        const next = !previewAllowed;
+    // 회차 잠금/열기 토글
+    const handleToggleLock = async (w: number) => {
+        setTogglingWeek(w);
+        const isUnlocked = unlockedWeeks.includes(w);
+        const next = isUnlocked
+            ? unlockedWeeks.filter(v => v !== w)
+            : [...unlockedWeeks, w].sort((a, b) => a - b);
         const { error } = await supabase
             .from("app_settings")
-            .update({ preview_allowed: next, updated_at: new Date().toISOString() })
+            .update({ unlocked_weeks: next, updated_at: new Date().toISOString() })
             .eq("id", 1);
-        if (!error) setPreviewAllowed(next);
-        setPreviewLoading(false);
+        if (!error) setUnlockedWeeks(next);
+        setTogglingWeek(null);
+    };
+
+    // 전체 열기 / 전체 잠금
+    const handleUnlockAll = async () => {
+        const all = Array.from({ length: 29 }, (_, i) => i + 1);
+        const { error } = await supabase.from("app_settings")
+            .update({ unlocked_weeks: all, updated_at: new Date().toISOString() }).eq("id", 1);
+        if (!error) setUnlockedWeeks(all);
+    };
+    const handleLockAll = async () => {
+        const { error } = await supabase.from("app_settings")
+            .update({ unlocked_weeks: [], updated_at: new Date().toISOString() }).eq("id", 1);
+        if (!error) setUnlockedWeeks([]);
     };
 
     useEffect(() => {
@@ -428,12 +444,12 @@ function Dashboard({ onLogout }: { onLogout: () => void }) {
         loadStudents();
         loadMissionsFromDB();
 
-        // 수업 상태 + 예습 허용 로드
-        supabase.from("app_settings").select("class_active, preview_allowed").eq("id", 1).single()
+        // 수업 상태 + 열린 회차 로드
+        supabase.from("app_settings").select("class_active, unlocked_weeks").eq("id", 1).single()
             .then(({ data }) => {
                 if (data) {
                     setClassActive(data.class_active);
-                    if (data.preview_allowed != null) setPreviewAllowed(data.preview_allowed);
+                    if (Array.isArray(data.unlocked_weeks)) setUnlockedWeeks(data.unlocked_weeks);
                 }
             });
 
@@ -498,21 +514,6 @@ function Dashboard({ onLogout }: { onLogout: () => void }) {
                 </div>
 
                 <div className="flex items-center gap-3">
-                    {/* 예습 허용 */}
-                    <button
-                        onClick={handlePreviewToggle}
-                        disabled={previewLoading}
-                        className="flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-sm transition-all disabled:opacity-60"
-                        style={{
-                            background: previewAllowed ? "var(--highlight-light)" : "var(--surface-2)",
-                            color: previewAllowed ? "#D97706" : "var(--foreground-muted)",
-                            border: previewAllowed ? "1.5px solid #FFC233" : "1.5px solid transparent",
-                        }}
-                    >
-                        <BookOpen size={14} />
-                        {previewLoading ? "저장 중..." : previewAllowed ? "예습 허용 ON" : "예습 허용 OFF"}
-                    </button>
-
                     {/* 수업 상태 */}
                     <button
                         onClick={handleClassToggle}
@@ -728,6 +729,124 @@ function Dashboard({ onLogout }: { onLogout: () => void }) {
                                 >
                                     {isSavingBalance ? "저장 중..." : "전체 적용"}
                                 </button>
+                            </div>
+                        </div>
+
+                        {/* ── 회차 열람 관리 ── */}
+                        <div className="rounded-2xl overflow-hidden"
+                            style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
+                            <div className="px-5 py-4 flex items-center justify-between"
+                                style={{ borderBottom: "1px solid var(--border)" }}>
+                                <div>
+                                    <h3 className="text-base font-black" style={{ color: "var(--foreground)" }}>
+                                        회차 열람 관리
+                                    </h3>
+                                    <p className="text-xs mt-0.5" style={{ color: "var(--foreground-muted)" }}>
+                                        열린 회차만 학생이 볼 수 있어요 · {unlockedWeeks.length}/29 열림
+                                    </p>
+                                </div>
+                                <div className="flex gap-2">
+                                    <button onClick={handleUnlockAll}
+                                        className="text-xs font-bold px-3 py-1.5 rounded-xl transition-all hover:opacity-80"
+                                        style={{ background: "var(--accent-light)", color: "var(--accent)" }}>
+                                        전체 열기
+                                    </button>
+                                    <button onClick={handleLockAll}
+                                        className="text-xs font-bold px-3 py-1.5 rounded-xl transition-all hover:opacity-80"
+                                        style={{ background: "var(--surface-2)", color: "var(--foreground-soft)" }}>
+                                        전체 잠금
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* 1학기 */}
+                            <div className="px-5 pt-4 pb-2">
+                                <p className="text-xs font-black mb-2" style={{ color: "var(--foreground-muted)" }}>
+                                    1학기 (1~15회)
+                                </p>
+                                <div className="flex flex-col gap-1.5">
+                                    {CURRICULUM.filter(s => s.semester === 1).map(s => {
+                                        const isOpen = unlockedWeeks.includes(s.week);
+                                        const isToggling = togglingWeek === s.week;
+                                        const tc = THEME_COLORS[s.theme];
+                                        return (
+                                            <div key={s.week}
+                                                className="flex items-center gap-3 px-3 py-2.5 rounded-xl"
+                                                style={{
+                                                    background: isOpen ? `${tc.color}10` : "var(--surface-2)",
+                                                    border: `1px solid ${isOpen ? tc.color + "33" : "transparent"}`,
+                                                }}>
+                                                <span className="text-xs font-black w-10 shrink-0"
+                                                    style={{ color: isOpen ? tc.color : "var(--foreground-muted)" }}>
+                                                    {s.week}회
+                                                </span>
+                                                <span className="flex-1 text-xs font-semibold truncate"
+                                                    style={{ color: isOpen ? "var(--foreground)" : "var(--foreground-muted)" }}>
+                                                    {s.title}
+                                                </span>
+                                                <button
+                                                    onClick={() => handleToggleLock(s.week)}
+                                                    disabled={isToggling}
+                                                    className="shrink-0 flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold transition-all hover:opacity-80 disabled:opacity-40"
+                                                    style={{
+                                                        background: isOpen ? tc.color : "var(--border)",
+                                                        color: isOpen ? "white" : "var(--foreground-muted)",
+                                                    }}>
+                                                    {isToggling
+                                                        ? <Loader2 size={11} className="animate-spin" />
+                                                        : isOpen ? <><CheckCircle2 size={11} /> 열람</>
+                                                                 : <><Lock size={11} /> 잠김</>
+                                                    }
+                                                </button>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+
+                            {/* 2학기 */}
+                            <div className="px-5 pt-2 pb-4">
+                                <p className="text-xs font-black mb-2" style={{ color: "var(--foreground-muted)" }}>
+                                    2학기 (16~29회)
+                                </p>
+                                <div className="flex flex-col gap-1.5">
+                                    {CURRICULUM.filter(s => s.semester === 2).map(s => {
+                                        const isOpen = unlockedWeeks.includes(s.week);
+                                        const isToggling = togglingWeek === s.week;
+                                        const tc = THEME_COLORS[s.theme];
+                                        return (
+                                            <div key={s.week}
+                                                className="flex items-center gap-3 px-3 py-2.5 rounded-xl"
+                                                style={{
+                                                    background: isOpen ? `${tc.color}10` : "var(--surface-2)",
+                                                    border: `1px solid ${isOpen ? tc.color + "33" : "transparent"}`,
+                                                }}>
+                                                <span className="text-xs font-black w-10 shrink-0"
+                                                    style={{ color: isOpen ? tc.color : "var(--foreground-muted)" }}>
+                                                    {s.week}회
+                                                </span>
+                                                <span className="flex-1 text-xs font-semibold truncate"
+                                                    style={{ color: isOpen ? "var(--foreground)" : "var(--foreground-muted)" }}>
+                                                    {s.title}
+                                                </span>
+                                                <button
+                                                    onClick={() => handleToggleLock(s.week)}
+                                                    disabled={isToggling}
+                                                    className="shrink-0 flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold transition-all hover:opacity-80 disabled:opacity-40"
+                                                    style={{
+                                                        background: isOpen ? tc.color : "var(--border)",
+                                                        color: isOpen ? "white" : "var(--foreground-muted)",
+                                                    }}>
+                                                    {isToggling
+                                                        ? <Loader2 size={11} className="animate-spin" />
+                                                        : isOpen ? <><CheckCircle2 size={11} /> 열람</>
+                                                                 : <><Lock size={11} /> 잠김</>
+                                                    }
+                                                </button>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
                             </div>
                         </div>
 

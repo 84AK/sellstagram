@@ -39,7 +39,7 @@ export default function SessionPage() {
     const [showReport, setShowReport] = useState(false);
     const [teamMembers, setTeamMembers] = useState<{ name: string; avatar: string }[]>([]);
     const [loadingTeam, setLoadingTeam] = useState(true);
-    const [previewAllowed, setPreviewAllowed] = useState(false);
+    const [unlockedWeeks, setUnlockedWeeks] = useState<number[]>([]);
 
     useEffect(() => {
         if (!user.team) {
@@ -58,12 +58,11 @@ export default function SessionPage() {
     }, [user.team]);
 
     useEffect(() => {
-        supabase.from("app_settings").select("preview_allowed").eq("id", 1).single()
-            .then(({ data }) => { if (data?.preview_allowed != null) setPreviewAllowed(data.preview_allowed); });
+        supabase.from("app_settings").select("unlocked_weeks").eq("id", 1).single()
+            .then(({ data }) => { if (Array.isArray(data?.unlocked_weeks)) setUnlockedWeeks(data.unlocked_weeks); });
     }, []);
 
-    const maxAccessibleWeek = currentWeek + (previewAllowed ? 1 : 0);
-    const isLocked = viewWeek > maxAccessibleWeek;
+    const isLocked = !unlockedWeeks.includes(viewWeek);
 
     const session = getSessionByWeek(viewWeek);
     const isCurrentSession = viewWeek === currentWeek;
@@ -133,7 +132,7 @@ export default function SessionPage() {
                                 const tc = THEME_COLORS[s.theme];
                                 const isDone = s.week < currentWeek;
                                 const isCurrent = s.week === currentWeek;
-                                const locked = s.week > maxAccessibleWeek;
+                                const locked = !unlockedWeeks.includes(s.week);
                                 return (
                                     <button
                                         key={s.week}
@@ -164,20 +163,20 @@ export default function SessionPage() {
                                 const tc = THEME_COLORS[s.theme];
                                 const isDone = s.week < currentWeek;
                                 const isCurrent = s.week === currentWeek;
+                                const locked = !unlockedWeeks.includes(s.week);
                                 return (
                                     <button
                                         key={s.week}
-                                        onClick={() => { setViewWeek(s.week); setShowCurriculumMap(false); setExpandedActivity(0); }}
-                                        className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-[10px] font-bold transition-all hover:scale-105"
+                                        onClick={() => { if (!locked) { setViewWeek(s.week); setShowCurriculumMap(false); setExpandedActivity(0); } }}
+                                        disabled={locked}
+                                        className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-[10px] font-bold transition-all hover:scale-105 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100"
                                         style={{
-                                            background: isCurrent ? tc.color : isDone ? tc.bg : "var(--surface-2)",
-                                            color: isCurrent ? "white" : isDone ? tc.color : "var(--foreground-muted)",
-                                            border: isCurrent ? "none" : `1.5px solid ${isDone ? tc.color + "44" : "transparent"}`,
+                                            background: locked ? "var(--surface-2)" : isCurrent ? tc.color : isDone ? tc.bg : "var(--surface-2)",
+                                            color: locked ? "var(--foreground-muted)" : isCurrent ? "white" : isDone ? tc.color : "var(--foreground-muted)",
+                                            border: locked ? "1.5px solid transparent" : isCurrent ? "none" : `1.5px solid ${isDone ? tc.color + "44" : "transparent"}`,
                                         }}
                                     >
-                                        {isDone && <CheckCircle2 size={9} />}
-                                        {isCurrent && <Play size={9} />}
-                                        {!isDone && !isCurrent && <Lock size={9} />}
+                                        {locked ? <Lock size={9} /> : isDone ? <CheckCircle2 size={9} /> : isCurrent ? <Play size={9} /> : <Lock size={9} />}
                                         {s.week}회
                                     </button>
                                 );
@@ -225,7 +224,7 @@ export default function SessionPage() {
 
                 <button
                     onClick={() => { setViewWeek((w) => Math.min(29, w + 1)); setExpandedActivity(0); }}
-                    disabled={viewWeek >= 29 || viewWeek >= maxAccessibleWeek}
+                    disabled={viewWeek >= 29 || !unlockedWeeks.includes(viewWeek + 1)}
                     className="w-9 h-9 rounded-xl flex items-center justify-center transition-all disabled:opacity-30"
                     style={{ background: "var(--surface-2)" }}
                 >
