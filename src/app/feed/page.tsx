@@ -16,6 +16,7 @@ import {
 import StoryBar from "@/components/feed/StoryBar";
 import FeedCard from "@/components/feed/FeedCard";
 import VideoPlayer from "@/components/feed/VideoPlayer";
+import DailyChallenge from "@/components/feed/DailyChallenge";
 import Insights from "@/components/dashboard/Insights";
 import { useGameStore } from "@/store/useGameStore";
 import { supabase, DbPost } from "@/lib/supabase/client";
@@ -290,6 +291,9 @@ export default function FeedPage() {
                         <span className="text-lg font-black" style={{ color: "var(--accent)" }}>{teamRank ? `${teamRank}위` : "-"}</span>
                     </div>
                 </div>
+
+                {/* 일일 마케팅 챌린지 */}
+                <DailyChallenge />
 
                 {/* 피드 헤더 */}
                 <div className="flex justify-between items-center px-1 mt-2">

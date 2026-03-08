@@ -23,6 +23,7 @@ import {
 import { useGameStore } from "@/store/useGameStore";
 import { supabase } from "@/lib/supabase/client";
 import { simulateMarketingEffect } from "@/lib/simulation/engine";
+import { getTodayChallenge } from "@/lib/challenges/dailyChallenges";
 
 export default function UploadModal() {
     const {
@@ -37,6 +38,8 @@ export default function UploadModal() {
         user
     } = useGameStore();
     const [uploadType, setUploadType] = useState<"post" | "video">("post");
+    const [challengeMode, setChallengeMode] = useState(false);
+    const todayChallenge = getTodayChallenge();
     const [caption, setCaption] = useState("");
     const [tags, setTags] = useState("");
     const [isUploading, setIsUploading] = useState(false);
@@ -76,6 +79,7 @@ export default function UploadModal() {
         setShowResult(false);
         setSimResult(null);
         setPersonaReactions([]);
+        setChallengeMode(false);
     };
 
     const handleFileSelect = (file: File) => {
@@ -192,8 +196,8 @@ export default function UploadModal() {
             }
             // Supabase 성공 시 realtime이 자동으로 addPost 호출 (page.tsx 구독)
 
-            // 포인트 지급: 게시물 +10 XP, 미션 모드 +20 XP
-            const xp = isMissionMode ? 20 : 10;
+            // 포인트 지급: 게시물 +10 XP, 미션 모드 +20 XP, 챌린지 참여 추가 보너스
+            const xp = (isMissionMode ? 20 : 10) + (challengeMode ? todayChallenge.bonusXP : 0);
             addPoints(xp);
 
             setIsUploading(false);
@@ -227,8 +231,10 @@ export default function UploadModal() {
             addInsight({
                 id: Math.random().toString(36).substr(2, 9),
                 type: "coach" as const,
-                title: isMissionMode ? "미션 게시물 마케팅 분석" : "게시물 마케팅 분석",
-                content: `## 시뮬레이션 결과\n\n- **예상 노출**: ${sim.impressions.toLocaleString()}명\n- **인게이지먼트**: ${sim.engagementRate.toFixed(1)}%\n- **예상 클릭**: ${sim.clicks.toLocaleString()}회\n\n## 코치의 한마디\n\n${coachMsg}\n\n> 캡션: "${caption.slice(0, 80)}..."`,
+                title: challengeMode
+                    ? `[챌린지] ${todayChallenge.theme} 분석`
+                    : isMissionMode ? "미션 게시물 마케팅 분석" : "게시물 마케팅 분석",
+                content: `## 시뮬레이션 결과\n\n- **예상 노출**: ${sim.impressions.toLocaleString()}명\n- **인게이지먼트**: ${sim.engagementRate.toFixed(1)}%\n- **예상 클릭**: ${sim.clicks.toLocaleString()}회\n${challengeMode ? `\n## 오늘의 챌린지: ${todayChallenge.theme}\n\n**전략**: ${todayChallenge.strategy}\n\n${todayChallenge.tip}\n` : ""}\n## 코치의 한마디\n\n${coachMsg}\n\n> 캡션: "${caption.slice(0, 80)}..."`,
                 date: new Date().toISOString().split("T")[0],
             });
 
@@ -253,7 +259,7 @@ export default function UploadModal() {
 
     // 업로드 결과 화면
     if (showResult && simResult) {
-        const xpGained = isMissionMode ? 20 : 10;
+        const xpGained = (isMissionMode ? 20 : 10) + (challengeMode ? todayChallenge.bonusXP : 0);
         const personaEmojis: Record<string, string> = { p1: "🛍️", p2: "💚", p3: "🔍", p4: "✨" };
         return (
             <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300">
@@ -264,10 +270,16 @@ export default function UploadModal() {
                             <div className="w-10 h-10 rounded-2xl bg-accent/20 flex items-center justify-center">
                                 <CheckCircle size={20} className="text-accent" />
                             </div>
-                            <div>
+                            <div className="flex-1">
                                 <h3 className="text-lg font-black italic tracking-tighter">게시물 올라갔어요!</h3>
                                 <p className="text-[11px] text-foreground/50">+{xpGained} XP 획득 · 시뮬레이션 결과를 확인하세요</p>
                             </div>
+                            {challengeMode && (
+                                <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-black text-white"
+                                    style={{ background: "linear-gradient(135deg,#FF6B35,#FFC233)" }}>
+                                    {todayChallenge.icon} 챌린지 완료!
+                                </div>
+                            )}
                         </div>
 
                         {/* 시뮬레이션 수치 */}
@@ -446,6 +458,59 @@ export default function UploadModal() {
                                         onChange={(e) => setTags(e.target.value)}
                                         className="w-full bg-foreground/5 border border-foreground/10 rounded-2xl py-3 pl-10 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium italic"
                                     />
+                                </div>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* 오늘의 챌린지 참여 토글 */}
+                    <div
+                        className="rounded-2xl overflow-hidden"
+                        style={{ border: challengeMode ? "1.5px solid #FF6B35" : "1px solid var(--border)" }}
+                    >
+                        <button
+                            onClick={() => setChallengeMode(v => !v)}
+                            className="w-full flex items-center gap-3 p-4 transition-all text-left"
+                            style={{ background: challengeMode ? "rgba(255,107,53,0.07)" : "var(--surface)" }}
+                        >
+                            <span className="text-2xl shrink-0">{todayChallenge.icon}</span>
+                            <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-1.5 mb-0.5">
+                                    <span className="text-[9px] font-black uppercase tracking-widest"
+                                        style={{ color: challengeMode ? "var(--primary)" : "var(--foreground-muted)" }}>
+                                        오늘의 챌린지 참여
+                                    </span>
+                                    <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full"
+                                        style={{ background: "rgba(255,107,53,0.12)", color: "var(--primary)" }}>
+                                        +{todayChallenge.bonusXP} XP
+                                    </span>
+                                </div>
+                                <p className="text-xs font-bold truncate" style={{ color: "var(--foreground)" }}>
+                                    {todayChallenge.theme}
+                                </p>
+                                <p className="text-[10px]" style={{ color: "var(--foreground-muted)" }}>
+                                    {todayChallenge.strategy}
+                                </p>
+                            </div>
+                            {/* 토글 스위치 */}
+                            <div className="shrink-0 w-10 h-6 rounded-full relative transition-colors"
+                                style={{ background: challengeMode ? "var(--primary)" : "var(--border)" }}>
+                                <div className="absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-all"
+                                    style={{ left: challengeMode ? "calc(100% - 22px)" : "2px" }} />
+                            </div>
+                        </button>
+                        {challengeMode && (
+                            <div className="px-4 pb-4 pt-0 flex flex-col gap-1.5"
+                                style={{ background: "rgba(255,107,53,0.04)" }}>
+                                <p className="text-[11px] font-semibold leading-relaxed" style={{ color: "var(--foreground-soft)" }}>
+                                    {todayChallenge.description}
+                                </p>
+                                <div className="flex items-start gap-2 p-2.5 rounded-xl"
+                                    style={{ background: "rgba(255,107,53,0.08)" }}>
+                                    <span className="text-sm shrink-0">💡</span>
+                                    <p className="text-[10px] leading-relaxed" style={{ color: "var(--foreground-muted)" }}>
+                                        {todayChallenge.tip}
+                                    </p>
                                 </div>
                             </div>
                         )}
