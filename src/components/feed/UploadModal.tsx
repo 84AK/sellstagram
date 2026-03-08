@@ -33,6 +33,7 @@ export default function UploadModal() {
         addInsight,
         setAIReportModal,
         addPoints,
+        startCampaign,
         user
     } = useGameStore();
     const [uploadType, setUploadType] = useState<"post" | "video">("post");
@@ -208,6 +209,28 @@ export default function UploadModal() {
                 baseFollowers: 500,
             }, 30000);
             setSimResult(sim);
+
+            // 시뮬레이션 결과 자동으로 campaign + insight 저장
+            startCampaign({
+                id: Math.random().toString(36).substr(2, 9),
+                productId: "uploaded",
+                spent: 0,
+                revenue: sim.revenue,
+                efficiency: parseFloat((sim.revenue > 0 ? sim.revenue / Math.max(sim.impressions * 0.01, 1) : 0).toFixed(2)),
+                engagement: sim.engagementRate,
+            });
+            const coachMsg = sim.engagementRate >= 8
+                ? "인게이지먼트가 높아요! 이미지 퀄리티와 해시태그 전략이 잘 맞았어요. 다음엔 업로드 시간도 최적화해보세요."
+                : sim.engagementRate >= 4
+                    ? "괜찮은 출발이에요. 더 구체적인 혜택을 캡션에 담으면 클릭률을 높일 수 있어요."
+                    : "캡션을 조금 더 다듬어 보세요. 질문형 문장이나 감성적인 표현이 반응을 높여줘요.";
+            addInsight({
+                id: Math.random().toString(36).substr(2, 9),
+                type: "coach" as const,
+                title: isMissionMode ? "미션 게시물 마케팅 분석" : "게시물 마케팅 분석",
+                content: `## 시뮬레이션 결과\n\n- **예상 노출**: ${sim.impressions.toLocaleString()}명\n- **인게이지먼트**: ${sim.engagementRate.toFixed(1)}%\n- **예상 클릭**: ${sim.clicks.toLocaleString()}회\n\n## 코치의 한마디\n\n${coachMsg}\n\n> 캡션: "${caption.slice(0, 80)}..."`,
+                date: new Date().toISOString().split("T")[0],
+            });
 
             try {
                 const res = await fetch("/api/ai/reactions", {

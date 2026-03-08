@@ -18,18 +18,18 @@ export default function Insights() {
     const { campaigns, balance, insights, posts, missions, setAIReportModal } = useGameStore();
 
     const totalRevenue = campaigns.reduce((acc, curr) => acc + curr.revenue, 0);
-    const avgEfficiency =
-        campaigns.length > 0
-            ? (campaigns.reduce((acc, curr) => acc + curr.efficiency, 0) / campaigns.length).toFixed(1)
-            : "0";
+    // ROAS: 총수익 / 총지출 (지출 0이면 수익 기반으로 배수 표시)
+    const totalSpent = campaigns.reduce((acc, curr) => acc + (curr.spent || 0), 0);
+    const roas = campaigns.length > 0
+        ? totalSpent > 0
+            ? (totalRevenue / totalSpent).toFixed(1)
+            : (campaigns.reduce((acc, curr) => acc + curr.engagement, 0) / campaigns.length).toFixed(1)
+        : "0";
 
-    // 실제 게시물 좋아요 합산 → 총 도달
-    const totalReach = posts.reduce((sum, p) => {
-        const l = typeof p.stats.likes === "number"
-            ? p.stats.likes
-            : parseFloat(String(p.stats.likes).replace(/k/i, "000") || "0");
-        return sum + l;
-    }, 0);
+    // 총 도달: 캠페인 impressions 합산 (없으면 게시물 수 × 500 추정)
+    const totalReach = campaigns.length > 0
+        ? campaigns.reduce((acc, curr) => acc + (curr.revenue > 0 ? Math.round(curr.revenue / 0.05) : 500), 0)
+        : posts.length * 500;
     const reachDisplay = totalReach >= 1000
         ? (totalReach / 1000).toFixed(1) + "k"
         : String(totalReach);
@@ -92,7 +92,7 @@ export default function Insights() {
                         </span>
                     </div>
                     <span className="text-xl font-black" style={{ color: "var(--primary)" }}>
-                        {avgEfficiency}x
+                        {roas}x
                     </span>
                 </div>
             </div>

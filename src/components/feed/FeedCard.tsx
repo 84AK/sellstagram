@@ -10,7 +10,9 @@ import {
     ShoppingCart,
     CheckCircle2,
     TrendingUp,
-    Loader2
+    Loader2,
+    Sparkles,
+    X,
 } from "lucide-react";
 import GlassCard from "../common/GlassCard";
 import { useGameStore } from "@/store/useGameStore";
@@ -56,7 +58,10 @@ export default function FeedCard({ id, user, content, stats, timeAgo }: FeedCard
     const [submitting, setSubmitting] = useState(false);
     const [shareMsg, setShareMsg] = useState("");
 
-    const { addFunds, user: currentUser } = useGameStore();
+    const { addFunds, addInsight, startCampaign, setAIReportModal, user: currentUser } = useGameStore();
+    const isMyPost = user.handle === currentUser.handle;
+    const [showMenu, setShowMenu] = useState(false);
+    const [isAnalyzing, setIsAnalyzing] = useState(false);
 
     // localStorage에서 좋아요/북마크 상태 복원
     useEffect(() => {
@@ -84,6 +89,46 @@ export default function FeedCard({ id, user, content, stats, timeAgo }: FeedCard
         return () => { supabase.removeChannel(channel); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [showComments]);
+
+    const handleAIAnalyze = async () => {
+        setShowMenu(false);
+        setIsAnalyzing(true);
+        try {
+            const res = await fetch("/api/ai/analyze", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ type: "coach", caption: content.caption, engagement: "Predictions" }),
+            });
+            const data = await res.json();
+            const sim = simulateMarketingEffect({
+                caption: content.caption,
+                hashtags: content.tags,
+                visualQuality: 0.8,
+                baseFollowers: 500,
+            }, 30000);
+            startCampaign({
+                id: Math.random().toString(36).substr(2, 9),
+                productId: id,
+                spent: 0,
+                revenue: sim.revenue,
+                efficiency: parseFloat((sim.engagementRate).toFixed(2)),
+                engagement: sim.engagementRate,
+            });
+            const newInsight = {
+                id: Math.random().toString(36).substr(2, 9),
+                type: "coach" as const,
+                title: "게시물 AI 재분석",
+                content: data.insight ?? `## 분석 결과\n\n- **예상 노출**: ${sim.impressions.toLocaleString()}명\n- **인게이지먼트**: ${sim.engagementRate.toFixed(1)}%\n\n## 코치의 한마디\n\n${sim.engagementRate >= 8 ? "인게이지먼트가 높아요! 전략이 잘 맞았어요." : sim.engagementRate >= 4 ? "괜찮은 출발이에요. 더 구체적인 혜택을 담아보세요." : "캡션을 더 다듬어보세요. 질문형 문장이 반응을 높여줘요."}`,
+                date: new Date().toISOString().split("T")[0],
+            };
+            addInsight(newInsight);
+            setAIReportModal(true, newInsight);
+        } catch {
+            // 실패 시 무시
+        } finally {
+            setIsAnalyzing(false);
+        }
+    };
 
     const handleBuyNow = () => {
         if (isSimulating) return;
@@ -137,9 +182,42 @@ export default function FeedCard({ id, user, content, stats, timeAgo }: FeedCard
                         <span className="text-[10px] text-foreground/40 font-medium">@{user.handle} • {timeAgo}</span>
                     </div>
                 </div>
-                <button className="p-2 text-foreground/30 hover:text-foreground transition-colors">
-                    <MoreHorizontal size={20} />
-                </button>
+                <div className="relative">
+                    <button
+                        onClick={() => setShowMenu(v => !v)}
+                        className="p-2 text-foreground/30 hover:text-foreground transition-colors"
+                    >
+                        {isAnalyzing ? <Loader2 size={20} className="animate-spin" /> : <MoreHorizontal size={20} />}
+                    </button>
+                    {showMenu && (
+                        <>
+                            <div className="fixed inset-0 z-10" onClick={() => setShowMenu(false)} />
+                            <div
+                                className="absolute right-0 top-8 z-20 min-w-[160px] rounded-2xl overflow-hidden shadow-xl"
+                                style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
+                            >
+                                {isMyPost && (
+                                    <button
+                                        onClick={handleAIAnalyze}
+                                        className="w-full flex items-center gap-2.5 px-4 py-3 text-sm font-bold transition-colors hover:bg-foreground/5 text-left"
+                                        style={{ color: "var(--primary)" }}
+                                    >
+                                        <Sparkles size={15} />
+                                        AI 분석하기
+                                    </button>
+                                )}
+                                <button
+                                    onClick={() => setShowMenu(false)}
+                                    className="w-full flex items-center gap-2.5 px-4 py-3 text-sm font-medium transition-colors hover:bg-foreground/5 text-left"
+                                    style={{ color: "var(--foreground-muted)" }}
+                                >
+                                    <X size={15} />
+                                    닫기
+                                </button>
+                            </div>
+                        </>
+                    )}
+                </div>
             </div>
 
             {/* Main Image Area */}
