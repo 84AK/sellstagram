@@ -34,7 +34,7 @@ interface TeamMember {
 
 export default function ProfilePage() {
     const router = useRouter();
-    const { user, inventory, campaigns } = useGameStore();
+    const { user } = useGameStore();
 
     const [showEditModal, setShowEditModal] = useState(false);
     const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
@@ -45,12 +45,8 @@ export default function ProfilePage() {
     const [loadingBookmarks, setLoadingBookmarks] = useState(false);
     const [recentPosts, setRecentPosts] = useState<{ id: string; caption: string | null; image_url: string | null; likes: number; engagement_rate: string; created_at: string; week: number | null }[]>([]);
     const [loadingActivity, setLoadingActivity] = useState(true);
-
-    const stats = [
-        { label: "실습 상품", value: inventory.length, icon: Zap },
-        { label: "총 캠페인", value: campaigns.length, icon: Activity },
-        { label: "획득 포인트", value: user.points, icon: Trophy },
-    ];
+    const [postCount, setPostCount] = useState(0);
+    const [weekCount, setWeekCount] = useState(0);
 
     // 팀 멤버 로드
     useEffect(() => {
@@ -119,7 +115,7 @@ export default function ProfilePage() {
         fetchTeamMembers();
     }, [user.team, user.name, user.avatar, user.rank]);
 
-    // 최근 활동: 본인 게시물 로드
+    // 최근 활동 + 통계: 본인 게시물 로드
     useEffect(() => {
         if (!user.handle) return;
         setLoadingActivity(true);
@@ -128,9 +124,12 @@ export default function ProfilePage() {
             .select("id, caption, image_url, likes, engagement_rate, created_at, week")
             .eq("user_handle", user.handle)
             .order("created_at", { ascending: false })
-            .limit(5)
             .then(({ data }) => {
-                setRecentPosts(data ?? []);
+                const all = data ?? [];
+                setRecentPosts(all.slice(0, 5));
+                setPostCount(all.length);
+                const weeks = new Set(all.map(p => p.week).filter(Boolean));
+                setWeekCount(weeks.size);
                 setLoadingActivity(false);
             });
     }, [user.handle]);
@@ -222,7 +221,11 @@ export default function ProfilePage() {
 
                 {/* Stats Grid */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    {stats.map((stat, idx) => (
+                    {[
+                        { label: "내 게시물", value: postCount, icon: TrendingUp },
+                        { label: "참여 주차", value: weekCount, icon: Activity },
+                        { label: "획득 포인트", value: user.points, icon: Trophy },
+                    ].map((stat, idx) => (
                         <GlassCard key={idx} className="flex flex-col gap-2 p-6 transition-all hover:scale-[1.02]">
                             <div className="flex items-center gap-2 text-foreground/40">
                                 <stat.icon size={16} />
