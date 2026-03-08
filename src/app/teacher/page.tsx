@@ -327,9 +327,15 @@ function Dashboard({ onLogout }: { onLogout: () => void }) {
     const handleUpdateTeam = async (studentId: string, newTeam: string) => {
         setUpdatingTeamId(studentId);
         try {
+            const { data: { session } } = await supabase.auth.getSession();
+            const token = session?.access_token;
+
             const res = await fetch("/api/teacher/update-team", {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
+                headers: {
+                    "Content-Type": "application/json",
+                    ...(token ? { "Authorization": `Bearer ${token}` } : {}),
+                },
                 body: JSON.stringify({ studentId, team: newTeam }),
             });
             if (res.ok) {
