@@ -104,25 +104,39 @@ export default function AdminDashboard() {
         router.push("/admin");
     };
 
+    const adminUpdateProfile = async (userId: string, field: string, value: unknown) => {
+        const res = await fetch("/api/admin/update-profile", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ userId, field, value }),
+        });
+        if (!res.ok) {
+            const { error } = await res.json();
+            console.error("프로필 업데이트 실패:", error);
+            return false;
+        }
+        return true;
+    };
+
     const handleRoleChange = async (userId: string, newRole: string) => {
         setUpdatingRole(userId);
-        await supabase.from("profiles").update({ role: newRole }).eq("id", userId);
-        setProfiles(prev => prev.map(p => p.id === userId ? { ...p, role: newRole } : p));
+        const ok = await adminUpdateProfile(userId, "role", newRole);
+        if (ok) setProfiles(prev => prev.map(p => p.id === userId ? { ...p, role: newRole } : p));
         setUpdatingRole(null);
     };
 
     const handleTeamChange = async (userId: string, newTeam: string) => {
         setUpdatingTeam(userId);
-        await supabase.from("profiles").update({ team: newTeam }).eq("id", userId);
-        setProfiles(prev => prev.map(p => p.id === userId ? { ...p, team: newTeam } : p));
+        const ok = await adminUpdateProfile(userId, "team", newTeam);
+        if (ok) setProfiles(prev => prev.map(p => p.id === userId ? { ...p, team: newTeam } : p));
         setUpdatingTeam(null);
     };
 
     const handleLeaderToggle = async (userId: string, currentIsLeader: boolean) => {
         setUpdatingLeader(userId);
         const newIsLeader = !currentIsLeader;
-        await supabase.from("profiles").update({ is_leader: newIsLeader }).eq("id", userId);
-        setProfiles(prev => prev.map(p => p.id === userId ? { ...p, is_leader: newIsLeader } : p));
+        const ok = await adminUpdateProfile(userId, "is_leader", newIsLeader);
+        if (ok) setProfiles(prev => prev.map(p => p.id === userId ? { ...p, is_leader: newIsLeader } : p));
         setUpdatingLeader(null);
     };
 
