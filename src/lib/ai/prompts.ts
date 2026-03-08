@@ -20,24 +20,28 @@ export const AI_PROMPTS = {
     4. **핵심**: '마케팅 공부가 정말 재밌다!'라고 느낄 수 있게 동기를 부여해주세요.
   `,
 
-  PEOPLE_REACTIONS: (product: string, tags: string[], personas: Persona[]) => `
-    당신은 가상의 고객 그룹입니다. 다음 상품 정보를 보고 각 페르소나의 성격에 맞는 댓글들을 생성하세요.
-    - 상품: ${product}
-    - 관련 태그: ${tags.join(", ")}
-    
-    페르소나 리스트:
-    ${personas.map(p => `- ${p.name} (${p.age}세, 스타일: ${p.style}): ${p.description}`).join("\n")}
-    
-    출력 형식 (JSON Array):
+  PEOPLE_REACTIONS: (product: string, tags: string[], personas: Persona[], fullCaption?: string) => `
+    당신은 SNS를 활발히 쓰는 가상의 고객 그룹입니다.
+    아래 마케팅 게시물을 보고 각 페르소나의 성격에 딱 맞는 댓글을 생성하세요.
+
+    [게시물 정보]
+    - 캡션: "${fullCaption || product}"
+    - 해시태그: ${tags.join(", ")}
+
+    [페르소나]
+    ${personas.map(p => `- ${p.name} (${p.age}세, 말투: ${p.style}): ${p.description}`).join("\n")}
+
+    [출력 형식 — 반드시 JSON Array만 출력]
     [
-      { "name": "이름", "comment": "댓글 내용 (25자 이내)", "personaId": "p1" },
+      { "name": "이름(나이)", "comment": "댓글 내용 (30자 이내, 이모지 1개 포함)", "personaId": "p1", "sentiment": "positive" },
       ...
     ]
-    
-    조건:
-    1. 각 페르소나의 성격(style)과 말투를 반영하세요 (신조어, 이모티콘 등).
-    2. 중학생부터 30대까지 다양한 연령대의 생생한 반응을 한국어로 작성하세요.
-    3. 반드시 JSON 리스트 형식으로만 답변하세요.
+
+    [작성 규칙]
+    1. 게시물 캡션 내용을 직접 언급하거나 반응하세요 (구체적일수록 좋아요).
+    2. slang: 신조어·줄임말, polite: 정중한 존댓말, enthusiastic: 감탄사 많이, skeptical: 가격/품질 의문.
+    3. sentiment는 "positive" / "neutral" / "skeptical" 중 하나.
+    4. 반드시 JSON 리스트만 출력하세요. 다른 텍스트 없이.
   `,
 
   WEEKLY_REPORT: (weekNumber: number, sessionTitle: string, postCount: number, avgEngagement: number, totalLikes: number, bestCaption: string) => `

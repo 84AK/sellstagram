@@ -242,10 +242,26 @@ export default function UploadModal() {
                 const res = await fetch("/api/ai/reactions", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ product: caption.slice(0, 40), tags: tagList2 }),
+                    body: JSON.stringify({ product: caption.slice(0, 40), tags: tagList2, caption }),
                 });
                 const data = await res.json();
-                setPersonaReactions(data.reactions ?? []);
+                const reactions = data.reactions ?? [];
+                setPersonaReactions(reactions);
+
+                // AI 반응을 comments 테이블에 저장 (피드에서 항상 표시)
+                if (inserted?.id && reactions.length > 0) {
+                    const inserts = reactions.slice(0, 4).map((r: {
+                        name: string; personaId: string; comment: string; personaEmoji?: string;
+                    }) => ({
+                        post_id: inserted.id,
+                        user_name: r.name,
+                        user_handle: `ai_${r.personaId}`,
+                        text: r.comment,
+                        is_ai_reaction: true,
+                        persona_emoji: r.personaEmoji ?? "👤",
+                    }));
+                    await supabase.from("comments").insert(inserts);
+                }
             } catch {
                 setPersonaReactions([]);
             }

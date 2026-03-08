@@ -26,6 +26,13 @@ interface Comment {
     created_at: string;
 }
 
+interface ConsumerReaction {
+    id: string;
+    user_name: string;
+    text: string;
+    persona_emoji: string;
+}
+
 interface FeedCardProps {
     id: string;
     user: {
@@ -57,6 +64,8 @@ export default function FeedCard({ id, user, content, stats, timeAgo }: FeedCard
     const [commentInput, setCommentInput] = useState("");
     const [submitting, setSubmitting] = useState(false);
     const [shareMsg, setShareMsg] = useState("");
+    const [aiReactions, setAiReactions] = useState<ConsumerReaction[]>([]);
+    const [showAllReactions, setShowAllReactions] = useState(false);
 
     const { addFunds, addInsight, startCampaign, setAIReportModal, user: currentUser } = useGameStore();
     const isMyPost = user.handle === currentUser.handle;
@@ -69,6 +78,18 @@ export default function FeedCard({ id, user, content, stats, timeAgo }: FeedCard
         const savedIds: string[] = JSON.parse(localStorage.getItem("saved_posts") || "[]");
         setIsLiked(likedIds.includes(id));
         setIsSaved(savedIds.includes(id));
+    }, [id]);
+
+    // AI 소비자 반응 — 마운트 시 로드
+    useEffect(() => {
+        supabase
+            .from("comments")
+            .select("id, user_name, text, persona_emoji")
+            .eq("post_id", id)
+            .eq("is_ai_reaction", true)
+            .order("created_at", { ascending: true })
+            .then(({ data }) => { if (data && data.length > 0) setAiReactions(data); });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [id]);
 
     useEffect(() => {
@@ -380,6 +401,55 @@ export default function FeedCard({ id, user, content, stats, timeAgo }: FeedCard
                             ))}
                         </div>
                     </div>
+
+                    {/* 가상 소비자 반응 */}
+                    {aiReactions.length > 0 && (
+                        <div className="flex flex-col gap-2 py-2 border-t border-foreground/5">
+                            <div className="flex items-center gap-1.5">
+                                <span className="text-[9px] font-black uppercase tracking-widest" style={{ color: "var(--foreground-muted)" }}>
+                                    가상 소비자 반응
+                                </span>
+                                <span
+                                    className="text-[8px] font-black px-1.5 py-0.5 rounded-full"
+                                    style={{ background: "var(--primary-light)", color: "var(--primary)" }}
+                                >
+                                    AI
+                                </span>
+                            </div>
+                            <div className="flex flex-col gap-1.5">
+                                {(showAllReactions ? aiReactions : aiReactions.slice(0, 2)).map((r) => (
+                                    <div
+                                        key={r.id}
+                                        className="flex items-start gap-2 px-3 py-2 rounded-xl"
+                                        style={{ background: "var(--surface-2)" }}
+                                    >
+                                        <span className="text-base shrink-0 leading-none mt-0.5">
+                                            {r.persona_emoji || "👤"}
+                                        </span>
+                                        <div className="min-w-0">
+                                            <span className="text-[10px] font-black" style={{ color: "var(--foreground-soft)" }}>
+                                                {r.user_name}{" "}
+                                            </span>
+                                            <span className="text-[11px]" style={{ color: "var(--foreground)" }}>
+                                                {r.text}
+                                            </span>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                            {aiReactions.length > 2 && (
+                                <button
+                                    onClick={() => setShowAllReactions(v => !v)}
+                                    className="text-[10px] font-bold text-left transition-opacity hover:opacity-70"
+                                    style={{ color: "var(--primary)" }}
+                                >
+                                    {showAllReactions
+                                        ? "접기"
+                                        : `반응 ${aiReactions.length - 2}개 더 보기`}
+                                </button>
+                            )}
+                        </div>
+                    )}
 
                     <button
                         onClick={handleBuyNow}
