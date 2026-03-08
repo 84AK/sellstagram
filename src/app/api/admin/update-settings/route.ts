@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { verifyAdminToken } from "@/lib/admin/token";
 
 export async function POST(request: NextRequest) {
-    // 관리자 쿠키 확인
-    const adminAuth = request.cookies.get("admin_auth")?.value;
-    if (adminAuth !== "true") {
+    // 관리자 토큰 확인
+    const token = request.cookies.get("admin_token")?.value ?? "";
+    if (!verifyAdminToken(token)) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
