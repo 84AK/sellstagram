@@ -72,12 +72,16 @@ export default function FeedCard({ id, user, content, stats, timeAgo }: FeedCard
     const [showMenu, setShowMenu] = useState(false);
     const [isAnalyzing, setIsAnalyzing] = useState(false);
 
-    // localStorage에서 좋아요/북마크 상태 복원
+    const [isPurchased, setIsPurchased] = useState(false);
+
+    // localStorage에서 좋아요/북마크/구매 상태 복원
     useEffect(() => {
         const likedIds: string[] = JSON.parse(localStorage.getItem("liked_posts") || "[]");
         const savedIds: string[] = JSON.parse(localStorage.getItem("saved_posts") || "[]");
+        const purchasedIds: string[] = JSON.parse(localStorage.getItem("purchased_posts") || "[]");
         setIsLiked(likedIds.includes(id));
         setIsSaved(savedIds.includes(id));
+        setIsPurchased(purchasedIds.includes(id));
     }, [id]);
 
     // AI 소비자 반응 — 마운트 시 로드
@@ -153,7 +157,7 @@ export default function FeedCard({ id, user, content, stats, timeAgo }: FeedCard
     };
 
     const handleBuyNow = () => {
-        if (isSimulating) return;
+        if (isSimulating || isMyPost || isPurchased) return;
         setIsSimulating(true);
         setTimeout(() => {
             const result = simulateMarketingEffect({
@@ -165,6 +169,11 @@ export default function FeedCard({ id, user, content, stats, timeAgo }: FeedCard
 
             addFunds(result.revenue);
             setLocalSales(`₩${(parseInt(localSales.replace(/[^0-9]/g, "")) + result.revenue).toLocaleString()}`);
+
+            // 구매 완료 기록 (중복 방지)
+            const purchasedIds: string[] = JSON.parse(localStorage.getItem("purchased_posts") || "[]");
+            localStorage.setItem("purchased_posts", JSON.stringify([...purchasedIds, id]));
+            setIsPurchased(true);
             setIsSimulating(false);
         }, 800);
     };
@@ -452,14 +461,28 @@ export default function FeedCard({ id, user, content, stats, timeAgo }: FeedCard
                         </div>
                     )}
 
-                    <button
-                        onClick={handleBuyNow}
-                        disabled={isSimulating}
-                        className="w-full flex items-center justify-center gap-2 py-3 bg-foreground text-background rounded-xl font-bold italic text-sm transition-all hover:bg-foreground/90 active:scale-[0.98] shadow-lg shadow-black/10 dark:shadow-white/5 group/buy disabled:opacity-50"
-                    >
-                        <ShoppingCart size={16} className={`group-hover/buy:-translate-y-0.5 transition-transform ${isSimulating ? "animate-pulse" : ""}`} />
-                        {isSimulating ? "시뮬레이션 중..." : "테스트 구매 시뮬레이션"}
-                    </button>
+                    {isMyPost ? (
+                        <div className="w-full flex items-center justify-center gap-2 py-3 rounded-xl font-bold italic text-sm cursor-not-allowed"
+                            style={{ background: "var(--surface-2)", color: "var(--foreground-muted)" }}>
+                            <ShoppingCart size={16} />
+                            내 게시물은 구매할 수 없어요
+                        </div>
+                    ) : isPurchased ? (
+                        <div className="w-full flex items-center justify-center gap-2 py-3 rounded-xl font-bold italic text-sm cursor-not-allowed"
+                            style={{ background: "rgba(6,214,160,0.12)", color: "var(--accent)" }}>
+                            <CheckCircle2 size={16} />
+                            구매 완료
+                        </div>
+                    ) : (
+                        <button
+                            onClick={handleBuyNow}
+                            disabled={isSimulating}
+                            className="w-full flex items-center justify-center gap-2 py-3 bg-foreground text-background rounded-xl font-bold italic text-sm transition-all hover:bg-foreground/90 active:scale-[0.98] shadow-lg shadow-black/10 dark:shadow-white/5 group/buy disabled:opacity-50"
+                        >
+                            <ShoppingCart size={16} className={`group-hover/buy:-translate-y-0.5 transition-transform ${isSimulating ? "animate-pulse" : ""}`} />
+                            {isSimulating ? "시뮬레이션 중..." : "테스트 구매 시뮬레이션"}
+                        </button>
+                    )}
                 </div>
             </div>
         </GlassCard>
