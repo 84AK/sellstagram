@@ -69,6 +69,13 @@ const navItems = [
         activeBg: "var(--primary-light)",
     },
     {
+        name: "마켓 시뮬레이션",
+        href: "/simulate",
+        icon: PlayCircle,
+        activeColor: "#06D6A0",
+        activeBg: "var(--accent-light)",
+    },
+    {
         name: "리워드 마켓",
         href: "/rewards",
         icon: Gift,
@@ -161,12 +168,12 @@ export default function Sidebar() {
                 </button>
 
                 <Link
-                    href="/missions"
+                    href="/simulate"
                     className="flex flex-col items-center gap-0.5 transition-all duration-200"
-                    style={{ color: pathname === "/missions" ? "#D97706" : "var(--foreground-muted)" }}
+                    style={{ color: pathname === "/simulate" ? "var(--accent)" : "var(--foreground-muted)" }}
                 >
-                    <Trophy size={22} />
-                    <span className="text-[9px] font-bold">미션</span>
+                    <PlayCircle size={22} />
+                    <span className="text-[9px] font-bold">시뮬</span>
                 </Link>
 
                 <Link

@@ -1,9 +1,36 @@
 import { NextRequest, NextResponse } from "next/server";
+import { createClient } from "@supabase/supabase-js";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { verifyAdminToken } from "@/lib/admin/token";
 
-function isAuthorized(request: NextRequest): boolean {
-    const teacherCookie = request.cookies.get("teacher_auth")?.value;
-    return teacherCookie === "true";
+async function isAuthorized(request: NextRequest): Promise<boolean> {
+    // 방법 1: teacher_auth 쿠키 (PIN 인증 후)
+    if (request.cookies.get("teacher_auth")?.value === "true") return true;
+
+    // 방법 2: admin_token 쿠키 (관리자)
+    const adminToken = request.cookies.get("admin_token")?.value ?? "";
+    if (verifyAdminToken(adminToken)) return true;
+
+    // 방법 3: Supabase Bearer 토큰 + teacher role
+    const authHeader = request.headers.get("Authorization");
+    const token = authHeader?.replace("Bearer ", "");
+    if (token) {
+        const supabase = createClient(
+            process.env.NEXT_PUBLIC_SUPABASE_URL!,
+            process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+        );
+        const { data: { user } } = await supabase.auth.getUser(token);
+        if (user) {
+            const { data: profile } = await supabase
+                .from("profiles")
+                .select("role")
+                .eq("id", user.id)
+                .single();
+            if (profile?.role === "teacher") return true;
+        }
+    }
+
+    return false;
 }
 
 // GET: 전체 팀 목록 (공개)
@@ -19,7 +46,7 @@ export async function GET() {
 
 // POST: 팀 생성 (교사 전용)
 export async function POST(request: NextRequest) {
-    if (!isAuthorized(request)) {
+    if (!(await isAuthorized(request))) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
     const { name, emoji, color } = await request.json();
@@ -43,7 +70,7 @@ export async function POST(request: NextRequest) {
 
 // DELETE: 팀 삭제 + 해당 팀 학생 미배정 처리 (교사 전용)
 export async function DELETE(request: NextRequest) {
-    if (!isAuthorized(request)) {
+    if (!(await isAuthorized(request))) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
     const { id } = await request.json();

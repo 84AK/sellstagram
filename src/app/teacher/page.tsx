@@ -197,6 +197,9 @@ function Dashboard({ onLogout }: { onLogout: () => void }) {
     const [activeTab, setActiveTab] = useState<Tab>("class");
     const [classActive, setClassActive] = useState(false);
     const [classActiveLoading, setClassActiveLoading] = useState(false);
+    const [simActive, setSimActive] = useState(false);
+    const [simLoading, setSimLoading] = useState(false);
+    const [simDuration, setSimDuration] = useState(10);
     const [showResetConfirm, setShowResetConfirm] = useState(false);
     const [initialBalance, setInitialBalance] = useState(1000000);
     const [balanceInput, setBalanceInput] = useState("1000000");
@@ -369,16 +372,40 @@ function Dashboard({ onLogout }: { onLogout: () => void }) {
         setClassActiveLoading(false);
     };
 
+    // 마켓 시뮬레이션 토글
+    const handleSimToggle = async () => {
+        setSimLoading(true);
+        const next = !simActive;
+        const updatePayload = next
+            ? {
+                sim_active: true,
+                sim_started_at: new Date().toISOString(),
+                sim_duration_minutes: simDuration,
+              }
+            : {
+                sim_active: false,
+                sim_started_at: null,
+              };
+        const { error } = await supabase
+            .from("app_settings")
+            .update(updatePayload)
+            .eq("id", 1);
+        if (!error) setSimActive(next);
+        setSimLoading(false);
+    };
+
     // 회차 잠금/열기 토글
     useEffect(() => {
         loadTeamStats();
         loadMissionsFromDB();
 
         // 수업 상태 로드
-        supabase.from("app_settings").select("class_active").eq("id", 1).single()
+        supabase.from("app_settings").select("class_active, sim_active, sim_duration_minutes").eq("id", 1).single()
             .then(({ data }) => {
                 if (data) {
                     setClassActive(data.class_active);
+                    setSimActive(data.sim_active ?? false);
+                    setSimDuration(data.sim_duration_minutes ?? 10);
                 }
             });
 
@@ -677,6 +704,76 @@ function Dashboard({ onLogout }: { onLogout: () => void }) {
                                     {isSavingBalance ? "저장 중..." : "전체 적용"}
                                 </button>
                             </div>
+                        </div>
+
+                        {/* 마켓 시뮬레이션 컨트롤 */}
+                        <div className="rounded-2xl p-5"
+                            style={{
+                                background: simActive
+                                    ? "linear-gradient(135deg, rgba(6,214,160,0.08), rgba(67,97,238,0.06))"
+                                    : "var(--surface)",
+                                border: simActive ? "1.5px solid rgba(6,214,160,0.4)" : "1px solid var(--border)",
+                            }}>
+                            <div className="flex items-start justify-between gap-4 mb-4">
+                                <div>
+                                    <div className="flex items-center gap-2 mb-1">
+                                        <h3 className="text-base font-black" style={{ color: "var(--foreground)" }}>
+                                            마켓 시뮬레이션
+                                        </h3>
+                                        {simActive && (
+                                            <span className="flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full"
+                                                style={{ background: "rgba(6,214,160,0.15)", color: "var(--accent)" }}>
+                                                <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse inline-block" />
+                                                진행 중
+                                            </span>
+                                        )}
+                                    </div>
+                                    <p className="text-xs" style={{ color: "var(--foreground-muted)" }}>
+                                        학생들이 가상 구매자 반응을 실시간으로 확인합니다 · 1분 = 1시간
+                                    </p>
+                                </div>
+                            </div>
+
+                            {/* 시간 선택 (비활성 시에만) */}
+                            {!simActive && (
+                                <div className="flex gap-2 mb-4 flex-wrap">
+                                    {[5, 10, 15, 20, 30].map(min => (
+                                        <button
+                                            key={min}
+                                            onClick={() => setSimDuration(min)}
+                                            className="px-3 py-1.5 rounded-xl text-xs font-bold transition-all"
+                                            style={{
+                                                background: simDuration === min ? "var(--accent)" : "var(--surface-2)",
+                                                color: simDuration === min ? "white" : "var(--foreground-soft)",
+                                            }}
+                                        >
+                                            {min}분
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
+
+                            <button
+                                onClick={handleSimToggle}
+                                disabled={simLoading}
+                                className="w-full py-3 rounded-xl font-bold text-sm transition-all disabled:opacity-60 flex items-center justify-center gap-2"
+                                style={{
+                                    background: simActive
+                                        ? "rgba(239,68,68,0.1)"
+                                        : "linear-gradient(135deg, var(--accent), #4361EE)",
+                                    color: simActive ? "#EF4444" : "white",
+                                    border: simActive ? "1.5px solid rgba(239,68,68,0.3)" : "none",
+                                    boxShadow: simActive ? "none" : "0 4px 12px rgba(6,214,160,0.3)",
+                                }}
+                            >
+                                {simLoading ? (
+                                    "처리 중..."
+                                ) : simActive ? (
+                                    <><Pause size={15} /> 마켓 닫기</>
+                                ) : (
+                                    <><Play size={15} /> 마켓 열기 ({simDuration}분)</>
+                                )}
+                            </button>
                         </div>
 
                         {/* 팀 리더보드 */}
@@ -2033,9 +2130,14 @@ function TeamsTab() {
         if (!newName.trim()) return;
         setSaving(true);
         setMsg("");
+        const { data: { session } } = await supabase.auth.getSession();
+        const token = session?.access_token;
         const res = await fetch("/api/teacher/teams", {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: {
+                "Content-Type": "application/json",
+                ...(token ? { "Authorization": `Bearer ${token}` } : {}),
+            },
             body: JSON.stringify({ name: newName.trim(), emoji: newEmoji, color: newColor }),
         });
         const json = await res.json();
@@ -2053,9 +2155,14 @@ function TeamsTab() {
 
     const handleDelete = async (id: string) => {
         setDeletingId(id);
+        const { data: { session } } = await supabase.auth.getSession();
+        const token = session?.access_token;
         const res = await fetch("/api/teacher/teams", {
             method: "DELETE",
-            headers: { "Content-Type": "application/json" },
+            headers: {
+                "Content-Type": "application/json",
+                ...(token ? { "Authorization": `Bearer ${token}` } : {}),
+            },
             body: JSON.stringify({ id }),
         });
         if (res.ok) {
