@@ -68,7 +68,7 @@ interface StudentProfile {
     points: number;
 }
 
-type Tab = "class" | "feed" | "mission" | "shop" | "reward" | "weekly";
+type Tab = "class" | "feed" | "mission" | "shop" | "reward" | "weekly" | "teams";
 
 /* ─────────────────── PIN 화면 ─────────────────── */
 function PinScreen({ onAuth }: { onAuth: () => void }) {
@@ -216,10 +216,6 @@ function Dashboard({ onLogout }: { onLogout: () => void }) {
     const [isSavingMission, setIsSavingMission] = useState(false);
     const [deletingId, setDeletingId] = useState<string | null>(null);
 
-    // 학생 팀 배정 상태
-    const [students, setStudents] = useState<StudentProfile[]>([]);
-    const [isLoadingStudents, setIsLoadingStudents] = useState(true);
-    const [updatingTeamId, setUpdatingTeamId] = useState<string | null>(null);
 
     // 피드 모니터링용 Supabase 게시물
     const [dbPosts, setDbPosts] = useState<DbPost[]>([]);
@@ -316,45 +312,6 @@ function Dashboard({ onLogout }: { onLogout: () => void }) {
         setDeletingId(null);
     };
 
-    // Supabase: 학생 목록 로드
-    const loadStudents = async () => {
-        setIsLoadingStudents(true);
-        const { data } = await supabase
-            .from("profiles")
-            .select("id, name, handle, team, points")
-            .order("name");
-        if (data) setStudents(data);
-        setIsLoadingStudents(false);
-    };
-
-    // Supabase: 팀 배정 업데이트
-    const handleUpdateTeam = async (studentId: string, newTeam: string) => {
-        setUpdatingTeamId(studentId);
-        try {
-            const { data: { session } } = await supabase.auth.getSession();
-            const token = session?.access_token;
-
-            const res = await fetch("/api/teacher/update-team", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    ...(token ? { "Authorization": `Bearer ${token}` } : {}),
-                },
-                body: JSON.stringify({ studentId, team: newTeam }),
-            });
-            if (res.ok) {
-                setStudents(prev => prev.map(s => s.id === studentId ? { ...s, team: newTeam } : s));
-                loadTeamStats();
-            } else {
-                const { error } = await res.json().catch(() => ({ error: "서버 오류" }));
-                console.error("팀 배정 실패:", error);
-            }
-        } catch (err) {
-            console.error("팀 배정 오류:", err);
-        }
-        setUpdatingTeamId(null);
-    };
-
     // Supabase: 주차 변경 동기화
     const syncWeek = async (newWeek: number) => {
         await supabase.from("game_state").update({ week: newWeek, updated_at: new Date().toISOString() }).eq("id", 1);
@@ -415,7 +372,6 @@ function Dashboard({ onLogout }: { onLogout: () => void }) {
     // 회차 잠금/열기 토글
     useEffect(() => {
         loadTeamStats();
-        loadStudents();
         loadMissionsFromDB();
 
         // 수업 상태 로드
@@ -469,6 +425,7 @@ function Dashboard({ onLogout }: { onLogout: () => void }) {
 
     const tabs: { id: Tab; label: string; emoji: string }[] = [
         { id: "class", label: "수업 현황", emoji: "🎓" },
+        { id: "teams", label: "팀 관리", emoji: "👥" },
         { id: "weekly", label: "주차별 결과", emoji: "📊" },
         { id: "feed", label: "피드 모니터링", emoji: "📱" },
         { id: "mission", label: "미션 관리", emoji: "🏆" },
@@ -799,101 +756,23 @@ function Dashboard({ onLogout }: { onLogout: () => void }) {
                             </div>
                         </div>
 
-                        {/* 학생 팀 배정 */}
-                        <div className="rounded-2xl overflow-hidden"
-                            style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
-                            <div className="px-5 py-4 flex items-center justify-between"
-                                style={{ borderBottom: "1px solid var(--border)" }}>
-                                <div>
-                                    <h3 className="text-base font-black" style={{ color: "var(--foreground)" }}>
-                                        학생 팀 배정
-                                    </h3>
-                                    <p className="text-xs mt-0.5" style={{ color: "var(--foreground-muted)" }}>
-                                        {students.length}명 · 드롭다운으로 즉시 변경됩니다
-                                    </p>
+                        {/* 팀 관리 바로가기 */}
+                        <button
+                            onClick={() => setActiveTab("teams")}
+                            className="flex items-center justify-between px-5 py-4 rounded-2xl w-full transition-all hover:opacity-90"
+                            style={{ background: "var(--secondary-light)", border: "1.5px solid rgba(67,97,238,0.25)" }}
+                        >
+                            <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: "var(--secondary)" }}>
+                                    <Users size={18} className="text-white" />
                                 </div>
-                                <button
-                                    onClick={loadStudents}
-                                    className="text-xs font-bold px-3 py-1.5 rounded-xl transition-all hover:opacity-80"
-                                    style={{ background: "var(--surface-2)", color: "var(--foreground-soft)" }}>
-                                    새로고침
-                                </button>
+                                <div className="text-left">
+                                    <p className="font-black text-sm" style={{ color: "var(--secondary)" }}>팀 관리 · 학생 배정</p>
+                                    <p className="text-xs mt-0.5" style={{ color: "var(--foreground-muted)" }}>팀 생성, 삭제, 학생 팀 배정은 팀 관리 탭에서</p>
+                                </div>
                             </div>
-
-                            {isLoadingStudents ? (
-                                <div className="py-8 text-center text-sm flex items-center justify-center gap-2"
-                                    style={{ color: "var(--foreground-muted)" }}>
-                                    <Loader2 size={16} className="animate-spin" /> 학생 목록 불러오는 중...
-                                </div>
-                            ) : students.length === 0 ? (
-                                <div className="py-8 text-center text-sm" style={{ color: "var(--foreground-muted)" }}>
-                                    등록된 학생이 없어요
-                                </div>
-                            ) : (
-                                <div className="divide-y" style={{ borderColor: "var(--border)" }}>
-                                    {students.map((student) => {
-                                        const teamMeta = student.team ? TEAM_META[student.team] : null;
-                                        const isUpdating = updatingTeamId === student.id;
-                                        return (
-                                            <div key={student.id}
-                                                className="flex items-center gap-3 px-5 py-3">
-                                                {/* 아바타 */}
-                                                <div className="w-9 h-9 rounded-xl flex items-center justify-center font-black text-base shrink-0"
-                                                    style={{ background: "var(--secondary-light)", color: "var(--secondary)" }}>
-                                                    {student.name?.[0] ?? "?"}
-                                                </div>
-
-                                                {/* 이름 + 핸들 */}
-                                                <div className="flex-1 min-w-0">
-                                                    <p className="font-bold text-sm truncate" style={{ color: "var(--foreground)" }}>
-                                                        {student.name}
-                                                    </p>
-                                                    <p className="text-xs truncate" style={{ color: "var(--foreground-muted)" }}>
-                                                        @{student.handle}
-                                                    </p>
-                                                </div>
-
-                                                {/* 현재 팀 배지 */}
-                                                {teamMeta && (
-                                                    <span className="text-xs font-bold px-2 py-0.5 rounded-full shrink-0"
-                                                        style={{
-                                                            background: `${teamMeta.color}18`,
-                                                            color: teamMeta.color,
-                                                        }}>
-                                                        {teamMeta.emoji} {student.team}
-                                                    </span>
-                                                )}
-
-                                                {/* 팀 드롭다운 */}
-                                                <div className="relative shrink-0">
-                                                    {isUpdating ? (
-                                                        <div className="w-28 h-9 rounded-xl flex items-center justify-center"
-                                                            style={{ background: "var(--surface-2)" }}>
-                                                            <Loader2 size={14} className="animate-spin" style={{ color: "var(--foreground-muted)" }} />
-                                                        </div>
-                                                    ) : (
-                                                        <select
-                                                            value={student.team ?? "미배정"}
-                                                            onChange={e => handleUpdateTeam(student.id, e.target.value)}
-                                                            className="w-28 px-3 py-2 rounded-xl text-xs font-bold outline-none appearance-none cursor-pointer transition-all"
-                                                            style={{
-                                                                background: "var(--surface-2)",
-                                                                border: "1.5px solid var(--border)",
-                                                                color: "var(--foreground)",
-                                                            }}>
-                                                            <option value="미배정">미배정</option>
-                                                            {Object.keys(TEAM_META).map(t => (
-                                                                <option key={t} value={t}>{t}</option>
-                                                            ))}
-                                                        </select>
-                                                    )}
-                                                </div>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            )}
-                        </div>
+                            <ChevronRight size={18} style={{ color: "var(--secondary)" }} />
+                        </button>
 
                         {/* 참여 현황 */}
                         <div className="rounded-2xl p-5"
@@ -1003,6 +882,9 @@ function Dashboard({ onLogout }: { onLogout: () => void }) {
                         )}
                     </div>
                 )}
+
+                {/* ══════════ TAB: 팀 관리 ══════════ */}
+                {activeTab === "teams" && <TeamsTab />}
 
                 {/* ══════════ TAB: 주차별 결과 ══════════ */}
                 {activeTab === "weekly" && (
@@ -2098,6 +1980,340 @@ function RewardManageTab() {
                     )}
                 </div>
             )}
+        </div>
+    );
+}
+
+/* ─────────────────── 팀 관리 탭 ─────────────────── */
+interface DbTeam {
+    id: string;
+    name: string;
+    emoji: string;
+    color: string;
+    created_at: string;
+}
+
+const EMOJI_PRESETS = ["🔥", "⚡", "🌊", "🌿", "🦁", "🚀", "🌈", "💎", "🎯", "🏅"];
+const COLOR_PRESETS = ["#FF6B35", "#4361EE", "#06D6A0", "#8B5CF6", "#FFC233", "#EF4444", "#EC4899", "#14B8A6"];
+
+function TeamsTab() {
+    const [teams, setTeams] = useState<DbTeam[]>([]);
+    const [students, setStudents] = useState<StudentProfile[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [loadingStudents, setLoadingStudents] = useState(true);
+    const [showForm, setShowForm] = useState(false);
+    const [newName, setNewName] = useState("");
+    const [newEmoji, setNewEmoji] = useState("🔥");
+    const [newColor, setNewColor] = useState("#FF6B35");
+    const [saving, setSaving] = useState(false);
+    const [deletingId, setDeletingId] = useState<string | null>(null);
+    const [updatingTeamId, setUpdatingTeamId] = useState<string | null>(null);
+    const [msg, setMsg] = useState("");
+
+    const loadTeams = async () => {
+        setLoading(true);
+        const { data } = await supabase.from("teams").select("*").order("created_at", { ascending: true });
+        setTeams(data ?? []);
+        setLoading(false);
+    };
+
+    const loadStudents = async () => {
+        setLoadingStudents(true);
+        const { data } = await supabase.from("profiles").select("id, name, handle, team, points").order("name");
+        setStudents(data ?? []);
+        setLoadingStudents(false);
+    };
+
+    useEffect(() => {
+        loadTeams();
+        loadStudents();
+    }, []);
+
+    const handleCreate = async () => {
+        if (!newName.trim()) return;
+        setSaving(true);
+        setMsg("");
+        const res = await fetch("/api/teacher/teams", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ name: newName.trim(), emoji: newEmoji, color: newColor }),
+        });
+        const json = await res.json();
+        if (!res.ok) {
+            setMsg(json.error ?? "오류가 발생했어요");
+        } else {
+            setTeams(prev => [...prev, json.team]);
+            setNewName("");
+            setNewEmoji("🔥");
+            setNewColor("#FF6B35");
+            setShowForm(false);
+        }
+        setSaving(false);
+    };
+
+    const handleDelete = async (id: string) => {
+        setDeletingId(id);
+        const res = await fetch("/api/teacher/teams", {
+            method: "DELETE",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ id }),
+        });
+        if (res.ok) {
+            setTeams(prev => prev.filter(t => t.id !== id));
+            setStudents(prev => prev.map(s => s.team === teams.find(t => t.id === id)?.name ? { ...s, team: null } : s));
+        }
+        setDeletingId(null);
+    };
+
+    const handleUpdateTeam = async (studentId: string, newTeam: string) => {
+        setUpdatingTeamId(studentId);
+        try {
+            const { data: { session } } = await supabase.auth.getSession();
+            const token = session?.access_token;
+            const res = await fetch("/api/teacher/update-team", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    ...(token ? { "Authorization": `Bearer ${token}` } : {}),
+                },
+                body: JSON.stringify({ studentId, team: newTeam }),
+            });
+            if (res.ok) {
+                setStudents(prev => prev.map(s => s.id === studentId ? { ...s, team: newTeam } : s));
+            }
+        } catch (err) {
+            console.error("팀 배정 오류:", err);
+        }
+        setUpdatingTeamId(null);
+    };
+
+    const memberCount = (teamName: string) => students.filter(s => s.team === teamName).length;
+
+    return (
+        <div className="flex flex-col gap-4">
+            {/* 안내 + 팀 추가 버튼 */}
+            <div className="flex items-center justify-between">
+                <div className="flex items-start gap-3 flex-1 p-4 rounded-2xl" style={{ background: "var(--secondary-light)" }}>
+                    <Users size={18} style={{ color: "var(--secondary)" }} className="shrink-0 mt-0.5" />
+                    <p className="text-sm" style={{ color: "var(--foreground-soft)" }}>
+                        <strong style={{ color: "var(--secondary)" }}>팀을 자유롭게 만들어보세요.</strong> 팀 이름과 이모지를 직접 설정하고 학생들을 배정할 수 있어요.
+                    </p>
+                </div>
+                <button
+                    onClick={() => { setShowForm(true); setMsg(""); }}
+                    className="ml-3 shrink-0 flex items-center gap-1.5 px-4 py-2.5 rounded-xl font-bold text-sm text-white transition-all hover:opacity-90"
+                    style={{ background: "linear-gradient(135deg, var(--secondary), #6B5CE7)" }}
+                >
+                    <Plus size={16} /> 팀 추가
+                </button>
+            </div>
+
+            {/* 팀 생성 폼 */}
+            {showForm && (
+                <div className="rounded-2xl p-5 flex flex-col gap-4" style={{ background: "var(--surface)", border: "1.5px solid var(--secondary)" }}>
+                    <h3 className="text-base font-black" style={{ color: "var(--foreground)" }}>새 팀 만들기</h3>
+
+                    <div className="flex flex-col gap-1.5">
+                        <label className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "var(--foreground-muted)" }}>팀 이름</label>
+                        <input
+                            type="text"
+                            value={newName}
+                            onChange={e => setNewName(e.target.value)}
+                            placeholder="예: 별빛팀, 혜성팀, 마케팅팀..."
+                            maxLength={12}
+                            className="px-4 py-2.5 rounded-xl text-sm font-bold outline-none"
+                            style={{ background: "var(--surface-2)", border: "1px solid var(--border)", color: "var(--foreground)" }}
+                        />
+                    </div>
+
+                    <div className="flex flex-col gap-2">
+                        <label className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "var(--foreground-muted)" }}>이모지</label>
+                        <div className="flex flex-wrap gap-2">
+                            {EMOJI_PRESETS.map(e => (
+                                <button
+                                    key={e}
+                                    onClick={() => setNewEmoji(e)}
+                                    className="w-10 h-10 rounded-xl text-xl flex items-center justify-center transition-all hover:scale-110"
+                                    style={{
+                                        background: newEmoji === e ? "var(--secondary-light)" : "var(--surface-2)",
+                                        border: newEmoji === e ? "2px solid var(--secondary)" : "2px solid transparent",
+                                    }}
+                                >
+                                    {e}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    <div className="flex flex-col gap-2">
+                        <label className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "var(--foreground-muted)" }}>색상</label>
+                        <div className="flex flex-wrap gap-2">
+                            {COLOR_PRESETS.map(c => (
+                                <button
+                                    key={c}
+                                    onClick={() => setNewColor(c)}
+                                    className="w-8 h-8 rounded-full transition-all hover:scale-110"
+                                    style={{
+                                        background: c,
+                                        border: newColor === c ? "3px solid var(--foreground)" : "3px solid transparent",
+                                        outline: newColor === c ? `2px solid ${c}` : "none",
+                                        outlineOffset: "2px",
+                                    }}
+                                />
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* 미리보기 */}
+                    <div className="flex items-center gap-2 px-4 py-2.5 rounded-xl self-start" style={{ background: `${newColor}18`, border: `1.5px solid ${newColor}40` }}>
+                        <span className="text-xl">{newEmoji}</span>
+                        <span className="font-black text-sm" style={{ color: newColor }}>{newName || "팀 이름"}</span>
+                    </div>
+
+                    {msg && <p className="text-xs font-bold" style={{ color: "#EF4444" }}>{msg}</p>}
+
+                    <div className="flex gap-2">
+                        <button
+                            onClick={handleCreate}
+                            disabled={saving || !newName.trim()}
+                            className="flex-1 py-2.5 rounded-xl font-bold text-sm text-white transition-all disabled:opacity-50"
+                            style={{ background: "var(--secondary)" }}
+                        >
+                            {saving ? "저장 중..." : "팀 만들기"}
+                        </button>
+                        <button
+                            onClick={() => { setShowForm(false); setMsg(""); }}
+                            className="px-5 py-2.5 rounded-xl font-bold text-sm"
+                            style={{ background: "var(--surface-2)", color: "var(--foreground-muted)" }}
+                        >
+                            취소
+                        </button>
+                    </div>
+                </div>
+            )}
+
+            {/* 팀 목록 */}
+            <div className="rounded-2xl overflow-hidden" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
+                <div className="px-5 py-4" style={{ borderBottom: "1px solid var(--border)" }}>
+                    <h3 className="text-base font-black" style={{ color: "var(--foreground)" }}>등록된 팀</h3>
+                </div>
+                {loading ? (
+                    <div className="py-8 flex justify-center">
+                        <Loader2 size={20} className="animate-spin" style={{ color: "var(--foreground-muted)" }} />
+                    </div>
+                ) : teams.length === 0 ? (
+                    <div className="py-10 text-center">
+                        <p className="text-sm font-semibold" style={{ color: "var(--foreground-muted)" }}>등록된 팀이 없어요</p>
+                        <p className="text-xs mt-1" style={{ color: "var(--foreground-muted)" }}>위 버튼으로 첫 번째 팀을 만들어보세요!</p>
+                    </div>
+                ) : (
+                    <div className="divide-y" style={{ borderColor: "var(--border)" }}>
+                        {teams.map(team => (
+                            <div key={team.id} className="flex items-center gap-4 px-5 py-4">
+                                <div
+                                    className="w-11 h-11 rounded-2xl flex items-center justify-center text-2xl shrink-0"
+                                    style={{ background: `${team.color}18` }}
+                                >
+                                    {team.emoji}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                    <p className="font-black text-base" style={{ color: team.color }}>{team.name}</p>
+                                    <p className="text-xs" style={{ color: "var(--foreground-muted)" }}>
+                                        {memberCount(team.name)}명 배정됨
+                                    </p>
+                                </div>
+                                <button
+                                    onClick={() => handleDelete(team.id)}
+                                    disabled={deletingId === team.id}
+                                    className="p-2 rounded-xl transition-all hover:bg-red-50 disabled:opacity-50"
+                                    title="팀 삭제"
+                                >
+                                    {deletingId === team.id
+                                        ? <Loader2 size={16} className="animate-spin" style={{ color: "var(--foreground-muted)" }} />
+                                        : <Trash2 size={16} style={{ color: "#EF4444" }} />}
+                                </button>
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </div>
+
+            {/* 학생 팀 배정 */}
+            <div className="rounded-2xl overflow-hidden" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
+                <div className="px-5 py-4 flex items-center justify-between" style={{ borderBottom: "1px solid var(--border)" }}>
+                    <div>
+                        <h3 className="text-base font-black" style={{ color: "var(--foreground)" }}>학생 팀 배정</h3>
+                        <p className="text-xs mt-0.5" style={{ color: "var(--foreground-muted)" }}>
+                            {students.length}명 · 드롭다운으로 즉시 변경됩니다
+                        </p>
+                    </div>
+                    <button
+                        onClick={loadStudents}
+                        className="text-xs font-bold px-3 py-1.5 rounded-xl transition-all hover:opacity-80"
+                        style={{ background: "var(--surface-2)", color: "var(--foreground-soft)" }}
+                    >
+                        새로고침
+                    </button>
+                </div>
+
+                {loadingStudents ? (
+                    <div className="py-8 flex justify-center">
+                        <Loader2 size={16} className="animate-spin" style={{ color: "var(--foreground-muted)" }} />
+                    </div>
+                ) : students.length === 0 ? (
+                    <div className="py-8 text-center text-sm" style={{ color: "var(--foreground-muted)" }}>
+                        등록된 학생이 없어요
+                    </div>
+                ) : (
+                    <div className="divide-y" style={{ borderColor: "var(--border)" }}>
+                        {students.map(student => {
+                            const teamMeta = student.team ? teams.find(t => t.name === student.team) ?? null : null;
+                            const isUpdating = updatingTeamId === student.id;
+                            return (
+                                <div key={student.id} className="flex items-center gap-3 px-5 py-3">
+                                    <div
+                                        className="w-9 h-9 rounded-xl flex items-center justify-center font-black text-base shrink-0"
+                                        style={{ background: "var(--secondary-light)", color: "var(--secondary)" }}
+                                    >
+                                        {student.name?.[0] ?? "?"}
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <p className="font-bold text-sm truncate" style={{ color: "var(--foreground)" }}>{student.name}</p>
+                                        <p className="text-xs truncate" style={{ color: "var(--foreground-muted)" }}>@{student.handle}</p>
+                                    </div>
+                                    {teamMeta && (
+                                        <span
+                                            className="text-xs font-bold px-2 py-0.5 rounded-full shrink-0"
+                                            style={{ background: `${teamMeta.color}18`, color: teamMeta.color }}
+                                        >
+                                            {teamMeta.emoji} {student.team}
+                                        </span>
+                                    )}
+                                    <div className="relative shrink-0">
+                                        {isUpdating ? (
+                                            <div className="w-32 h-9 rounded-xl flex items-center justify-center" style={{ background: "var(--surface-2)" }}>
+                                                <Loader2 size={14} className="animate-spin" style={{ color: "var(--foreground-muted)" }} />
+                                            </div>
+                                        ) : (
+                                            <select
+                                                value={student.team ?? "미배정"}
+                                                onChange={e => handleUpdateTeam(student.id, e.target.value)}
+                                                className="w-32 px-3 py-2 rounded-xl text-xs font-bold outline-none appearance-none cursor-pointer transition-all"
+                                                style={{ background: "var(--surface-2)", border: "1.5px solid var(--border)", color: "var(--foreground)" }}
+                                            >
+                                                <option value="미배정">미배정</option>
+                                                {teams.map(t => (
+                                                    <option key={t.id} value={t.name}>{t.emoji} {t.name}</option>
+                                                ))}
+                                            </select>
+                                        )}
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                )}
+            </div>
         </div>
     );
 }

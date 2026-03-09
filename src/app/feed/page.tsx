@@ -9,7 +9,6 @@ import {
     Plus,
     GraduationCap,
     Flame,
-    Users,
     ChevronRight,
     Zap,
 } from "lucide-react";
@@ -61,26 +60,7 @@ function calcStreak(posts: ReturnType<typeof dbPostToStorePost>[], handle: strin
 export default function FeedPage() {
     const { setUploadModalOpen, setGuideModalOpen, posts, week, user, addPost, setWeek } = useGameStore();
     const [feedFilter, setFeedFilter] = useState<"latest" | "hot">("latest");
-    const [teamRank, setTeamRank] = useState<number | null>(null);
     const [classActive, setClassActive] = useState(false);
-
-    useEffect(() => {
-        const calcTeamRank = async () => {
-            if (!user.team) return;
-            const { data } = await supabase.from("profiles").select("team, points");
-            if (!data) return;
-            const teamTotals: Record<string, number> = {};
-            data.forEach((p: { team: string; points: number }) => {
-                const t = p.team || "A팀";
-                teamTotals[t] = (teamTotals[t] || 0) + (p.points || 0);
-            });
-            const sorted = Object.entries(teamTotals).sort((a, b) => b[1] - a[1]);
-            const rank = sorted.findIndex(([t]) => t === user.team) + 1;
-            setTeamRank(rank > 0 ? rank : null);
-        };
-        calcTeamRank();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [user.team]);
 
     const sortedPosts = feedFilter === "hot"
         ? [...posts].sort((a, b) => {
@@ -267,28 +247,21 @@ export default function FeedPage() {
                     </div>
                 </div>
 
-                {/* 팀 현황 빠른 요약 */}
-                <div className="grid grid-cols-3 gap-3">
-                    <div className="rounded-2xl p-3.5 text-center" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
-                        <div className="flex items-center justify-center gap-1 mb-1">
-                            <Flame size={13} style={{ color: "var(--primary)" }} />
-                            <span className="text-[10px] font-bold uppercase" style={{ color: "var(--foreground-muted)" }}>연속</span>
+                {/* 개인 현황 빠른 요약 */}
+                <div className="grid grid-cols-2 gap-3">
+                    <div className="rounded-2xl p-4 text-center" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
+                        <div className="flex items-center justify-center gap-1 mb-1.5">
+                            <Flame size={14} style={{ color: "var(--primary)" }} />
+                            <span className="text-[10px] font-bold uppercase" style={{ color: "var(--foreground-muted)" }}>연속 업로드</span>
                         </div>
-                        <span className="text-lg font-black" style={{ color: "var(--primary)" }}>{streak > 0 ? `${streak}일` : "-"}</span>
+                        <span className="text-2xl font-black" style={{ color: "var(--primary)" }}>{streak > 0 ? `${streak}일` : "-"}</span>
                     </div>
-                    <div className="rounded-2xl p-3.5 text-center" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
-                        <div className="flex items-center justify-center gap-1 mb-1">
-                            <Sparkles size={13} style={{ color: "var(--secondary)" }} />
-                            <span className="text-[10px] font-bold uppercase" style={{ color: "var(--foreground-muted)" }}>점수</span>
+                    <div className="rounded-2xl p-4 text-center" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
+                        <div className="flex items-center justify-center gap-1 mb-1.5">
+                            <Sparkles size={14} style={{ color: "var(--secondary)" }} />
+                            <span className="text-[10px] font-bold uppercase" style={{ color: "var(--foreground-muted)" }}>내 점수</span>
                         </div>
-                        <span className="text-lg font-black" style={{ color: "var(--secondary)" }}>{user.points}</span>
-                    </div>
-                    <div className="rounded-2xl p-3.5 text-center" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
-                        <div className="flex items-center justify-center gap-1 mb-1">
-                            <Users size={13} style={{ color: "var(--accent)" }} />
-                            <span className="text-[10px] font-bold uppercase" style={{ color: "var(--foreground-muted)" }}>팀 순위</span>
-                        </div>
-                        <span className="text-lg font-black" style={{ color: "var(--accent)" }}>{teamRank ? `${teamRank}위` : "-"}</span>
+                        <span className="text-2xl font-black" style={{ color: "var(--secondary)" }}>{user.points}</span>
                     </div>
                 </div>
 

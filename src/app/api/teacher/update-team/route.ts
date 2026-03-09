@@ -2,15 +2,18 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { createAdminClient } from "@/lib/supabase/admin";
 
-const VALID_TEAMS = ["미배정", "A팀", "B팀", "C팀", "D팀", "E팀", "F팀"];
-
 export async function POST(request: NextRequest) {
     const { studentId, team } = await request.json();
 
     if (!studentId || !team) {
         return NextResponse.json({ error: "Missing params" }, { status: 400 });
     }
-    if (!VALID_TEAMS.includes(team)) {
+
+    // 유효 팀 목록을 DB에서 동적으로 조회
+    const adminForCheck = createAdminClient();
+    const { data: teamsData } = await adminForCheck.from("teams").select("name");
+    const validTeams = ["미배정", ...(teamsData?.map((t: { name: string }) => t.name) ?? [])];
+    if (!validTeams.includes(team)) {
         return NextResponse.json({ error: "Invalid team" }, { status: 400 });
     }
 
