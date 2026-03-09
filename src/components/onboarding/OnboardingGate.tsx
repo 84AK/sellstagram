@@ -53,7 +53,7 @@ export default function OnboardingGate({ children }: { children: React.ReactNode
 
             const { data: profile } = await supabase
                 .from("profiles")
-                .select("id, name, handle, avatar, avatar_config, marketer_type, team, points, rank, role, balance")
+                .select("id, name, handle, avatar, marketer_type, team, points, rank, role, balance")
                 .eq("id", session.user.id)
                 .single();
 
@@ -76,15 +76,11 @@ export default function OnboardingGate({ children }: { children: React.ReactNode
             updateProfile({
                 name: profile.name,
                 handle: profile.handle,
-                avatar: profile.avatar,
+                avatar: profile.avatar, // DiceBear URL or emoji — AvatarDisplay가 자동 처리
                 rank: profile.rank,
                 team: profile.team,
                 points: profile.points ?? 0,
                 role: profile.role ?? "student",
-                // avatar_config 컬럼이 존재하면 로드 (SQL: ALTER TABLE profiles ADD COLUMN IF NOT EXISTS avatar_config JSONB DEFAULT '{}')
-                ...(profile.avatar_config && Object.keys(profile.avatar_config).length > 0
-                    ? { avatarConfig: profile.avatar_config }
-                    : {}),
             });
             useGameStore.setState({ balance });
 

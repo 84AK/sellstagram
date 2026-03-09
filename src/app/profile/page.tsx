@@ -182,15 +182,20 @@ export default function ProfilePage() {
     const handleAvatarSave = async (config: typeof user.avatarConfig & object) => {
         _setAvatarConfig(config);
         setShowAvatarBuilder(false);
-        // Supabase avatar_config 컬럼 동기화 (SQL: ALTER TABLE profiles ADD COLUMN IF NOT EXISTS avatar_config JSONB DEFAULT '{}')
+        // DiceBear URL을 기존 profiles.avatar 컬럼에 저장 (SQL 불필요)
         try {
             const { data: { session } } = await supabase.auth.getSession();
             if (session?.user?.id) {
+                const { buildAvatarUrl } = await import("@/lib/avatar/items");
+                const avatarUrl = buildAvatarUrl(config, user.handle || user.name || "user", 200);
                 await supabase.from("profiles")
-                    .update({ avatar_config: config })
+                    .update({ avatar: avatarUrl })
                     .eq("id", session.user.id);
+                // Zustand avatar도 URL로 업데이트 (피드/스토리바 즉시 반영)
+                _setAvatarConfig(config);
+                useGameStore.getState().updateProfile({ avatar: avatarUrl });
             }
-        } catch {/* ignore: column may not exist yet */}
+        } catch {/* ignore */}
     };
 
     return (
