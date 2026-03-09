@@ -6,7 +6,7 @@ import {
     Shield, Users, FileText, Trophy, MessageSquare,
     LogOut, Loader2, Trash2, Crown, RefreshCw,
     TrendingUp, ShoppingBag, BarChart3, Settings, Eye, EyeOff, Check,
-    Lock, Unlock,
+    Lock, Unlock, Key,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase/client";
 import { CURRICULUM } from "@/lib/curriculum/sessions";
@@ -58,6 +58,13 @@ export default function AdminDashboard() {
     const [updatingLeader, setUpdatingLeader] = useState<string | null>(null);
     const [deletingPost, setDeletingPost] = useState<string | null>(null);
 
+    // API 키 관리 상태
+    const [apiKeyStatus, setApiKeyStatus] = useState<{ hasKey: boolean; masked: string | null } | null>(null);
+    const [newApiKey, setNewApiKey] = useState("");
+    const [showApiKeyInput, setShowApiKeyInput] = useState(false);
+    const [apiKeySaving, setApiKeySaving] = useState(false);
+    const [apiKeyMsg, setApiKeyMsg] = useState<{ ok: boolean; msg: string } | null>(null);
+
     // PIN 설정 상태
     const [currentPin, setCurrentPin] = useState("");
     const [newPin, setNewPin] = useState("");
@@ -75,6 +82,8 @@ export default function AdminDashboard() {
         fetch("/api/auth/admin-check").then(r => r.json()).then(({ isAdmin }) => {
             if (!isAdmin) { router.replace("/admin"); return; }
             setAuthChecked(true);
+            // API 키 상태 초기 로드
+            fetch("/api/admin/gemini-key").then(r => r.json()).then(setApiKeyStatus);
         });
     }, [router]);
 
@@ -594,6 +603,124 @@ export default function AdminDashboard() {
                                 {pinSaving ? <Loader2 size={15} className="animate-spin" /> : <Check size={15} />}
                                 {pinSaving ? "저장 중..." : "PIN 변경 저장"}
                             </button>
+                        </div>
+
+                        {/* AI API 키 관리 */}
+                        <div className="flex flex-col gap-4 p-5 rounded-2xl"
+                            style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
+                            <div className="flex items-center gap-2">
+                                <Key size={16} style={{ color: "#7C3AED" }} />
+                                <h3 className="text-sm font-black" style={{ color: "var(--foreground)" }}>Gemini AI 키 관리</h3>
+                            </div>
+                            <p className="text-xs" style={{ color: "var(--foreground-muted)" }}>
+                                할당량 초과 시 새 키를 등록하면 재배포 없이 즉시 반영됩니다. DB 키가 없으면 환경변수 키를 사용합니다.
+                            </p>
+
+                            {/* 현재 상태 */}
+                            <div className="flex items-center justify-between gap-3 px-4 py-3 rounded-xl"
+                                style={{ background: "var(--surface-2)", border: "1px solid var(--border)" }}>
+                                <div className="flex items-center gap-2.5">
+                                    <div className={`w-2.5 h-2.5 rounded-full shrink-0 ${apiKeyStatus?.hasKey ? "bg-green-400" : "bg-foreground/20"}`} />
+                                    <div>
+                                        <p className="text-sm font-bold" style={{ color: "var(--foreground)" }}>
+                                            {apiKeyStatus?.hasKey ? "DB 키 등록됨" : "환경변수 키 사용 중"}
+                                        </p>
+                                        {apiKeyStatus?.hasKey && apiKeyStatus.masked && (
+                                            <p className="text-xs font-mono mt-0.5" style={{ color: "var(--foreground-muted)" }}>
+                                                {apiKeyStatus.masked}
+                                            </p>
+                                        )}
+                                    </div>
+                                </div>
+                                {apiKeyStatus?.hasKey && (
+                                    <button
+                                        onClick={async () => {
+                                            if (!confirm("DB 키를 삭제하면 환경변수 키로 복귀해요. 계속할까요?")) return;
+                                            setApiKeySaving(true);
+                                            await fetch("/api/admin/gemini-key", { method: "DELETE" });
+                                            const updated = await fetch("/api/admin/gemini-key").then(r => r.json());
+                                            setApiKeyStatus(updated);
+                                            setApiKeyMsg({ ok: true, msg: "키가 삭제됐어요. 환경변수 키를 사용합니다." });
+                                            setApiKeySaving(false);
+                                        }}
+                                        disabled={apiKeySaving}
+                                        className="text-xs font-bold px-3 py-1.5 rounded-lg transition-colors"
+                                        style={{ background: "rgba(239,68,68,0.08)", color: "#ef4444", border: "1px solid rgba(239,68,68,0.2)" }}>
+                                        키 삭제
+                                    </button>
+                                )}
+                            </div>
+
+                            {/* 피드백 */}
+                            {apiKeyMsg && (
+                                <div className="flex items-center gap-2 px-4 py-3 rounded-xl text-sm font-semibold"
+                                    style={{
+                                        background: apiKeyMsg.ok ? "rgba(6,214,160,0.1)" : "rgba(239,68,68,0.1)",
+                                        color: apiKeyMsg.ok ? "var(--accent)" : "#ef4444",
+                                    }}>
+                                    {apiKeyMsg.ok ? <Check size={14} /> : <Shield size={14} />}
+                                    {apiKeyMsg.msg}
+                                </div>
+                            )}
+
+                            {/* 새 키 입력 */}
+                            {showApiKeyInput ? (
+                                <div className="flex flex-col gap-3">
+                                    <input
+                                        type="password"
+                                        value={newApiKey}
+                                        onChange={e => setNewApiKey(e.target.value)}
+                                        placeholder="AIza..."
+                                        className="px-4 py-3 rounded-xl text-sm font-mono font-bold outline-none"
+                                        style={{ background: "var(--surface-2)", border: "1px solid var(--border)", color: "var(--foreground)" }}
+                                    />
+                                    <p className="text-xs" style={{ color: "var(--foreground-muted)" }}>
+                                        Google AI Studio(aistudio.google.com)에서 발급한 키를 입력하세요.
+                                    </p>
+                                    <div className="flex gap-2">
+                                        <button
+                                            onClick={() => { setShowApiKeyInput(false); setNewApiKey(""); }}
+                                            className="flex-1 py-2.5 rounded-xl text-sm font-bold"
+                                            style={{ background: "var(--surface-2)", color: "var(--foreground-muted)", border: "1px solid var(--border)" }}>
+                                            취소
+                                        </button>
+                                        <button
+                                            onClick={async () => {
+                                                if (!newApiKey.trim()) return;
+                                                setApiKeySaving(true);
+                                                setApiKeyMsg(null);
+                                                const res = await fetch("/api/admin/gemini-key", {
+                                                    method: "POST",
+                                                    headers: { "Content-Type": "application/json" },
+                                                    body: JSON.stringify({ apiKey: newApiKey.trim() }),
+                                                });
+                                                const data = await res.json();
+                                                if (!res.ok) {
+                                                    setApiKeyMsg({ ok: false, msg: data.error ?? "저장 실패" });
+                                                } else {
+                                                    setApiKeyMsg({ ok: true, msg: "새 키가 저장됐어요! 즉시 반영됩니다." });
+                                                    setNewApiKey("");
+                                                    setShowApiKeyInput(false);
+                                                    const updated = await fetch("/api/admin/gemini-key").then(r => r.json());
+                                                    setApiKeyStatus(updated);
+                                                }
+                                                setApiKeySaving(false);
+                                            }}
+                                            disabled={apiKeySaving || !newApiKey.trim()}
+                                            className="flex-1 py-2.5 rounded-xl text-sm font-black text-white transition-all disabled:opacity-50"
+                                            style={{ background: "linear-gradient(135deg, #7C3AED, #4F46E5)" }}>
+                                            {apiKeySaving ? "저장 중..." : "저장하기"}
+                                        </button>
+                                    </div>
+                                </div>
+                            ) : (
+                                <button
+                                    onClick={() => { setShowApiKeyInput(true); setApiKeyMsg(null); }}
+                                    className="w-full py-3 rounded-xl text-sm font-black text-white transition-all hover:opacity-90"
+                                    style={{ background: "linear-gradient(135deg, #7C3AED, #4F46E5)" }}>
+                                    🔑 새 API 키 등록 / 교체
+                                </button>
+                            )}
                         </div>
 
                         {/* 회차 열람 관리 */}
