@@ -16,6 +16,7 @@ import {
     Share2,
 } from "lucide-react";
 import GlassCard from "../common/GlassCard";
+import TermTooltip from "../common/TermTooltip";
 import { useGameStore } from "@/store/useGameStore";
 import { simulateMarketingEffect } from "@/lib/simulation/engine";
 import { supabase } from "@/lib/supabase/client";
@@ -346,7 +347,10 @@ export default function FeedCard({ id, user, content, stats, timeAgo }: FeedCard
                 {/* 인게이지먼트 스탯 */}
                 <div className="flex items-center gap-4 py-1 border-y border-foreground/5">
                     <div className="flex flex-col">
-                        <span className="text-[9px] text-foreground/40 font-bold uppercase tracking-widest italic">Engagement</span>
+                        <div className="flex items-center gap-1">
+                            <span className="text-[9px] text-foreground/40 font-bold uppercase tracking-widest italic">Engagement</span>
+                            <TermTooltip termKey="engagement" size={12} />
+                        </div>
                         <span className="text-sm font-black text-primary italic">{stats.engagement}</span>
                     </div>
                 </div>

@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { useGameStore } from "@/store/useGameStore";
 import { supabase } from "@/lib/supabase/client";
+import TermTooltip from "@/components/common/TermTooltip";
 
 interface TeamRank {
     name: string;
@@ -104,9 +105,12 @@ export default function Insights() {
             >
                 <div className="flex justify-between items-start mb-3">
                     <div>
-                        <p className="text-[10px] font-bold text-white/70 uppercase tracking-widest mb-1">
-                            마케팅 잔고
-                        </p>
+                        <div className="flex items-center gap-1.5 mb-1">
+                            <p className="text-[10px] font-bold text-white/70 uppercase tracking-widest">
+                                마케팅 잔고
+                            </p>
+                            <TermTooltip termKey="balance" size={11} className="opacity-70" />
+                        </div>
                         <h3 className="text-2xl font-black text-white">
                             ₩{balance.toLocaleString()}
                         </h3>
@@ -132,6 +136,7 @@ export default function Insights() {
                         <span className="text-[10px] font-bold uppercase" style={{ color: "var(--foreground-muted)" }}>
                             총 도달
                         </span>
+                        <TermTooltip termKey="reach" size={12} />
                     </div>
                     <span className="text-xl font-black" style={{ color: "var(--foreground)" }}>{reachDisplay || "0"}</span>
                 </div>
@@ -144,6 +149,7 @@ export default function Insights() {
                         <span className="text-[10px] font-bold uppercase" style={{ color: "var(--foreground-muted)" }}>
                             ROAS
                         </span>
+                        <TermTooltip termKey="roas" size={12} />
                     </div>
                     <span className="text-xl font-black" style={{ color: "var(--primary)" }}>
                         {roas}x
