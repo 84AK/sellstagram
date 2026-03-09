@@ -452,12 +452,12 @@ function StatsModal({ user, balance, posts, campaigns, onClose }: StatsModalProp
     const totalSpent = campaigns.reduce((s, c) => s + (c.spent ?? 0), 0);
 
     const statItems = [
-        { icon: <FileText size={14} />, label: "게시물", value: `${posts.length}개`, color: "var(--secondary)" },
-        { icon: <Heart size={14} />, label: "총 좋아요", value: totalLikes.toLocaleString(), color: "#EF4444" },
-        { icon: <MessageCircle size={14} />, label: "총 댓글", value: totalComments.toLocaleString(), color: "var(--accent)" },
-        { icon: <Share2 size={14} />, label: "총 공유", value: totalShares.toLocaleString(), color: "#8B5CF6" },
-        { icon: <ShoppingCart size={14} />, label: "총 구매", value: `${totalPurchases}건`, color: "var(--primary)" },
-        { icon: <Wallet size={14} />, label: "총 매출", value: `₩${totalRevenue.toLocaleString()}`, color: "#06D6A0" },
+        { icon: <FileText size={18} />, label: "게시물", value: `${posts.length}개`, color: "var(--secondary)" },
+        { icon: <Heart size={18} />, label: "총 좋아요", value: totalLikes.toLocaleString(), color: "#EF4444" },
+        { icon: <MessageCircle size={18} />, label: "총 댓글", value: totalComments.toLocaleString(), color: "var(--accent)" },
+        { icon: <Share2 size={18} />, label: "총 공유", value: totalShares.toLocaleString(), color: "#8B5CF6" },
+        { icon: <ShoppingCart size={18} />, label: "총 구매", value: `${totalPurchases}건`, color: "var(--primary)" },
+        { icon: <Wallet size={18} />, label: "총 매출", value: `₩${totalRevenue.toLocaleString()}`, color: "#06D6A0" },
     ];
 
     return (
@@ -475,59 +475,59 @@ function StatsModal({ user, balance, posts, campaigns, onClose }: StatsModalProp
                 style={{
                     top: "50%", left: "50%",
                     transform: "translate(-50%, -50%)",
-                    width: "min(420px, 95vw)",
-                    maxHeight: "85vh",
+                    width: "min(520px, 95vw)",
+                    maxHeight: "88vh",
                     background: "var(--surface)",
                     border: "1px solid var(--border)",
-                    borderRadius: "20px",
+                    borderRadius: "24px",
                     boxShadow: "0 24px 60px rgba(0,0,0,0.2)",
                     overflow: "hidden",
                 }}
             >
                 {/* 헤더 */}
                 <div
-                    className="flex items-center justify-between px-5 py-4 shrink-0"
+                    className="flex items-center justify-between px-6 py-5 shrink-0"
                     style={{ borderBottom: "1px solid var(--border)" }}
                 >
                     <div>
-                        <h2 className="text-sm font-black" style={{ color: "var(--foreground)" }}>
+                        <h2 className="text-lg font-black" style={{ color: "var(--foreground)" }}>
                             📊 나의 활동 통계
                         </h2>
-                        <p className="text-[11px] mt-0.5" style={{ color: "var(--foreground-muted)" }}>
+                        <p className="text-sm mt-0.5 font-medium" style={{ color: "var(--foreground-muted)" }}>
                             {user.name} · {user.team} · {user.points.toLocaleString()}pt
                         </p>
                     </div>
                     <button
                         onClick={onClose}
-                        className="p-1.5 rounded-lg hover:bg-foreground/5 transition-colors"
+                        className="p-2 rounded-xl hover:bg-foreground/5 transition-colors"
                         style={{ color: "var(--foreground-muted)" }}
                     >
-                        <X size={16} />
+                        <X size={20} />
                     </button>
                 </div>
 
                 {/* 잔고 배너 */}
                 <div
-                    className="mx-4 mt-4 rounded-2xl px-4 py-3 flex items-center justify-between shrink-0"
+                    className="mx-5 mt-5 rounded-2xl px-5 py-4 flex items-center justify-between shrink-0"
                     style={{ background: "linear-gradient(135deg, var(--secondary) 0%, #6B5CE7 100%)" }}
                 >
                     <div>
-                        <p className="text-[10px] font-bold text-white/70 uppercase tracking-wider mb-0.5">현재 마케팅 잔고</p>
-                        <p className="text-xl font-black text-white">₩{balance.toLocaleString()}</p>
+                        <p className="text-xs font-bold text-white/70 uppercase tracking-wider mb-1">현재 마케팅 잔고</p>
+                        <p className="text-2xl font-black text-white">₩{balance.toLocaleString()}</p>
                     </div>
                     <div className="text-right">
-                        <p className="text-[10px] font-bold text-white/70 mb-0.5">시뮬 총 매출</p>
-                        <p className="text-base font-black text-green-300">+₩{totalRevenue.toLocaleString()}</p>
+                        <p className="text-xs font-bold text-white/70 mb-1">시뮬 총 매출</p>
+                        <p className="text-xl font-black text-green-300">+₩{totalRevenue.toLocaleString()}</p>
                     </div>
                 </div>
 
                 {/* 탭 */}
-                <div className="flex gap-1 px-4 pt-3 shrink-0">
+                <div className="flex gap-2 px-5 pt-4 shrink-0">
                     {(["summary", "sims", "posts"] as const).map((t) => (
                         <button
                             key={t}
                             onClick={() => setTab(t)}
-                            className="flex-1 py-1.5 text-[11px] font-bold rounded-xl transition-all"
+                            className="flex-1 py-2.5 text-sm font-bold rounded-xl transition-all"
                             style={{
                                 background: tab === t ? "var(--primary)" : "var(--surface-2)",
                                 color: tab === t ? "white" : "var(--foreground-soft)",
@@ -539,25 +539,25 @@ function StatsModal({ user, balance, posts, campaigns, onClose }: StatsModalProp
                 </div>
 
                 {/* 탭 내용 */}
-                <div className="overflow-y-auto flex-1 px-4 py-3 custom-scrollbar">
+                <div className="overflow-y-auto flex-1 px-5 py-4 custom-scrollbar">
 
                     {/* 요약 탭 */}
                     {tab === "summary" && (
                         <div className="flex flex-col gap-3">
-                            <div className="grid grid-cols-2 gap-2">
+                            <div className="grid grid-cols-2 gap-3">
                                 {statItems.map((item) => (
                                     <div
                                         key={item.label}
-                                        className="rounded-xl p-3 flex flex-col gap-1"
+                                        className="rounded-2xl p-4 flex flex-col gap-2"
                                         style={{ background: "var(--surface-2)", border: "1px solid var(--border)" }}
                                     >
-                                        <div className="flex items-center gap-1.5" style={{ color: item.color }}>
+                                        <div className="flex items-center gap-2" style={{ color: item.color }}>
                                             {item.icon}
-                                            <span className="text-[10px] font-bold uppercase" style={{ color: "var(--foreground-muted)" }}>
+                                            <span className="text-xs font-bold" style={{ color: "var(--foreground-muted)" }}>
                                                 {item.label}
                                             </span>
                                         </div>
-                                        <span className="text-base font-black" style={{ color: item.color }}>
+                                        <span className="text-2xl font-black" style={{ color: item.color }}>
                                             {item.value}
                                         </span>
                                     </div>
@@ -566,20 +566,20 @@ function StatsModal({ user, balance, posts, campaigns, onClose }: StatsModalProp
 
                             {totalSpent > 0 && (
                                 <div
-                                    className="rounded-xl p-3"
+                                    className="rounded-2xl p-4"
                                     style={{ background: "var(--surface-2)", border: "1px solid var(--border)" }}
                                 >
-                                    <p className="text-[10px] font-bold uppercase mb-2" style={{ color: "var(--foreground-muted)" }}>수익 분석</p>
-                                    <div className="flex justify-between text-xs font-bold mb-1">
+                                    <p className="text-xs font-bold uppercase mb-3" style={{ color: "var(--foreground-muted)" }}>수익 분석</p>
+                                    <div className="flex justify-between text-sm font-bold mb-2">
                                         <span style={{ color: "var(--foreground-soft)" }}>총 매출</span>
                                         <span style={{ color: "#06D6A0" }}>+₩{totalRevenue.toLocaleString()}</span>
                                     </div>
-                                    <div className="flex justify-between text-xs font-bold mb-1">
+                                    <div className="flex justify-between text-sm font-bold mb-2">
                                         <span style={{ color: "var(--foreground-soft)" }}>총 지출</span>
                                         <span style={{ color: "var(--primary)" }}>-₩{totalSpent.toLocaleString()}</span>
                                     </div>
                                     <div
-                                        className="flex justify-between text-xs font-black pt-1"
+                                        className="flex justify-between text-sm font-black pt-2"
                                         style={{ borderTop: "1px solid var(--border)" }}
                                     >
                                         <span style={{ color: "var(--foreground)" }}>순이익</span>
@@ -594,33 +594,33 @@ function StatsModal({ user, balance, posts, campaigns, onClose }: StatsModalProp
 
                     {/* 시뮬레이션 내역 탭 */}
                     {tab === "sims" && (
-                        <div className="flex flex-col gap-2">
+                        <div className="flex flex-col gap-3">
                             {simResults.length === 0 ? (
-                                <p className="text-center text-xs py-8" style={{ color: "var(--foreground-muted)" }}>
+                                <p className="text-center text-sm py-10" style={{ color: "var(--foreground-muted)" }}>
                                     아직 시뮬레이션 기록이 없어요
                                 </p>
                             ) : simResults.map((r) => (
                                 <div
                                     key={r.id}
-                                    className="rounded-xl p-3"
+                                    className="rounded-2xl p-4"
                                     style={{ background: "var(--surface-2)", border: "1px solid var(--border)" }}
                                 >
-                                    <div className="flex justify-between items-start mb-2">
-                                        <p className="text-[11px] font-bold line-clamp-1 flex-1 mr-2" style={{ color: "var(--foreground)" }}>
+                                    <div className="flex justify-between items-start mb-3">
+                                        <p className="text-sm font-bold line-clamp-2 flex-1 mr-3" style={{ color: "var(--foreground)" }}>
                                             {r.post_caption || "게시물"}
                                         </p>
-                                        <span className="text-[10px] shrink-0 font-bold" style={{ color: "#06D6A0" }}>
+                                        <span className="text-base shrink-0 font-black" style={{ color: "#06D6A0" }}>
                                             +₩{r.total_revenue.toLocaleString()}
                                         </span>
                                     </div>
-                                    <div className="flex gap-3 text-[10px] font-bold" style={{ color: "var(--foreground-muted)" }}>
+                                    <div className="flex gap-3 text-sm font-bold" style={{ color: "var(--foreground-muted)" }}>
                                         <span>❤️ {r.total_likes}</span>
                                         <span>💬 {r.total_comments}</span>
                                         <span>🔗 {r.total_shares}</span>
                                         <span>🛍️ {r.total_purchases}건</span>
-                                        <span className="ml-auto">{r.duration_minutes}분</span>
+                                        <span className="ml-auto text-xs">{r.duration_minutes}분</span>
                                     </div>
-                                    <p className="text-[9px] mt-1" style={{ color: "var(--foreground-muted)" }}>
+                                    <p className="text-xs mt-2" style={{ color: "var(--foreground-muted)" }}>
                                         {new Date(r.session_started_at).toLocaleDateString("ko-KR", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
                                     </p>
                                 </div>
@@ -630,9 +630,9 @@ function StatsModal({ user, balance, posts, campaigns, onClose }: StatsModalProp
 
                     {/* 게시물 탭 */}
                     {tab === "posts" && (
-                        <div className="flex flex-col gap-2">
+                        <div className="flex flex-col gap-3">
                             {posts.length === 0 ? (
-                                <p className="text-center text-xs py-8" style={{ color: "var(--foreground-muted)" }}>
+                                <p className="text-center text-sm py-10" style={{ color: "var(--foreground-muted)" }}>
                                     아직 게시물이 없어요
                                 </p>
                             ) : posts.map((p, i) => {
@@ -640,20 +640,20 @@ function StatsModal({ user, balance, posts, campaigns, onClose }: StatsModalProp
                                 return (
                                     <div
                                         key={p.id}
-                                        className="rounded-xl p-3 flex items-center gap-3"
+                                        className="rounded-2xl p-4 flex items-center gap-4"
                                         style={{ background: "var(--surface-2)", border: "1px solid var(--border)" }}
                                     >
                                         <div
-                                            className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 text-sm font-black"
+                                            className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 text-base font-black"
                                             style={{ background: "var(--surface)", color: "var(--foreground-muted)" }}
                                         >
                                             {i + 1}
                                         </div>
                                         <div className="flex-1 min-w-0">
-                                            <p className="text-[11px] font-bold truncate" style={{ color: "var(--foreground)" }}>
+                                            <p className="text-sm font-bold truncate mb-1" style={{ color: "var(--foreground)" }}>
                                                 게시물 #{i + 1}
                                             </p>
-                                            <div className="flex gap-2 text-[10px] font-bold mt-0.5" style={{ color: "var(--foreground-muted)" }}>
+                                            <div className="flex gap-3 text-sm font-bold" style={{ color: "var(--foreground-muted)" }}>
                                                 <span>❤️ {likes.toLocaleString()}</span>
                                                 <span>📊 {parseFloat(String(p.stats.engagement ?? 0)).toFixed(1)}%</span>
                                                 {p.stats.sales && <span>🛍️ {p.stats.sales}</span>}
