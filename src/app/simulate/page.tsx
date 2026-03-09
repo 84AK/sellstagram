@@ -293,7 +293,7 @@ function ResultCard({
 
 // ─── 메인 페이지 ─────────────────────────────────────────────
 export default function SimulatePage() {
-    const { user, posts } = useGameStore();
+    const { user, posts, addFunds } = useGameStore();
     const [simState, setSimState] = useState<SimState>({ active: false, startedAt: null, durationMinutes: 10 });
     const [selectedPostId, setSelectedPostId] = useState<string>("");
     const [elapsedMs, setElapsedMs] = useState(0);
@@ -425,9 +425,17 @@ export default function SimulatePage() {
             const shares    = visibleEvents.filter(e => e.type === "share").length;
             const purchases = visibleEvents.filter(e => e.type === "purchase").length;
             const revenue   = visibleEvents.filter(e => e.type === "purchase").reduce((s, e) => s + (e.amount ?? 0), 0);
-            await fetch("/api/simulate/save-result", {
+
+            // Supabase 세션 토큰 포함해서 저장 (서버에서 balance 업데이트)
+            const { data: { session } } = await supabase.auth.getSession();
+            const token = session?.access_token;
+
+            const res = await fetch("/api/simulate/save-result", {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
+                headers: {
+                    "Content-Type": "application/json",
+                    ...(token ? { "Authorization": `Bearer ${token}` } : {}),
+                },
                 body: JSON.stringify({
                     user_name: user.name, user_handle: user.handle,
                     post_id: simPost.id, post_caption: simPost.caption, post_image: simPost.imageUrl,
@@ -436,9 +444,14 @@ export default function SimulatePage() {
                     total_purchases: purchases, total_revenue: revenue, events: visibleEvents,
                 }),
             });
+
+            if (res.ok && revenue > 0) {
+                // 클라이언트 잔고도 즉시 반영
+                addFunds(revenue);
+            }
             setSaved(true);
         } finally { setIsSaving(false); }
-    }, [simPost, simState, visibleEvents, user, isSaving, saved]);
+    }, [simPost, simState, visibleEvents, user, isSaving, saved, addFunds]);
 
     // ─── 렌더링 ───────────────────────────────────────────────
     if (!simState.active) {

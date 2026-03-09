@@ -7,12 +7,13 @@ import {
     Send,
     Bookmark,
     MoreHorizontal,
-    ShoppingCart,
     CheckCircle2,
-    TrendingUp,
-    Loader2,
     Sparkles,
     X,
+    Loader2,
+    TrendingUp,
+    ShoppingBag,
+    Share2,
 } from "lucide-react";
 import GlassCard from "../common/GlassCard";
 import { useGameStore } from "@/store/useGameStore";
@@ -26,30 +27,20 @@ interface Comment {
     created_at: string;
 }
 
-interface ConsumerReaction {
-    id: string;
-    user_name: string;
-    text: string;
-    persona_emoji: string;
+interface SimResult {
+    total_likes: number;
+    total_comments: number;
+    total_shares: number;
+    total_purchases: number;
+    total_revenue: number;
+    created_at: string;
 }
 
 interface FeedCardProps {
     id: string;
-    user: {
-        name: string;
-        handle: string;
-        avatar: string;
-    };
-    content: {
-        image: string;
-        caption: string;
-        tags: string[];
-    };
-    stats: {
-        likes: number;
-        engagement: string;
-        sales: string;
-    };
+    user: { name: string; handle: string; avatar: string };
+    content: { image: string; caption: string; tags: string[] };
+    stats: { likes: number; engagement: string; sales: string };
     timeAgo: string;
 }
 
@@ -57,58 +48,72 @@ export default function FeedCard({ id, user, content, stats, timeAgo }: FeedCard
     const [isLiked, setIsLiked] = useState(false);
     const [localLikes, setLocalLikes] = useState(stats.likes);
     const [isSaved, setIsSaved] = useState(false);
-    const [localSales, setLocalSales] = useState(stats.sales);
-    const [isSimulating, setIsSimulating] = useState(false);
     const [showComments, setShowComments] = useState(false);
     const [comments, setComments] = useState<Comment[]>([]);
     const [commentInput, setCommentInput] = useState("");
     const [submitting, setSubmitting] = useState(false);
     const [shareMsg, setShareMsg] = useState("");
-    const [aiReactions, setAiReactions] = useState<ConsumerReaction[]>([]);
-    const [showAllReactions, setShowAllReactions] = useState(false);
-
-    const { addFunds, addInsight, startCampaign, setAIReportModal, addSkillXP, user: currentUser } = useGameStore();
-    const isMyPost = user.handle === currentUser.handle;
     const [showMenu, setShowMenu] = useState(false);
     const [isAnalyzing, setIsAnalyzing] = useState(false);
+    const [simResult, setSimResult] = useState<SimResult | null>(null);
+    const [showSimResult, setShowSimResult] = useState(false);
 
-    const [isPurchased, setIsPurchased] = useState(false);
+    const { addInsight, startCampaign, setAIReportModal, addSkillXP, user: currentUser } = useGameStore();
+    const isMyPost = user.handle === currentUser.handle;
 
-    // localStorage에서 좋아요/북마크/구매 상태 복원
+    // 좋아요/북마크 복원
     useEffect(() => {
         const likedIds: string[] = JSON.parse(localStorage.getItem("liked_posts") || "[]");
         const savedIds: string[] = JSON.parse(localStorage.getItem("saved_posts") || "[]");
-        const purchasedIds: string[] = JSON.parse(localStorage.getItem("purchased_posts") || "[]");
         setIsLiked(likedIds.includes(id));
         setIsSaved(savedIds.includes(id));
-        setIsPurchased(purchasedIds.includes(id));
     }, [id]);
 
-    // AI 소비자 반응 — 마운트 시 로드
+    // 내 게시물의 시뮬레이션 결과 로드
     useEffect(() => {
+        if (!isMyPost) return;
         supabase
-            .from("comments")
-            .select("id, user_name, text, persona_emoji")
+            .from("simulation_results")
+            .select("total_likes, total_comments, total_shares, total_purchases, total_revenue, created_at")
             .eq("post_id", id)
-            .eq("is_ai_reaction", true)
-            .order("created_at", { ascending: true })
-            .then(({ data }) => { if (data && data.length > 0) setAiReactions(data); });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [id]);
+            .order("created_at", { ascending: false })
+            .limit(1)
+            .then(({ data }) => {
+                if (data && data.length > 0) setSimResult(data[0] as SimResult);
+            });
 
+        // 실시간 구독 (새 시뮬 결과 저장 시 자동 업데이트)
+        const ch = supabase
+            .channel(`sim-result-${id}`)
+            .on("postgres_changes", {
+                event: "INSERT", schema: "public", table: "simulation_results",
+                filter: `post_id=eq.${id}`,
+            }, (payload) => {
+                setSimResult(payload.new as SimResult);
+            })
+            .subscribe();
+        return () => { supabase.removeChannel(ch); };
+    }, [id, isMyPost]);
+
+    // 댓글 로드 (마케터 댓글만, is_ai_reaction 제외)
     useEffect(() => {
-        if (!showComments || comments.length > 0) return;
+        if (!showComments) return;
         supabase
             .from("comments")
             .select("id, user_name, text, created_at")
             .eq("post_id", id)
+            .eq("is_ai_reaction", false)
             .order("created_at", { ascending: true })
             .then(({ data }) => { if (data) setComments(data); });
 
         const channel = supabase
             .channel(`comments-feed-${id}`)
-            .on("postgres_changes", { event: "INSERT", schema: "public", table: "comments", filter: `post_id=eq.${id}` }, (payload) => {
-                setComments(prev => [...prev, payload.new as Comment]);
+            .on("postgres_changes", {
+                event: "INSERT", schema: "public", table: "comments",
+                filter: `post_id=eq.${id}`,
+            }, (payload) => {
+                const c = payload.new as Comment & { is_ai_reaction?: boolean };
+                if (!c.is_ai_reaction) setComments(prev => [...prev, c]);
             })
             .subscribe();
         return () => { supabase.removeChannel(channel); };
@@ -142,40 +147,14 @@ export default function FeedCard({ id, user, content, stats, timeAgo }: FeedCard
             const newInsight = {
                 id: Math.random().toString(36).substr(2, 9),
                 type: "coach" as const,
-                title: "게시물 AI 재분석",
-                content: data.insight ?? `## 분석 결과\n\n- **예상 노출**: ${sim.impressions.toLocaleString()}명\n- **인게이지먼트**: ${sim.engagementRate.toFixed(1)}%\n\n## 코치의 한마디\n\n${sim.engagementRate >= 8 ? "인게이지먼트가 높아요! 전략이 잘 맞았어요." : sim.engagementRate >= 4 ? "괜찮은 출발이에요. 더 구체적인 혜택을 담아보세요." : "캡션을 더 다듬어보세요. 질문형 문장이 반응을 높여줘요."}`,
+                title: "게시물 AI 분석",
+                content: data.insight ?? `## 분석 결과\n\n- **예상 노출**: ${sim.impressions.toLocaleString()}명\n- **인게이지먼트**: ${sim.engagementRate.toFixed(1)}%`,
                 date: new Date().toISOString().split("T")[0],
             };
             addInsight(newInsight);
             addSkillXP("analytics", 25);
             setAIReportModal(true, newInsight);
-        } catch {
-            // 실패 시 무시
-        } finally {
-            setIsAnalyzing(false);
-        }
-    };
-
-    const handleBuyNow = () => {
-        if (isSimulating || isMyPost || isPurchased) return;
-        setIsSimulating(true);
-        setTimeout(() => {
-            const result = simulateMarketingEffect({
-                caption: content.caption,
-                hashtags: content.tags,
-                visualQuality: 0.85,
-                baseFollowers: 5000
-            }, 450000);
-
-            addFunds(result.revenue);
-            setLocalSales(`₩${(parseInt(localSales.replace(/[^0-9]/g, "")) + result.revenue).toLocaleString()}`);
-
-            // 구매 완료 기록 (중복 방지)
-            const purchasedIds: string[] = JSON.parse(localStorage.getItem("purchased_posts") || "[]");
-            localStorage.setItem("purchased_posts", JSON.stringify([...purchasedIds, id]));
-            setIsPurchased(true);
-            setIsSimulating(false);
-        }, 800);
+        } catch { /* 실패 시 무시 */ } finally { setIsAnalyzing(false); }
     };
 
     const handleSubmitComment = async () => {
@@ -188,13 +167,14 @@ export default function FeedCard({ id, user, content, stats, timeAgo }: FeedCard
             user_name: currentUser.name || "익명",
             user_handle: currentUser.handle || "unknown",
             text,
+            is_ai_reaction: false,
         });
         setSubmitting(false);
     };
 
     return (
         <GlassCard className="p-0 border-none group transition-all duration-500 hover:shadow-2xl hover:shadow-primary/5">
-            {/* Card Header */}
+            {/* 헤더 */}
             <div className="flex items-center justify-between p-4 px-5">
                 <div className="flex items-center gap-3">
                     <div className="relative w-10 h-10 rounded-full bg-gradient-to-tr from-primary via-accent to-secondary p-[2px]">
@@ -223,27 +203,19 @@ export default function FeedCard({ id, user, content, stats, timeAgo }: FeedCard
                     {showMenu && (
                         <>
                             <div className="fixed inset-0 z-10" onClick={() => setShowMenu(false)} />
-                            <div
-                                className="absolute right-0 top-8 z-20 min-w-[160px] rounded-2xl overflow-hidden shadow-xl"
-                                style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
-                            >
+                            <div className="absolute right-0 top-8 z-20 min-w-[160px] rounded-2xl overflow-hidden shadow-xl"
+                                style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
                                 {isMyPost && (
-                                    <button
-                                        onClick={handleAIAnalyze}
+                                    <button onClick={handleAIAnalyze}
                                         className="w-full flex items-center gap-2.5 px-4 py-3 text-sm font-bold transition-colors hover:bg-foreground/5 text-left"
-                                        style={{ color: "var(--primary)" }}
-                                    >
-                                        <Sparkles size={15} />
-                                        AI 분석하기
+                                        style={{ color: "var(--primary)" }}>
+                                        <Sparkles size={15} /> AI 분석하기
                                     </button>
                                 )}
-                                <button
-                                    onClick={() => setShowMenu(false)}
+                                <button onClick={() => setShowMenu(false)}
                                     className="w-full flex items-center gap-2.5 px-4 py-3 text-sm font-medium transition-colors hover:bg-foreground/5 text-left"
-                                    style={{ color: "var(--foreground-muted)" }}
-                                >
-                                    <X size={15} />
-                                    닫기
+                                    style={{ color: "var(--foreground-muted)" }}>
+                                    <X size={15} /> 닫기
                                 </button>
                             </div>
                         </>
@@ -251,46 +223,32 @@ export default function FeedCard({ id, user, content, stats, timeAgo }: FeedCard
                 </div>
             </div>
 
-            {/* Main Image Area */}
+            {/* 이미지 */}
             <div className="relative aspect-square w-full bg-foreground/5 overflow-hidden group/image">
                 {content.image ? (
-                    <>
-                        <img src={content.image} alt={content.caption} className="absolute inset-0 w-full h-full object-cover" />
-                        <div className="absolute inset-0 bg-gradient-to-tr from-primary/10 to-secondary/10 opacity-0 group-hover/image:opacity-100 transition-opacity duration-700" />
-                    </>
+                    <img src={content.image} alt={content.caption} className="absolute inset-0 w-full h-full object-cover" />
                 ) : (
-                    <>
-                        <div className="absolute inset-0 bg-gradient-to-tr from-primary/10 to-secondary/10 opacity-0 group-hover/image:opacity-100 transition-opacity duration-700" />
-                        <div className="absolute inset-0 flex items-center justify-center p-12 text-center">
-                            <span className="text-foreground/5 font-black text-6xl italic select-none">#{id}</span>
-                        </div>
-                    </>
-                )}
-                <div className="absolute inset-0 bg-gradient-to-t from-background/90 via-transparent to-transparent opacity-0 group-hover/image:opacity-100 transition-all duration-500 translate-y-4 group-hover/image:translate-y-0 flex flex-col justify-end p-6">
-                    <div className="flex items-center gap-2 mb-2">
-                        <span className="px-2 py-0.5 rounded-md bg-primary/20 text-[8px] font-bold text-primary border border-primary/20 tracking-wider">ECO-TECH</span>
-                        <span className="px-2 py-0.5 rounded-md bg-secondary/20 text-[8px] font-bold text-secondary border border-secondary/20 tracking-wider">PREMIUM</span>
+                    <div className="absolute inset-0 flex items-center justify-center p-12 text-center">
+                        <span className="text-foreground/5 font-black text-6xl italic select-none">#{id}</span>
                     </div>
-                    <p className="text-xs text-foreground/70 font-medium leading-relaxed max-w-xs transition-all duration-500 delay-100 group-hover/image:translate-y-0 translate-y-2">
-                        AI가 예측한 이 디자인의 시장 적합도는 **92.4%**입니다.
-                    </p>
-                </div>
+                )}
             </div>
 
-            {/* Interaction Bar */}
+            {/* 인터랙션 바 */}
             <div className="p-5 flex flex-col gap-4">
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-5">
+                        {/* 좋아요 */}
                         <button
                             onClick={async () => {
                                 const newLiked = !isLiked;
                                 setIsLiked(newLiked);
                                 const newCount = newLiked ? localLikes + 1 : localLikes - 1;
                                 setLocalLikes(newCount);
-                                // localStorage 유지
                                 const likedIds: string[] = JSON.parse(localStorage.getItem("liked_posts") || "[]");
-                                const updated = newLiked ? [...likedIds, id] : likedIds.filter(x => x !== id);
-                                localStorage.setItem("liked_posts", JSON.stringify(updated));
+                                localStorage.setItem("liked_posts", JSON.stringify(
+                                    newLiked ? [...likedIds, id] : likedIds.filter(x => x !== id)
+                                ));
                                 await supabase.from("posts").update({ likes: newCount }).eq("id", id);
                             }}
                             className={`flex items-center gap-1.5 transition-all duration-300 hover:scale-110 ${isLiked ? "text-primary" : "text-foreground/70 hover:text-primary"}`}
@@ -298,16 +256,19 @@ export default function FeedCard({ id, user, content, stats, timeAgo }: FeedCard
                             <Heart size={24} fill={isLiked ? "currentColor" : "none"} strokeWidth={isLiked ? 2.5 : 2} />
                             <span className="text-sm font-bold">{localLikes}</span>
                         </button>
+
+                        {/* 댓글 */}
                         <button
                             onClick={() => setShowComments(v => !v)}
                             className={`transition-all duration-300 hover:scale-110 ${showComments ? "text-secondary" : "text-foreground/70 hover:text-secondary"}`}
                         >
                             <MessageCircle size={24} strokeWidth={2} />
                         </button>
+
+                        {/* 공유 */}
                         <button
                             onClick={async () => {
-                                const text = content.caption || "Sellstagram 게시물";
-                                try { await navigator.clipboard.writeText(text); } catch { /* ignore */ }
+                                try { await navigator.clipboard.writeText(content.caption || "Sellstagram 게시물"); } catch { /* ignore */ }
                                 setShareMsg("복사됨!");
                                 setTimeout(() => setShareMsg(""), 2000);
                             }}
@@ -321,13 +282,16 @@ export default function FeedCard({ id, user, content, stats, timeAgo }: FeedCard
                             )}
                         </button>
                     </div>
+
+                    {/* 북마크 */}
                     <button
                         onClick={() => {
                             const newSaved = !isSaved;
                             setIsSaved(newSaved);
                             const savedIds: string[] = JSON.parse(localStorage.getItem("saved_posts") || "[]");
-                            const updated = newSaved ? [...savedIds, id] : savedIds.filter(x => x !== id);
-                            localStorage.setItem("saved_posts", JSON.stringify(updated));
+                            localStorage.setItem("saved_posts", JSON.stringify(
+                                newSaved ? [...savedIds, id] : savedIds.filter(x => x !== id)
+                            ));
                         }}
                         className={`transition-all duration-300 hover:scale-110 ${isSaved ? "text-secondary" : "text-foreground/70 hover:text-secondary"}`}
                     >
@@ -335,7 +299,7 @@ export default function FeedCard({ id, user, content, stats, timeAgo }: FeedCard
                     </button>
                 </div>
 
-                {/* 댓글 섹션 */}
+                {/* 마케터 댓글 */}
                 {showComments && (
                     <div className="flex flex-col gap-2.5">
                         {comments.length > 0 ? (
@@ -379,111 +343,90 @@ export default function FeedCard({ id, user, content, stats, timeAgo }: FeedCard
                     </div>
                 )}
 
-                {/* Stats Row */}
-                <div className="flex items-center gap-6 py-1 border-y border-foreground/5">
+                {/* 인게이지먼트 스탯 */}
+                <div className="flex items-center gap-4 py-1 border-y border-foreground/5">
                     <div className="flex flex-col">
                         <span className="text-[9px] text-foreground/40 font-bold uppercase tracking-widest italic">Engagement</span>
-                        <span className="text-sm font-black text-primary transition-all duration-300 group-hover:scale-105 origin-left italic">
-                            {stats.engagement}
-                        </span>
-                    </div>
-                    <div className="flex flex-col border-l border-foreground/5 pl-6 relative overflow-hidden">
-                        <span className="text-[9px] text-foreground/40 font-bold uppercase tracking-widest italic">Est. Sales</span>
-                        <div className="flex items-center gap-1">
-                            <span className={`text-sm font-black text-secondary transition-all duration-300 origin-left italic ${isSimulating ? "opacity-50 blur-sm" : "opacity-100 blur-0"}`}>
-                                {localSales}
-                            </span>
-                            {isSimulating && <TrendingUp size={12} className="text-secondary animate-bounce" />}
-                        </div>
+                        <span className="text-sm font-black text-primary italic">{stats.engagement}</span>
                     </div>
                 </div>
 
-                {/* Caption & Purchase */}
-                <div className="flex flex-col gap-3">
-                    <div className="flex flex-col gap-1">
-                        <p className="text-sm leading-relaxed text-foreground/80 line-clamp-2 italic">
-                            <span className="font-bold text-foreground mr-2">{user.handle}</span>
-                            {content.caption}
-                        </p>
-                        <div className="flex flex-wrap gap-2 mt-1">
-                            {content.tags.map(tag => (
-                                <span key={tag} className="text-[10px] font-bold text-accent hover:underline cursor-pointer italic">#{tag}</span>
-                            ))}
-                        </div>
+                {/* 캡션 & 태그 */}
+                <div className="flex flex-col gap-1">
+                    <p className="text-sm leading-relaxed text-foreground/80 line-clamp-2 italic">
+                        <span className="font-bold text-foreground mr-2">{user.handle}</span>
+                        {content.caption}
+                    </p>
+                    <div className="flex flex-wrap gap-2 mt-1">
+                        {content.tags.map(tag => (
+                            <span key={tag} className="text-[10px] font-bold text-accent hover:underline cursor-pointer italic">#{tag}</span>
+                        ))}
                     </div>
+                </div>
 
-                    {/* 가상 소비자 반응 */}
-                    {aiReactions.length > 0 && (
-                        <div className="flex flex-col gap-2 py-2 border-t border-foreground/5">
-                            <div className="flex items-center gap-1.5">
-                                <span className="text-[9px] font-black uppercase tracking-widest" style={{ color: "var(--foreground-muted)" }}>
-                                    가상 소비자 반응
-                                </span>
-                                <span
-                                    className="text-[8px] font-black px-1.5 py-0.5 rounded-full"
-                                    style={{ background: "var(--primary-light)", color: "var(--primary)" }}
-                                >
-                                    AI
-                                </span>
-                            </div>
-                            <div className="flex flex-col gap-1.5">
-                                {(showAllReactions ? aiReactions : aiReactions.slice(0, 2)).map((r) => (
-                                    <div
-                                        key={r.id}
-                                        className="flex items-start gap-2 px-3 py-2 rounded-xl"
-                                        style={{ background: "var(--surface-2)" }}
-                                    >
-                                        <span className="text-base shrink-0 leading-none mt-0.5">
-                                            {r.persona_emoji || "👤"}
-                                        </span>
-                                        <div className="min-w-0">
-                                            <span className="text-[10px] font-black" style={{ color: "var(--foreground-soft)" }}>
-                                                {r.user_name}{" "}
-                                            </span>
-                                            <span className="text-[11px]" style={{ color: "var(--foreground)" }}>
-                                                {r.text}
-                                            </span>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                            {aiReactions.length > 2 && (
-                                <button
-                                    onClick={() => setShowAllReactions(v => !v)}
-                                    className="text-[10px] font-bold text-left transition-opacity hover:opacity-70"
-                                    style={{ color: "var(--primary)" }}
-                                >
-                                    {showAllReactions
-                                        ? "접기"
-                                        : `반응 ${aiReactions.length - 2}개 더 보기`}
-                                </button>
-                            )}
-                        </div>
-                    )}
-
-                    {isMyPost ? (
-                        <div className="w-full flex items-center justify-center gap-2 py-3 rounded-xl font-bold italic text-sm cursor-not-allowed"
-                            style={{ background: "var(--surface-2)", color: "var(--foreground-muted)" }}>
-                            <ShoppingCart size={16} />
-                            내 게시물은 구매할 수 없어요
-                        </div>
-                    ) : isPurchased ? (
-                        <div className="w-full flex items-center justify-center gap-2 py-3 rounded-xl font-bold italic text-sm cursor-not-allowed"
-                            style={{ background: "rgba(6,214,160,0.12)", color: "var(--accent)" }}>
-                            <CheckCircle2 size={16} />
-                            구매 완료
-                        </div>
-                    ) : (
+                {/* 내 게시물 — 시뮬레이션 결과 */}
+                {isMyPost && simResult && (
+                    <div className="rounded-2xl overflow-hidden"
+                        style={{ border: "1px solid rgba(6,214,160,0.3)", background: "rgba(6,214,160,0.05)" }}>
                         <button
-                            onClick={handleBuyNow}
-                            disabled={isSimulating}
-                            className="w-full flex items-center justify-center gap-2 py-3 bg-foreground text-background rounded-xl font-bold italic text-sm transition-all hover:bg-foreground/90 active:scale-[0.98] shadow-lg shadow-black/10 dark:shadow-white/5 group/buy disabled:opacity-50"
+                            onClick={() => setShowSimResult(v => !v)}
+                            className="w-full flex items-center justify-between px-4 py-3"
                         >
-                            <ShoppingCart size={16} className={`group-hover/buy:-translate-y-0.5 transition-transform ${isSimulating ? "animate-pulse" : ""}`} />
-                            {isSimulating ? "시뮬레이션 중..." : "테스트 구매 시뮬레이션"}
+                            <div className="flex items-center gap-2">
+                                <TrendingUp size={14} style={{ color: "var(--accent)" }} />
+                                <span className="text-[12px] font-black" style={{ color: "var(--accent)" }}>
+                                    마켓 시뮬레이션 결과
+                                </span>
+                            </div>
+                            <div className="flex items-center gap-3 text-[11px] font-bold">
+                                <span style={{ color: "#FF6B35" }}>❤️ {simResult.total_likes}</span>
+                                <span style={{ color: "#4361EE" }}>💬 {simResult.total_comments}</span>
+                                <span style={{ color: "#D97706" }}>🛍️ {simResult.total_purchases}</span>
+                            </div>
                         </button>
-                    )}
-                </div>
+                        {showSimResult && (
+                            <div className="px-4 pb-4 flex flex-col gap-3"
+                                style={{ borderTop: "1px solid rgba(6,214,160,0.2)" }}>
+                                <div className="grid grid-cols-4 gap-2 pt-3">
+                                    {[
+                                        { label: "좋아요",  value: simResult.total_likes,     emoji: "❤️",  color: "#FF6B35" },
+                                        { label: "댓글",    value: simResult.total_comments,  emoji: "💬",  color: "#4361EE" },
+                                        { label: "공유",    value: simResult.total_shares,    emoji: "🔗",  color: "#06D6A0" },
+                                        { label: "구매",    value: simResult.total_purchases, emoji: "🛍️", color: "#D97706" },
+                                    ].map(s => (
+                                        <div key={s.label} className="rounded-xl p-2 text-center"
+                                            style={{ background: "var(--surface-2)" }}>
+                                            <div className="text-base mb-0.5">{s.emoji}</div>
+                                            <div className="text-lg font-black" style={{ color: s.color }}>{s.value}</div>
+                                            <div className="text-[9px]" style={{ color: "var(--foreground-muted)" }}>{s.label}</div>
+                                        </div>
+                                    ))}
+                                </div>
+                                {simResult.total_revenue > 0 && (
+                                    <div className="p-3 rounded-xl text-center"
+                                        style={{ background: "rgba(255,194,51,0.12)", border: "1px solid rgba(255,194,51,0.3)" }}>
+                                        <p className="text-[10px] font-bold mb-0.5" style={{ color: "#D97706" }}>매출 (잔고 반영됨)</p>
+                                        <p className="text-xl font-black" style={{ color: "#D97706" }}>
+                                            ₩{simResult.total_revenue.toLocaleString()}
+                                        </p>
+                                    </div>
+                                )}
+                                <p className="text-[10px] text-center" style={{ color: "var(--foreground-muted)" }}>
+                                    {new Date(simResult.created_at).toLocaleString("ko-KR", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })} 기준
+                                </p>
+                            </div>
+                        )}
+                    </div>
+                )}
+
+                {/* 내 게시물 — 결과 없을 때 안내 */}
+                {isMyPost && !simResult && (
+                    <div className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm"
+                        style={{ background: "var(--surface-2)", color: "var(--foreground-muted)" }}>
+                        <ShoppingBag size={15} />
+                        <span className="text-[12px] font-semibold">마켓 시뮬레이션 결과가 여기에 표시돼요</span>
+                    </div>
+                )}
             </div>
         </GlassCard>
     );

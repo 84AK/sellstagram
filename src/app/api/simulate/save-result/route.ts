@@ -3,7 +3,6 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@supabase/supabase-js";
 
 export async function POST(request: NextRequest) {
-    // 인증된 사용자만 허용
     const authHeader = request.headers.get("Authorization");
     const token = authHeader?.replace("Bearer ", "");
 
@@ -20,18 +19,9 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json();
     const {
-        user_name,
-        user_handle,
-        post_id,
-        post_caption,
-        post_image,
-        session_started_at,
-        duration_minutes,
-        total_likes,
-        total_comments,
-        total_shares,
-        total_purchases,
-        total_revenue,
+        user_name, user_handle, post_id, post_caption, post_image,
+        session_started_at, duration_minutes,
+        total_likes, total_comments, total_shares, total_purchases, total_revenue,
         events,
     } = body;
 
@@ -40,25 +30,33 @@ export async function POST(request: NextRequest) {
     }
 
     const admin = createAdminClient();
+
+    // 결과 저장
     const { data, error } = await admin.from("simulation_results").insert({
         user_id: userId,
-        user_name,
-        user_handle,
-        post_id,
-        post_caption,
-        post_image,
-        session_started_at,
-        duration_minutes,
-        total_likes,
-        total_comments,
-        total_shares,
-        total_purchases,
-        total_revenue,
+        user_name, user_handle, post_id, post_caption, post_image,
+        session_started_at, duration_minutes,
+        total_likes, total_comments, total_shares, total_purchases, total_revenue,
         events,
     }).select().single();
 
     if (error) {
         return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+
+    // 매출이 있고 userId가 있으면 profiles.balance 증가
+    if (userId && total_revenue > 0) {
+        const { data: profile } = await admin
+            .from("profiles")
+            .select("balance")
+            .eq("id", userId)
+            .single();
+
+        const currentBalance = profile?.balance ?? 0;
+        await admin
+            .from("profiles")
+            .update({ balance: currentBalance + total_revenue })
+            .eq("id", userId);
     }
 
     return NextResponse.json({ ok: true, id: data?.id });
