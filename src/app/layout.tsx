@@ -26,6 +26,11 @@ export const metadata: Metadata = {
   title: "셀스타그램 | Sellstagram",
   description: "학생들을 위한 AI 마케팅 시뮬레이션 SNS",
   manifest: "/manifest.json",
+  icons: {
+    icon: "/aklabs-logo.svg",
+    shortcut: "/aklabs-logo.svg",
+    apple: "/aklabs-logo.svg",
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
