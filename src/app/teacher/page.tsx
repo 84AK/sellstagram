@@ -68,7 +68,7 @@ interface StudentProfile {
     points: number;
 }
 
-type Tab = "class" | "feed" | "mission" | "shop" | "reward" | "weekly";
+type Tab = "class" | "feed" | "mission" | "shop" | "reward" | "weekly" | "apikey";
 
 /* ─────────────────── PIN 화면 ─────────────────── */
 function PinScreen({ onAuth }: { onAuth: () => void }) {
@@ -474,6 +474,7 @@ function Dashboard({ onLogout }: { onLogout: () => void }) {
         { id: "mission", label: "미션 관리", emoji: "🏆" },
         { id: "shop", label: "상품 관리", emoji: "🛍️" },
         { id: "reward", label: "리워드 관리", emoji: "🎁" },
+        { id: "apikey", label: "AI 키 관리", emoji: "🔑" },
     ];
 
     return (
@@ -1449,6 +1450,11 @@ function Dashboard({ onLogout }: { onLogout: () => void }) {
                     <RewardManageTab />
                 )}
 
+                {/* ══════════ TAB 6: AI 키 관리 ══════════ */}
+                {activeTab === "apikey" && (
+                    <ApiKeyManageTab />
+                )}
+
             </div>
         </div>
     );
@@ -2268,6 +2274,164 @@ function WeeklyResultsTab() {
                         ))}
                     </div>
                 )}
+            </div>
+        </div>
+    );
+}
+
+/* ─────────────────── AI 키 관리 탭 ─────────────────── */
+function ApiKeyManageTab() {
+    const [status, setStatus] = useState<{ hasKey: boolean; masked: string | null } | null>(null);
+    const [isLoading, setIsLoading] = useState(true);
+    const [newKey, setNewKey] = useState("");
+    const [showInput, setShowInput] = useState(false);
+    const [isSaving, setIsSaving] = useState(false);
+    const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+
+    useEffect(() => {
+        fetch("/api/admin/gemini-key")
+            .then(r => r.json())
+            .then(data => setStatus(data))
+            .finally(() => setIsLoading(false));
+    }, []);
+
+    const handleSave = async () => {
+        if (!newKey.trim()) return;
+        setIsSaving(true);
+        setMessage(null);
+        try {
+            const res = await fetch("/api/admin/gemini-key", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ apiKey: newKey.trim() }),
+            });
+            const data = await res.json();
+            if (!res.ok) {
+                setMessage({ type: "error", text: data.error ?? "저장에 실패했어요." });
+            } else {
+                setMessage({ type: "success", text: "새 API 키가 저장됐어요! 즉시 적용됩니다." });
+                setNewKey("");
+                setShowInput(false);
+                const updated = await fetch("/api/admin/gemini-key").then(r => r.json());
+                setStatus(updated);
+            }
+        } catch {
+            setMessage({ type: "error", text: "네트워크 오류가 발생했어요." });
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
+    const handleDelete = async () => {
+        if (!confirm("등록된 키를 삭제하면 환경변수 키로 복귀해요. 계속할까요?")) return;
+        setIsSaving(true);
+        setMessage(null);
+        try {
+            await fetch("/api/admin/gemini-key", { method: "DELETE" });
+            setMessage({ type: "success", text: "키가 삭제됐어요. 환경변수 키를 사용합니다." });
+            const updated = await fetch("/api/admin/gemini-key").then(r => r.json());
+            setStatus(updated);
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
+    return (
+        <div className="p-6 max-w-xl mx-auto flex flex-col gap-5">
+            <div>
+                <h3 className="text-lg font-black">AI API 키 관리</h3>
+                <p className="text-sm text-foreground/50 mt-1">
+                    Gemini AI 키가 할당량을 초과했을 때 새 키를 등록하면 재배포 없이 즉시 적용돼요.
+                </p>
+            </div>
+
+            <div className="p-4 rounded-2xl text-sm leading-relaxed flex flex-col gap-1"
+                style={{ background: "rgba(67,97,238,0.07)", border: "1px solid rgba(67,97,238,0.2)" }}>
+                <p className="font-bold text-secondary">우선순위 안내</p>
+                <p className="text-foreground/60">1순위: 여기서 등록한 DB 키</p>
+                <p className="text-foreground/60">2순위: Vercel 환경변수 키 (GEMINI_API_KEY)</p>
+                <p className="text-foreground/40 text-xs mt-1">DB 키가 없으면 자동으로 환경변수를 사용해요.</p>
+            </div>
+
+            <div className="p-5 rounded-2xl flex items-center justify-between gap-4"
+                style={{ background: "var(--surface-2)", border: "1px solid var(--border)" }}>
+                <div className="flex items-center gap-3">
+                    <div className={`w-3 h-3 rounded-full shrink-0 ${status?.hasKey ? "bg-accent" : "bg-foreground/20"}`} />
+                    <div>
+                        <p className="text-sm font-bold">
+                            {isLoading ? "확인 중..." : status?.hasKey ? "DB 키 등록됨" : "DB 키 없음 (환경변수 사용 중)"}
+                        </p>
+                        {status?.hasKey && status.masked && (
+                            <p className="text-xs text-foreground/40 font-mono mt-0.5">{status.masked}</p>
+                        )}
+                    </div>
+                </div>
+                {status?.hasKey && (
+                    <button
+                        onClick={handleDelete}
+                        disabled={isSaving}
+                        className="text-xs font-bold text-red-400 hover:text-red-500 transition-colors px-3 py-1.5 rounded-lg border border-red-200 hover:border-red-300"
+                    >
+                        키 삭제
+                    </button>
+                )}
+            </div>
+
+            {message && (
+                <div className="p-4 rounded-2xl text-sm font-medium animate-in slide-in-from-top-2 duration-200"
+                    style={{
+                        background: message.type === "success" ? "rgba(6,214,160,0.08)" : "rgba(239,68,68,0.08)",
+                        border: `1px solid ${message.type === "success" ? "rgba(6,214,160,0.3)" : "rgba(239,68,68,0.3)"}`,
+                        color: message.type === "success" ? "var(--accent)" : "#ef4444",
+                    }}>
+                    {message.text}
+                </div>
+            )}
+
+            {!showInput ? (
+                <button
+                    onClick={() => setShowInput(true)}
+                    className="w-full py-3.5 rounded-2xl text-sm font-black text-white transition-all hover:opacity-90"
+                    style={{ background: "linear-gradient(135deg,#FF6B35,#4361EE)" }}
+                >
+                    🔑 새 API 키 등록 / 교체
+                </button>
+            ) : (
+                <div className="flex flex-col gap-3 p-5 rounded-2xl"
+                    style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
+                    <label className="text-sm font-bold text-foreground/70">새 Gemini API 키</label>
+                    <input
+                        type="password"
+                        value={newKey}
+                        onChange={e => setNewKey(e.target.value)}
+                        placeholder="AIza..."
+                        className="w-full bg-foreground/5 border border-foreground/10 rounded-xl px-4 py-3 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
+                    />
+                    <p className="text-xs text-foreground/40">
+                        Google AI Studio에서 발급한 키를 입력하세요. 저장 즉시 반영됩니다.
+                    </p>
+                    <div className="flex gap-2">
+                        <button
+                            onClick={() => { setShowInput(false); setNewKey(""); }}
+                            className="flex-1 py-3 rounded-xl text-sm font-bold border border-foreground/10 text-foreground/50 hover:text-foreground/70 transition-all"
+                        >
+                            취소
+                        </button>
+                        <button
+                            onClick={handleSave}
+                            disabled={isSaving || !newKey.trim()}
+                            className="flex-1 py-3 rounded-xl text-sm font-black text-white transition-all disabled:opacity-40 hover:opacity-90"
+                            style={{ background: "var(--primary)" }}
+                        >
+                            {isSaving ? "저장 중..." : "저장하기"}
+                        </button>
+                    </div>
+                </div>
+            )}
+
+            <div className="p-4 rounded-2xl text-xs text-foreground/40 leading-relaxed"
+                style={{ background: "var(--surface-2)" }}>
+                💡 새 키 발급: <span className="font-mono">aistudio.google.com</span> → Get API Key → Create API Key
             </div>
         </div>
     );

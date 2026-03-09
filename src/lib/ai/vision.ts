@@ -1,4 +1,4 @@
-import { geminiFlash } from "./gemini";
+import { askGemini } from "./gemini";
 import { AI_PROMPTS } from "./prompts";
 
 /**
@@ -7,13 +7,8 @@ import { AI_PROMPTS } from "./prompts";
 
 export async function analyzePostVisual(imageData: string, caption: string) {
     try {
-        // In a real app, we would pass the base64 image to Gemini
-        // For this simulation, we'll ask Gemini to evaluate the "vibe" based on caption if image is not provided, 
-        // or simulate a high-quality analysis.
-
         const prompt = AI_PROMPTS.VISION_ANALYSIS(caption);
-        const result = await geminiFlash.generateContent(prompt);
-        const text = result.response.text();
+        const text = await askGemini(prompt);
 
         return {
             visualScore: 0.85, // Mocked score
