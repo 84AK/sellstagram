@@ -52,7 +52,8 @@ export default function RootLayout({
   return (
     <html lang="ko" suppressHydrationWarning>
       <head>
-        <link rel="icon" href="/favicon.ico" sizes="any" />
+        <link rel="icon" href="/aklabs-logo.svg" type="image/svg+xml" />
+        <link rel="alternate icon" href="/favicon.ico" sizes="any" />
       </head>
       <body
         className={`${inter.variable} ${outfit.variable} antialiased selection:bg-primary/30 font-sans`}
