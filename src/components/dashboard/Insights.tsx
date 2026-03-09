@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import {
     BarChart3,
     TrendingUp,
@@ -11,6 +12,13 @@ import {
     Sparkles,
     BookOpen,
     Trophy,
+    X,
+    ShoppingCart,
+    Heart,
+    MessageCircle,
+    Share2,
+    Wallet,
+    FileText,
 } from "lucide-react";
 import { useGameStore } from "@/store/useGameStore";
 import { supabase } from "@/lib/supabase/client";
@@ -23,9 +31,22 @@ interface TeamRank {
     score: number;
 }
 
+interface SimResult {
+    id: string;
+    post_caption: string;
+    total_likes: number;
+    total_comments: number;
+    total_shares: number;
+    total_purchases: number;
+    total_revenue: number;
+    duration_minutes: number;
+    session_started_at: string;
+}
+
 export default function Insights() {
     const { campaigns, balance, insights, posts, missions, user, setAIReportModal } = useGameStore();
     const [teamRankings, setTeamRankings] = useState<TeamRank[]>([]);
+    const [showStatsModal, setShowStatsModal] = useState(false);
 
     const totalRevenue = campaigns.reduce((acc, curr) => acc + curr.revenue, 0);
     const totalSpent = campaigns.reduce((acc, curr) => acc + (curr.spent || 0), 0);
@@ -95,6 +116,18 @@ export default function Insights() {
     return (
         <div className="flex flex-col gap-4">
 
+            {/* 활동 통계 모달 */}
+            {showStatsModal && typeof window !== "undefined" && createPortal(
+                <StatsModal
+                    user={user}
+                    balance={balance}
+                    posts={posts}
+                    campaigns={campaigns}
+                    onClose={() => setShowStatsModal(false)}
+                />,
+                document.body
+            )}
+
             {/* 마케팅 잔고 카드 */}
             <div
                 className="rounded-2xl p-5"
@@ -115,9 +148,13 @@ export default function Insights() {
                             ₩{balance.toLocaleString()}
                         </h3>
                     </div>
-                    <div className="w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center">
+                    <button
+                        onClick={() => setShowStatsModal(true)}
+                        className="w-9 h-9 rounded-xl bg-white/20 hover:bg-white/30 flex items-center justify-center transition-all active:scale-95"
+                        aria-label="활동 통계 보기"
+                    >
                         <BarChart3 size={18} className="text-white" />
-                    </div>
+                    </button>
                 </div>
                 <div className="flex items-center gap-1.5 text-green-300">
                     <TrendingUp size={12} />
@@ -376,5 +413,259 @@ export default function Insights() {
                 )}
             </div>
         </div>
+    );
+}
+
+/* ── 활동 통계 모달 ── */
+interface StatsModalProps {
+    user: { name: string; handle: string; team: string; points: number };
+    balance: number;
+    posts: { id: string; stats: { likes: number | string; engagement?: number | string; sales?: number | string; comments?: string; shares?: string } }[];
+    campaigns: { revenue: number; engagement: number; spent?: number }[];
+    onClose: () => void;
+}
+
+function StatsModal({ user, balance, posts, campaigns, onClose }: StatsModalProps) {
+    const [simResults, setSimResults] = useState<SimResult[]>([]);
+    const [tab, setTab] = useState<"summary" | "sims" | "posts">("summary");
+
+    useEffect(() => {
+        const load = async () => {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session?.user) return;
+            const { data } = await supabase
+                .from("simulation_results")
+                .select("id, post_caption, total_likes, total_comments, total_shares, total_purchases, total_revenue, duration_minutes, session_started_at")
+                .eq("user_id", session.user.id)
+                .order("session_started_at", { ascending: false })
+                .limit(20);
+            if (data) setSimResults(data as SimResult[]);
+        };
+        load();
+    }, []);
+
+    const totalRevenue = simResults.reduce((s, r) => s + r.total_revenue, 0);
+    const totalLikes = simResults.reduce((s, r) => s + r.total_likes, 0);
+    const totalComments = simResults.reduce((s, r) => s + r.total_comments, 0);
+    const totalShares = simResults.reduce((s, r) => s + r.total_shares, 0);
+    const totalPurchases = simResults.reduce((s, r) => s + r.total_purchases, 0);
+    const totalSpent = campaigns.reduce((s, c) => s + (c.spent ?? 0), 0);
+
+    const statItems = [
+        { icon: <FileText size={14} />, label: "게시물", value: `${posts.length}개`, color: "var(--secondary)" },
+        { icon: <Heart size={14} />, label: "총 좋아요", value: totalLikes.toLocaleString(), color: "#EF4444" },
+        { icon: <MessageCircle size={14} />, label: "총 댓글", value: totalComments.toLocaleString(), color: "var(--accent)" },
+        { icon: <Share2 size={14} />, label: "총 공유", value: totalShares.toLocaleString(), color: "#8B5CF6" },
+        { icon: <ShoppingCart size={14} />, label: "총 구매", value: `${totalPurchases}건`, color: "var(--primary)" },
+        { icon: <Wallet size={14} />, label: "총 매출", value: `₩${totalRevenue.toLocaleString()}`, color: "#06D6A0" },
+    ];
+
+    return (
+        <>
+            {/* 딤 배경 */}
+            <div
+                className="fixed inset-0 z-[9998]"
+                style={{ background: "rgba(0,0,0,0.5)", backdropFilter: "blur(4px)" }}
+                onClick={onClose}
+            />
+
+            {/* 모달 */}
+            <div
+                className="fixed z-[9999] flex flex-col"
+                style={{
+                    top: "50%", left: "50%",
+                    transform: "translate(-50%, -50%)",
+                    width: "min(420px, 95vw)",
+                    maxHeight: "85vh",
+                    background: "var(--surface)",
+                    border: "1px solid var(--border)",
+                    borderRadius: "20px",
+                    boxShadow: "0 24px 60px rgba(0,0,0,0.2)",
+                    overflow: "hidden",
+                }}
+            >
+                {/* 헤더 */}
+                <div
+                    className="flex items-center justify-between px-5 py-4 shrink-0"
+                    style={{ borderBottom: "1px solid var(--border)" }}
+                >
+                    <div>
+                        <h2 className="text-sm font-black" style={{ color: "var(--foreground)" }}>
+                            📊 나의 활동 통계
+                        </h2>
+                        <p className="text-[11px] mt-0.5" style={{ color: "var(--foreground-muted)" }}>
+                            {user.name} · {user.team} · {user.points.toLocaleString()}pt
+                        </p>
+                    </div>
+                    <button
+                        onClick={onClose}
+                        className="p-1.5 rounded-lg hover:bg-foreground/5 transition-colors"
+                        style={{ color: "var(--foreground-muted)" }}
+                    >
+                        <X size={16} />
+                    </button>
+                </div>
+
+                {/* 잔고 배너 */}
+                <div
+                    className="mx-4 mt-4 rounded-2xl px-4 py-3 flex items-center justify-between shrink-0"
+                    style={{ background: "linear-gradient(135deg, var(--secondary) 0%, #6B5CE7 100%)" }}
+                >
+                    <div>
+                        <p className="text-[10px] font-bold text-white/70 uppercase tracking-wider mb-0.5">현재 마케팅 잔고</p>
+                        <p className="text-xl font-black text-white">₩{balance.toLocaleString()}</p>
+                    </div>
+                    <div className="text-right">
+                        <p className="text-[10px] font-bold text-white/70 mb-0.5">시뮬 총 매출</p>
+                        <p className="text-base font-black text-green-300">+₩{totalRevenue.toLocaleString()}</p>
+                    </div>
+                </div>
+
+                {/* 탭 */}
+                <div className="flex gap-1 px-4 pt-3 shrink-0">
+                    {(["summary", "sims", "posts"] as const).map((t) => (
+                        <button
+                            key={t}
+                            onClick={() => setTab(t)}
+                            className="flex-1 py-1.5 text-[11px] font-bold rounded-xl transition-all"
+                            style={{
+                                background: tab === t ? "var(--primary)" : "var(--surface-2)",
+                                color: tab === t ? "white" : "var(--foreground-soft)",
+                            }}
+                        >
+                            {t === "summary" ? "요약" : t === "sims" ? "시뮬레이션" : "게시물"}
+                        </button>
+                    ))}
+                </div>
+
+                {/* 탭 내용 */}
+                <div className="overflow-y-auto flex-1 px-4 py-3 custom-scrollbar">
+
+                    {/* 요약 탭 */}
+                    {tab === "summary" && (
+                        <div className="flex flex-col gap-3">
+                            <div className="grid grid-cols-2 gap-2">
+                                {statItems.map((item) => (
+                                    <div
+                                        key={item.label}
+                                        className="rounded-xl p-3 flex flex-col gap-1"
+                                        style={{ background: "var(--surface-2)", border: "1px solid var(--border)" }}
+                                    >
+                                        <div className="flex items-center gap-1.5" style={{ color: item.color }}>
+                                            {item.icon}
+                                            <span className="text-[10px] font-bold uppercase" style={{ color: "var(--foreground-muted)" }}>
+                                                {item.label}
+                                            </span>
+                                        </div>
+                                        <span className="text-base font-black" style={{ color: item.color }}>
+                                            {item.value}
+                                        </span>
+                                    </div>
+                                ))}
+                            </div>
+
+                            {totalSpent > 0 && (
+                                <div
+                                    className="rounded-xl p-3"
+                                    style={{ background: "var(--surface-2)", border: "1px solid var(--border)" }}
+                                >
+                                    <p className="text-[10px] font-bold uppercase mb-2" style={{ color: "var(--foreground-muted)" }}>수익 분석</p>
+                                    <div className="flex justify-between text-xs font-bold mb-1">
+                                        <span style={{ color: "var(--foreground-soft)" }}>총 매출</span>
+                                        <span style={{ color: "#06D6A0" }}>+₩{totalRevenue.toLocaleString()}</span>
+                                    </div>
+                                    <div className="flex justify-between text-xs font-bold mb-1">
+                                        <span style={{ color: "var(--foreground-soft)" }}>총 지출</span>
+                                        <span style={{ color: "var(--primary)" }}>-₩{totalSpent.toLocaleString()}</span>
+                                    </div>
+                                    <div
+                                        className="flex justify-between text-xs font-black pt-1"
+                                        style={{ borderTop: "1px solid var(--border)" }}
+                                    >
+                                        <span style={{ color: "var(--foreground)" }}>순이익</span>
+                                        <span style={{ color: totalRevenue - totalSpent >= 0 ? "#06D6A0" : "var(--primary)" }}>
+                                            {totalRevenue - totalSpent >= 0 ? "+" : ""}₩{(totalRevenue - totalSpent).toLocaleString()}
+                                        </span>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    {/* 시뮬레이션 내역 탭 */}
+                    {tab === "sims" && (
+                        <div className="flex flex-col gap-2">
+                            {simResults.length === 0 ? (
+                                <p className="text-center text-xs py-8" style={{ color: "var(--foreground-muted)" }}>
+                                    아직 시뮬레이션 기록이 없어요
+                                </p>
+                            ) : simResults.map((r) => (
+                                <div
+                                    key={r.id}
+                                    className="rounded-xl p-3"
+                                    style={{ background: "var(--surface-2)", border: "1px solid var(--border)" }}
+                                >
+                                    <div className="flex justify-between items-start mb-2">
+                                        <p className="text-[11px] font-bold line-clamp-1 flex-1 mr-2" style={{ color: "var(--foreground)" }}>
+                                            {r.post_caption || "게시물"}
+                                        </p>
+                                        <span className="text-[10px] shrink-0 font-bold" style={{ color: "#06D6A0" }}>
+                                            +₩{r.total_revenue.toLocaleString()}
+                                        </span>
+                                    </div>
+                                    <div className="flex gap-3 text-[10px] font-bold" style={{ color: "var(--foreground-muted)" }}>
+                                        <span>❤️ {r.total_likes}</span>
+                                        <span>💬 {r.total_comments}</span>
+                                        <span>🔗 {r.total_shares}</span>
+                                        <span>🛍️ {r.total_purchases}건</span>
+                                        <span className="ml-auto">{r.duration_minutes}분</span>
+                                    </div>
+                                    <p className="text-[9px] mt-1" style={{ color: "var(--foreground-muted)" }}>
+                                        {new Date(r.session_started_at).toLocaleDateString("ko-KR", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
+                                    </p>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+
+                    {/* 게시물 탭 */}
+                    {tab === "posts" && (
+                        <div className="flex flex-col gap-2">
+                            {posts.length === 0 ? (
+                                <p className="text-center text-xs py-8" style={{ color: "var(--foreground-muted)" }}>
+                                    아직 게시물이 없어요
+                                </p>
+                            ) : posts.map((p, i) => {
+                                const likes = typeof p.stats.likes === "number" ? p.stats.likes : parseFloat(String(p.stats.likes)) || 0;
+                                return (
+                                    <div
+                                        key={p.id}
+                                        className="rounded-xl p-3 flex items-center gap-3"
+                                        style={{ background: "var(--surface-2)", border: "1px solid var(--border)" }}
+                                    >
+                                        <div
+                                            className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 text-sm font-black"
+                                            style={{ background: "var(--surface)", color: "var(--foreground-muted)" }}
+                                        >
+                                            {i + 1}
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <p className="text-[11px] font-bold truncate" style={{ color: "var(--foreground)" }}>
+                                                게시물 #{i + 1}
+                                            </p>
+                                            <div className="flex gap-2 text-[10px] font-bold mt-0.5" style={{ color: "var(--foreground-muted)" }}>
+                                                <span>❤️ {likes.toLocaleString()}</span>
+                                                <span>📊 {parseFloat(String(p.stats.engagement ?? 0)).toFixed(1)}%</span>
+                                                {p.stats.sales && <span>🛍️ {p.stats.sales}</span>}
+                                            </div>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    )}
+                </div>
+            </div>
+        </>
     );
 }
