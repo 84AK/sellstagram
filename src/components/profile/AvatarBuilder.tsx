@@ -6,10 +6,10 @@ import { X, Check, Lock, Sparkles, ChevronLeft, ChevronRight } from "lucide-reac
 import {
     AVATAR_ITEMS,
     CATEGORY_ICONS,
-    OWNED_ITEMS_KEY,
     AVATAR_CONFIG_KEY,
     buildAvatarUrl,
     getOwnedItems,
+    getItemPreviewUrl,
 } from "@/lib/avatar/items";
 import type { AvatarConfig, AvatarCategory, AvatarItemDef } from "@/lib/avatar/types";
 import { DEFAULT_AVATAR_CONFIG } from "@/lib/avatar/types";
@@ -19,6 +19,19 @@ interface AvatarBuilderProps {
     seed: string;
     onSave: (config: AvatarConfig) => void;
     onClose: () => void;
+}
+
+// 아이템 미리보기 이미지 컴포넌트
+function ItemPreview({ item, seed }: { item: import("@/lib/avatar/types").AvatarItemDef; seed: string }) {
+    const url = getItemPreviewUrl(item, seed);
+    return (
+        <img
+            src={url}
+            alt={item.name}
+            style={{ width: 64, height: 64, objectFit: "contain" }}
+            loading="lazy"
+        />
+    );
 }
 
 const CATEGORIES: AvatarCategory[] = ["헤어", "머리색", "눈", "입", "옷", "옷색상", "액세서리", "배경색"];
@@ -241,8 +254,20 @@ export default function AvatarBuilder({ initialConfig, seed, onSave, onClose }: 
                                                 </div>
                                             )}
 
-                                            {/* Preview emoji */}
-                                            <span style={{ fontSize: 28 }}>{item.preview}</span>
+                                            {/* DiceBear 미리보기 */}
+                                            <div
+                                                style={{
+                                                    filter: !owned ? "grayscale(60%) opacity(0.6)" : "none",
+                                                    background: item.slot === "backgroundColor"
+                                                        ? `#${item.value || "f7f6f3"}`
+                                                        : "var(--surface-3)",
+                                                    borderRadius: 12,
+                                                    padding: 4,
+                                                    marginTop: 8,
+                                                }}
+                                            >
+                                                <ItemPreview item={item} seed={seed} />
+                                            </div>
 
                                             {/* Name */}
                                             <span

@@ -130,6 +130,24 @@ export const CATEGORY_ICONS: Record<string, string> = {
     "배경색": "🖼️",
 };
 
+/** 아이템 카드에 보여줄 DiceBear 미리보기 URL (해당 옵션만 적용한 기본 아바타) */
+export function getItemPreviewUrl(item: AvatarItemDef, seed = "preview"): string {
+    const base: AvatarConfig = {
+        top: "shortFlat",
+        hairColor: "black",
+        eyes: "default",
+        eyebrows: "default",
+        mouth: "smile",
+        clothesType: "hoodie",
+        clothesColor: "gray01",
+        accessories: "",
+        backgroundColor: "f7f6f3",
+    };
+    // 해당 슬롯에 이 아이템의 값을 적용
+    const preview: AvatarConfig = { ...base, [item.slot]: item.value };
+    return buildAvatarUrl(preview, `${seed}-${item.id}`, 120);
+}
+
 export const OWNED_ITEMS_KEY = "sellstagram_avatar_owned";
 
 export function getOwnedItems(): string[] {

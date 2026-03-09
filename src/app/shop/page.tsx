@@ -26,6 +26,7 @@ import {
     getOwnedItems,
     addOwnedItem,
     buildAvatarUrl,
+    getItemPreviewUrl,
 } from "@/lib/avatar/items";
 import { DEFAULT_AVATAR_CONFIG } from "@/lib/avatar/types";
 import type { AvatarCategory } from "@/lib/avatar/types";
@@ -323,75 +324,95 @@ export default function ShopPage() {
                                 const isBuying = buyingAvatarId === item.id;
                                 const canAfford = user.points >= item.xpPrice;
                                 const rs = RARITY_STYLE[item.rarity];
+                                const previewUrl = getItemPreviewUrl(item, user.handle || "user");
 
                                 return (
                                     <div
                                         key={item.id}
-                                        className="relative flex flex-col items-center gap-2.5 p-4 rounded-2xl transition-all"
+                                        className="relative flex flex-col items-center gap-2 rounded-2xl overflow-hidden transition-all"
                                         style={{
                                             background: owned ? "var(--surface)" : "var(--surface-2)",
-                                            border: owned ? "1.5px solid var(--accent)" : "1.5px dashed var(--border)",
+                                            border: owned ? "2px solid var(--accent)" : "1.5px dashed var(--border)",
                                         }}
                                     >
                                         {/* 레어리티 뱃지 */}
                                         <span
-                                            className="absolute top-2.5 left-2.5 text-[8px] font-black px-1.5 py-0.5 rounded-full"
+                                            className="absolute top-2 left-2 z-10 text-[8px] font-black px-1.5 py-0.5 rounded-full"
                                             style={{ background: rs.bg, color: rs.text }}
                                         >
                                             {rs.label}
                                         </span>
 
-                                        {/* 보유 중 */}
+                                        {/* 보유/잠금 뱃지 */}
                                         {owned && (
                                             <div
-                                                className="absolute top-2.5 right-2.5 w-5 h-5 rounded-full flex items-center justify-center"
+                                                className="absolute top-2 right-2 z-10 w-5 h-5 rounded-full flex items-center justify-center"
                                                 style={{ background: "var(--accent)" }}
                                             >
                                                 <CheckCircle size={12} className="text-white" />
                                             </div>
                                         )}
-
-                                        {/* 미리보기 */}
-                                        <span style={{ fontSize: 36, marginTop: 12 }}>{item.preview}</span>
-
-                                        <p className="text-xs font-bold text-center leading-tight" style={{ color: "var(--foreground)" }}>
-                                            {item.name}
-                                        </p>
-
-                                        {/* 구매 버튼 */}
-                                        {owned ? (
-                                            <span
-                                                className="text-[10px] font-bold px-3 py-1 rounded-full"
-                                                style={{ background: "var(--accent-light)", color: "var(--accent)" }}
+                                        {!owned && !item.isDefault && (
+                                            <div
+                                                className="absolute top-2 right-2 z-10 w-5 h-5 rounded-full flex items-center justify-center"
+                                                style={{ background: "rgba(0,0,0,0.18)" }}
                                             >
-                                                ✓ 보유 중
-                                            </span>
-                                        ) : item.isDefault ? (
-                                            <span
-                                                className="text-[10px] font-bold px-3 py-1 rounded-full"
-                                                style={{ background: "var(--accent-light)", color: "var(--accent)" }}
-                                            >
-                                                무료
-                                            </span>
-                                        ) : (
-                                            <button
-                                                onClick={() => handleAvatarPurchase(item.id)}
-                                                disabled={!canAfford || isBuying}
-                                                className="flex items-center gap-1 px-3 py-1.5 rounded-full text-[10px] font-black transition-all active:scale-[0.97] disabled:cursor-not-allowed"
-                                                style={{
-                                                    background: canAfford ? "var(--highlight)" : "var(--surface-3)",
-                                                    color: canAfford ? "white" : "var(--foreground-muted)",
-                                                }}
-                                            >
-                                                {isBuying ? (
-                                                    <Loader2 size={10} className="animate-spin" />
-                                                ) : !canAfford ? (
-                                                    <><Lock size={9} /> XP 부족</>
-                                                ) : (
-                                                    <><Zap size={10} /> {item.xpPrice.toLocaleString()} XP</>
-                                                )}
-                                            </button>
+                                                <Lock size={10} className="text-white" />
+                                            </div>
                                         )}
+
+                                        {/* DiceBear 아바타 미리보기 */}
+                                        <div
+                                            className="w-full flex items-center justify-center relative"
+                                            style={{
+                                                height: 110,
+                                                background: item.slot === "backgroundColor"
+                                                    ? `#${item.value || "f7f6f3"}`
+                                                    : "var(--surface-3)",
+                                                filter: !owned && !item.isDefault ? "grayscale(60%) opacity(0.7)" : "none",
+                                            }}
+                                        >
+                                            <img
+                                                src={previewUrl}
+                                                alt={item.name}
+                                                style={{ width: 90, height: 90, objectFit: "contain" }}
+                                                loading="lazy"
+                                            />
+                                        </div>
+
+                                        {/* 이름 + 버튼 */}
+                                        <div className="flex flex-col items-center gap-1.5 px-2 pb-3 w-full">
+                                            <p className="text-xs font-bold text-center leading-tight" style={{ color: "var(--foreground)" }}>
+                                                {item.name}
+                                            </p>
+
+                                            {owned || item.isDefault ? (
+                                                <span
+                                                    className="text-[10px] font-bold px-3 py-1 rounded-full"
+                                                    style={{ background: "var(--accent-light)", color: "var(--accent)" }}
+                                                >
+                                                    {item.isDefault ? "무료" : "✓ 보유 중"}
+                                                </span>
+                                            ) : (
+                                                <button
+                                                    onClick={() => handleAvatarPurchase(item.id)}
+                                                    disabled={!canAfford || isBuying}
+                                                    className="flex items-center gap-1 px-3 py-1.5 rounded-full text-[10px] font-black transition-all active:scale-[0.97] disabled:cursor-not-allowed"
+                                                    style={{
+                                                        background: canAfford ? "var(--highlight)" : "var(--surface-3)",
+                                                        color: canAfford ? "white" : "var(--foreground-muted)",
+                                                    }}
+                                                >
+                                                    {isBuying ? (
+                                                        <Loader2 size={10} className="animate-spin" />
+                                                    ) : !canAfford ? (
+                                                        <><Lock size={9} /> XP 부족</>
+                                                    ) : (
+                                                        <><Zap size={10} /> {item.xpPrice.toLocaleString()} XP</>
+                                                    )}
+                                                </button>
+                                            )}
+                                        </div>
                                     </div>
                                 );
                             })}
