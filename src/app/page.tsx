@@ -54,6 +54,7 @@ const DEMO_POSTS = [
     id: "eco",
     label: "친환경 상품",
     emoji: "🌿",
+    image: "/echobag.png",
     bg: "linear-gradient(135deg, #d4f5e9, #a8e6cf)",
     caption:
       "지구를 위한 선택 🌍 친환경 에코백 여름 신상 출시! 비닐 대신 이 가방 하나면 충분해요",
@@ -83,6 +84,7 @@ const DEMO_POSTS = [
     id: "fashion",
     label: "패션 아이템",
     emoji: "👟",
+    image: "/echowatch.png",
     bg: "linear-gradient(135deg, #fde8d8, #ffb299)",
     caption:
       "이번 시즌 무조건 1개는 있어야 함 🔥 한정판 스니커즈 드롭! 선착순 50명 특가",
@@ -112,6 +114,7 @@ const DEMO_POSTS = [
     id: "tech",
     label: "테크 기기",
     emoji: "📱",
+    image: "/echoearphone.png",
     bg: "linear-gradient(135deg, #dce8ff, #b3c9ff)",
     caption: "공부할 때 이거 없으면 안 됨 📚 노이즈캔슬링 무선이어폰 솔직 리뷰",
     tags: ["이어폰", "테크", "리뷰", "공부템"],
@@ -1094,10 +1097,14 @@ export default function HomePage() {
                 {/* 왼쪽: 가상 게시물 */}
                 <div className="glass-card rounded-3xl overflow-hidden">
                   <div
-                    className="aspect-[4/3] w-full flex items-center justify-center text-7xl"
+                    className="aspect-[4/3] w-full flex items-center justify-center overflow-hidden"
                     style={{background: post.bg}}
                   >
-                    {post.emoji}
+                    <img
+                      src={post.image}
+                      alt={post.label}
+                      className="w-full h-full object-cover"
+                    />
                   </div>
                   <div className="p-5 flex flex-col gap-3">
                     <div className="flex items-center gap-2.5">
