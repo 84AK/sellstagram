@@ -1,8 +1,6 @@
 "use client";
 
 import React from "react";
-import { buildAvatarUrl } from "@/lib/avatar/items";
-import type { AvatarConfig } from "@/lib/avatar/types";
 import { Zap } from "lucide-react";
 
 interface IDCardProps {
@@ -11,8 +9,8 @@ interface IDCardProps {
     team: string;
     rank: string;
     points: number;
-    avatar: string;         // legacy emoji
-    avatarConfig?: AvatarConfig;
+    avatar: string;   // DiceBear URL (https://...) or legacy emoji
+    avatarConfig?: object; // kept for backward compat, not used
     onCustomize?: () => void;
 }
 
@@ -26,13 +24,9 @@ const RANK_COLORS: Record<string, string> = {
 };
 
 export default function IDCard({
-    name, handle, team, rank, points, avatar, avatarConfig, onCustomize,
+    name, handle, team, rank, points, avatar, onCustomize,
 }: IDCardProps) {
-    const hasConfig = avatarConfig && Object.keys(avatarConfig).length > 0;
-    const avatarUrl = hasConfig
-        ? buildAvatarUrl(avatarConfig!, handle || "user", 300)
-        : null;
-
+    const isUrl = avatar?.startsWith("http");
     const rankColor = RANK_COLORS[rank] ?? RANK_COLORS.Beginner;
 
     return (
@@ -108,25 +102,21 @@ export default function IDCard({
             <div
                 style={{
                     height: 200,
-                    background: avatarConfig?.backgroundColor
-                        ? `#${avatarConfig.backgroundColor}`
-                        : "linear-gradient(135deg, #FFF0EB 0%, #EEF1FD 100%)",
+                    background: "linear-gradient(135deg, #FFF0EB 0%, #EEF1FD 100%)",
                     display: "flex",
-                    alignItems: "flex-end",
+                    alignItems: "center",
                     justifyContent: "center",
                     overflow: "hidden",
                 }}
             >
-                {avatarUrl ? (
+                {isUrl ? (
                     <img
-                        src={avatarUrl}
+                        src={avatar}
                         alt={name}
                         style={{ width: 180, height: 180, objectFit: "contain" }}
                     />
                 ) : (
-                    <div className="flex flex-col items-center justify-center h-full gap-2 w-full">
-                        <span style={{ fontSize: 80, lineHeight: 1 }}>{avatar || "🦊"}</span>
-                    </div>
+                    <span style={{ fontSize: 80, lineHeight: 1 }}>{avatar || "🦊"}</span>
                 )}
             </div>
 

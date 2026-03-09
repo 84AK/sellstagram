@@ -21,15 +21,11 @@ import {
 import { useGameStore } from "@/store/useGameStore";
 import { supabase } from "@/lib/supabase/client";
 import {
-    AVATAR_ITEMS,
-    CATEGORY_ICONS,
-    getOwnedItems,
-    addOwnedItem,
-    buildAvatarUrl,
-    getItemPreviewUrl,
-} from "@/lib/avatar/items";
-import { DEFAULT_AVATAR_CONFIG } from "@/lib/avatar/types";
-import type { AvatarCategory } from "@/lib/avatar/types";
+    DICEBEAR_STYLES,
+    buildStyleUrl,
+    getUnlockedStyleIds,
+    addUnlockedStyle,
+} from "@/lib/avatar/styles";
 
 interface Product {
     id: string;
@@ -44,15 +40,9 @@ interface Product {
     is_active: boolean;
 }
 
-const AVATAR_CATEGORIES: AvatarCategory[] = ["헤어", "머리색", "눈", "입", "옷", "옷색상", "액세서리", "배경색"];
-const RARITY_STYLE: Record<string, { bg: string; text: string; label: string }> = {
-    common: { bg: "var(--surface-2)", text: "var(--foreground-muted)", label: "일반" },
-    rare:   { bg: "var(--secondary-light)", text: "var(--secondary)", label: "레어 ⭐" },
-    epic:   { bg: "var(--primary-light)", text: "var(--primary)", label: "에픽 🔥" },
-};
 
 export default function ShopPage() {
-    const { balance, addFunds, addPoints, user, setUploadModalOpen, setAvatarConfig } = useGameStore();
+    const { balance, addFunds, addPoints, user, setUploadModalOpen } = useGameStore();
     const [products, setProducts] = useState<Product[]>([]);
     const [ownedIds, setOwnedIds] = useState<Set<string>>(new Set());
     const [loading, setLoading] = useState(true);
@@ -63,42 +53,36 @@ export default function ShopPage() {
 
     // 탭: 상점 vs 아바타
     const [activeTab, setActiveTab] = useState<"shop" | "avatar">("shop");
-    // 아바타 탭용
-    const [avatarCategory, setAvatarCategory] = useState<AvatarCategory>("헤어");
-    const [avatarOwned, setAvatarOwned] = useState<Set<string>>(new Set());
+    // 아바타 스타일 해금
+    const [unlockedStyleIds, setUnlockedStyleIds] = useState<string[]>([]);
     const [avatarToast, setAvatarToast] = useState<string | null>(null);
-    const [buyingAvatarId, setBuyingAvatarId] = useState<string | null>(null);
+    const [buyingStyleId, setBuyingStyleId] = useState<string | null>(null);
 
-    // 아바타 보유 아이템 로드 (localStorage)
+    // 해금된 스타일 로드
     useEffect(() => {
-        const owned = getOwnedItems();
-        const defaults = AVATAR_ITEMS.filter(i => i.isDefault).map(i => i.id);
-        setAvatarOwned(new Set([...owned, ...defaults]));
+        setUnlockedStyleIds(getUnlockedStyleIds());
     }, []);
 
-    // 아바타 아이템 XP 구매
-    const handleAvatarPurchase = async (itemId: string) => {
-        const item = AVATAR_ITEMS.find(i => i.id === itemId);
-        if (!item || avatarOwned.has(itemId) || user.points < item.xpPrice) return;
-        setBuyingAvatarId(itemId);
-        // XP 차감
-        addPoints(-item.xpPrice);
-        // localStorage에 저장
-        addOwnedItem(itemId);
-        setAvatarOwned(prev => new Set([...prev, itemId]));
-        // Supabase points 업데이트 (옵션)
+    // 스타일 XP 구매
+    const handleStyleUnlock = async (styleId: string) => {
+        const style = DICEBEAR_STYLES.find(s => s.id === styleId);
+        if (!style || unlockedStyleIds.includes(styleId) || user.points < style.xpCost) return;
+        setBuyingStyleId(styleId);
+        addPoints(-style.xpCost);
+        addUnlockedStyle(styleId);
+        setUnlockedStyleIds(prev => [...prev, styleId]);
         try {
             const { data: { session } } = await supabase.auth.getSession();
             if (session?.user?.id) {
                 await supabase
                     .from("profiles")
-                    .update({ points: user.points - item.xpPrice })
+                    .update({ points: user.points - style.xpCost })
                     .eq("id", session.user.id);
             }
         } catch {/* ignore */}
-        setAvatarToast(item.name);
+        setAvatarToast(style.nameKo);
         setTimeout(() => setAvatarToast(null), 3000);
-        setBuyingAvatarId(null);
+        setBuyingStyleId(null);
     };
 
     // 상품 + 내 구매 목록 로드
@@ -162,9 +146,9 @@ export default function ShopPage() {
         setPurchasing(null);
     };
 
-    const avatarCategoryItems = AVATAR_ITEMS.filter(i => i.category === avatarCategory);
-    const currentConfig = user.avatarConfig ?? DEFAULT_AVATAR_CONFIG;
-    const previewUrl = buildAvatarUrl(currentConfig, user.handle || "user", 200);
+    const currentAvatarUrl = user.avatar?.startsWith("http")
+        ? user.avatar
+        : buildStyleUrl("fun-emoji", {}, user.handle || "user", 200);
 
     return (
         <div className="flex flex-col gap-8 p-4 pt-12 lg:pt-16 max-w-6xl mx-auto pb-32">
@@ -176,7 +160,7 @@ export default function ShopPage() {
                     style={{ background: "var(--secondary)", color: "white", minWidth: "300px" }}
                 >
                     <Sparkles size={18} className="shrink-0" />
-                    <p className="text-sm font-black">🎉 {avatarToast} 구매 완료! 아바타에서 착용해보세요</p>
+                    <p className="text-sm font-black">🎉 {avatarToast} 스타일 해금 완료! 프로필에서 사용해보세요</p>
                 </div>
             )}
 
@@ -259,21 +243,17 @@ export default function ShopPage() {
             </div>
 
             {/* ══════════════════════════════════════════
-                아바타 탭
+                아바타 탭 — DiceBear 스타일 해금
             ══════════════════════════════════════════ */}
             {activeTab === "avatar" && (
                 <div className="flex flex-col lg:flex-row gap-6">
-                    {/* 아바타 프리뷰 */}
-                    <div className="shrink-0 flex flex-col items-center gap-4">
+                    {/* 왼쪽: 현재 아바타 + XP */}
+                    <div className="shrink-0 flex flex-col items-center gap-4" style={{ width: 200 }}>
                         <div
                             className="rounded-3xl overflow-hidden shadow-xl"
-                            style={{
-                                width: 200, height: 200,
-                                background: currentConfig.backgroundColor ? `#${currentConfig.backgroundColor}` : "#ffffff",
-                                border: "2px solid var(--border)",
-                            }}
+                            style={{ width: 200, height: 200, background: "#f7f6f3", border: "2px solid var(--border)" }}
                         >
-                            <img src={previewUrl} alt="my avatar" style={{ width: "100%", height: "100%", objectFit: "contain" }} />
+                            <img src={currentAvatarUrl} alt="my avatar" style={{ width: "100%", height: "100%", objectFit: "contain" }} />
                         </div>
                         <div className="text-center">
                             <p className="text-sm font-black" style={{ color: "var(--foreground)" }}>{user.name}</p>
@@ -294,121 +274,98 @@ export default function ShopPage() {
                             </div>
                         </div>
                         <p className="text-[10px] text-center px-2" style={{ color: "var(--foreground-muted)" }}>
-                            구매 후 프로필 페이지에서 착용하세요
+                            해금 후 프로필 페이지에서 아바타를 꾸며보세요
                         </p>
                     </div>
 
-                    {/* 아이템 목록 */}
-                    <div className="flex-1 flex flex-col gap-4">
-                        {/* 카테고리 탭 */}
-                        <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
-                            {AVATAR_CATEGORIES.map(cat => (
-                                <button
-                                    key={cat}
-                                    onClick={() => setAvatarCategory(cat)}
-                                    className="shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all"
-                                    style={{
-                                        background: avatarCategory === cat ? "var(--foreground)" : "var(--surface-2)",
-                                        color: avatarCategory === cat ? "var(--background)" : "var(--foreground-soft)",
-                                    }}
-                                >
-                                    {CATEGORY_ICONS[cat]} {cat}
-                                </button>
-                            ))}
-                        </div>
-
-                        {/* 아이템 그리드 */}
-                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-3">
-                            {avatarCategoryItems.map(item => {
-                                const owned = avatarOwned.has(item.id);
-                                const isBuying = buyingAvatarId === item.id;
-                                const canAfford = user.points >= item.xpPrice;
-                                const rs = RARITY_STYLE[item.rarity];
-                                const previewUrl = getItemPreviewUrl(item, user.handle || "user");
+                    {/* 오른쪽: 스타일 카드 그리드 */}
+                    <div className="flex-1">
+                        <p className="text-sm font-black mb-4" style={{ color: "var(--foreground)" }}>
+                            🎨 아바타 스타일 ({unlockedStyleIds.length}/{DICEBEAR_STYLES.length} 해금)
+                        </p>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                            {DICEBEAR_STYLES.map(style => {
+                                const isUnlocked = unlockedStyleIds.includes(style.id);
+                                const isBuying = buyingStyleId === style.id;
+                                const canAfford = user.points >= style.xpCost;
+                                const seeds = ["alpha", "beta", "gamma", "delta"];
 
                                 return (
                                     <div
-                                        key={item.id}
-                                        className="relative flex flex-col items-center gap-2 rounded-2xl overflow-hidden transition-all"
+                                        key={style.id}
+                                        className="flex flex-col rounded-2xl overflow-hidden transition-all"
                                         style={{
-                                            background: owned ? "var(--surface)" : "var(--surface-2)",
-                                            border: owned ? "2px solid var(--accent)" : "1.5px dashed var(--border)",
+                                            background: "var(--surface)",
+                                            border: isUnlocked
+                                                ? "2px solid var(--accent)"
+                                                : "1.5px dashed var(--border)",
                                         }}
                                     >
-                                        {/* 레어리티 뱃지 */}
-                                        <span
-                                            className="absolute top-2 left-2 z-10 text-[8px] font-black px-1.5 py-0.5 rounded-full"
-                                            style={{ background: rs.bg, color: rs.text }}
-                                        >
-                                            {rs.label}
-                                        </span>
-
-                                        {/* 보유/잠금 뱃지 */}
-                                        {owned && (
-                                            <div
-                                                className="absolute top-2 right-2 z-10 w-5 h-5 rounded-full flex items-center justify-center"
-                                                style={{ background: "var(--accent)" }}
-                                            >
-                                                <CheckCircle size={12} className="text-white" />
-                                            </div>
-                                        )}
-                                        {!owned && !item.isDefault && (
-                                            <div
-                                                className="absolute top-2 right-2 z-10 w-5 h-5 rounded-full flex items-center justify-center"
-                                                style={{ background: "rgba(0,0,0,0.18)" }}
-                                            >
-                                                <Lock size={10} className="text-white" />
-                                            </div>
-                                        )}
-
-                                        {/* DiceBear 아바타 미리보기 */}
+                                        {/* 샘플 아바타 4개 */}
                                         <div
-                                            className="w-full flex items-center justify-center relative"
+                                            className="flex gap-2 p-4 justify-center"
                                             style={{
-                                                height: 110,
-                                                background: item.slot === "backgroundColor"
-                                                    ? `#${item.value || "f7f6f3"}`
-                                                    : "var(--surface-3)",
-                                                filter: !owned && !item.isDefault ? "grayscale(60%) opacity(0.7)" : "none",
+                                                background: isUnlocked ? "var(--surface-2)" : "var(--surface-3)",
+                                                filter: isUnlocked ? "none" : "grayscale(40%)",
                                             }}
                                         >
-                                            <img
-                                                src={previewUrl}
-                                                alt={item.name}
-                                                style={{ width: 90, height: 90, objectFit: "contain" }}
-                                                loading="lazy"
-                                            />
+                                            {seeds.map(s => (
+                                                <img
+                                                    key={s}
+                                                    src={buildStyleUrl(style.id, style.defaultOptions, s, 64)}
+                                                    alt=""
+                                                    className="rounded-lg"
+                                                    style={{ width: 44, height: 44, objectFit: "contain", background: "#f7f6f3" }}
+                                                    loading="lazy"
+                                                />
+                                            ))}
                                         </div>
 
-                                        {/* 이름 + 버튼 */}
-                                        <div className="flex flex-col items-center gap-1.5 px-2 pb-3 w-full">
-                                            <p className="text-xs font-bold text-center leading-tight" style={{ color: "var(--foreground)" }}>
-                                                {item.name}
-                                            </p>
+                                        {/* 정보 */}
+                                        <div className="flex flex-col gap-3 p-4">
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-xl">{style.emoji}</span>
+                                                <div>
+                                                    <p className="text-sm font-black" style={{ color: "var(--foreground)" }}>{style.nameKo}</p>
+                                                    <p className="text-[10px]" style={{ color: "var(--foreground-muted)" }}>{style.description}</p>
+                                                </div>
+                                                {isUnlocked && (
+                                                    <div className="ml-auto">
+                                                        <CheckCircle size={18} style={{ color: "var(--accent)" }} />
+                                                    </div>
+                                                )}
+                                            </div>
 
-                                            {owned || item.isDefault ? (
+                                            {isUnlocked ? (
                                                 <span
-                                                    className="text-[10px] font-bold px-3 py-1 rounded-full"
+                                                    className="text-[11px] font-black px-3 py-2 rounded-xl text-center"
                                                     style={{ background: "var(--accent-light)", color: "var(--accent)" }}
                                                 >
-                                                    {item.isDefault ? "무료" : "✓ 보유 중"}
+                                                    ✓ 해금 완료 — 프로필에서 사용하기
+                                                </span>
+                                            ) : style.xpCost === 0 ? (
+                                                <span
+                                                    className="text-[11px] font-black px-3 py-2 rounded-xl text-center"
+                                                    style={{ background: "var(--accent-light)", color: "var(--accent)" }}
+                                                >
+                                                    무료
                                                 </span>
                                             ) : (
                                                 <button
-                                                    onClick={() => handleAvatarPurchase(item.id)}
+                                                    onClick={() => handleStyleUnlock(style.id)}
                                                     disabled={!canAfford || isBuying}
-                                                    className="flex items-center gap-1 px-3 py-1.5 rounded-full text-[10px] font-black transition-all active:scale-[0.97] disabled:cursor-not-allowed"
+                                                    className="flex items-center justify-center gap-2 px-3 py-2 rounded-xl text-xs font-black transition-all active:scale-[0.97] disabled:cursor-not-allowed"
                                                     style={{
                                                         background: canAfford ? "var(--highlight)" : "var(--surface-3)",
-                                                        color: canAfford ? "white" : "var(--foreground-muted)",
+                                                        color: canAfford ? "#7c4a00" : "var(--foreground-muted)",
                                                     }}
                                                 >
                                                     {isBuying ? (
-                                                        <Loader2 size={10} className="animate-spin" />
+                                                        <Loader2 size={12} className="animate-spin" />
                                                     ) : !canAfford ? (
-                                                        <><Lock size={9} /> XP 부족</>
+                                                        <><Lock size={11} /> ⭐ {style.xpCost.toLocaleString()} XP 필요</>
                                                     ) : (
-                                                        <><Zap size={10} /> {item.xpPrice.toLocaleString()} XP</>
+                                                        <><Zap size={11} /> ⭐ {style.xpCost.toLocaleString()} XP로 해금</>
                                                     )}
                                                 </button>
                                             )}

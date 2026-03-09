@@ -6,7 +6,7 @@ import GlassCard from "@/components/common/GlassCard";
 import EditProfileModal from "@/components/profile/EditProfileModal";
 import SkillTree from "@/components/profile/SkillTree";
 import IDCard from "@/components/profile/IDCard";
-import AvatarBuilder from "@/components/profile/AvatarBuilder";
+import AvatarMaker from "@/components/profile/AvatarMaker";
 import {
     User,
     Settings,
@@ -26,7 +26,7 @@ import {
 } from "lucide-react";
 import { useGameStore } from "@/store/useGameStore";
 import { supabase, isSupabaseConfigured, DbProfile } from "@/lib/supabase/client";
-import { getSavedAvatarConfig } from "@/lib/avatar/items";
+import { getSavedAvatarStyle } from "@/lib/avatar/styles";
 
 interface TeamMember {
     id: string;
@@ -38,17 +38,16 @@ interface TeamMember {
 
 export default function ProfilePage() {
     const router = useRouter();
-    const { user, setAvatarConfig: _setAvatarConfig } = useGameStore();
-    // Load saved avatarConfig from localStorage on mount
+    const { user } = useGameStore();
+    // Load saved avatar style from localStorage on mount (for DiceBear URL sync)
     useEffect(() => {
-        const saved = getSavedAvatarConfig();
-        if (saved && Object.keys(saved).length > 0 && !user.avatarConfig) {
-            _setAvatarConfig(saved);
+        const saved = getSavedAvatarStyle();
+        if (saved && !user.avatar?.startsWith("https://api.dicebear.com")) {
+            // Will be synced on next save — nothing to do here
         }
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
-    const { setAvatarConfig } = useGameStore();
     const [showEditModal, setShowEditModal] = useState(false);
     const [showAvatarBuilder, setShowAvatarBuilder] = useState(false);
     const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
@@ -179,21 +178,16 @@ export default function ProfilePage() {
     // 팀장 = 첫 번째 멤버 (가장 먼저 가입)
     const leaderId = teamMembers.length > 0 ? teamMembers[0].id : null;
 
-    const handleAvatarSave = async (config: typeof user.avatarConfig & object) => {
-        _setAvatarConfig(config);
+    const handleAvatarSave = async (avatarUrl: string) => {
         setShowAvatarBuilder(false);
         // DiceBear URL을 기존 profiles.avatar 컬럼에 저장 (SQL 불필요)
+        useGameStore.getState().updateProfile({ avatar: avatarUrl });
         try {
             const { data: { session } } = await supabase.auth.getSession();
             if (session?.user?.id) {
-                const { buildAvatarUrl } = await import("@/lib/avatar/items");
-                const avatarUrl = buildAvatarUrl(config, user.handle || user.name || "user", 200);
                 await supabase.from("profiles")
                     .update({ avatar: avatarUrl })
                     .eq("id", session.user.id);
-                // Zustand avatar도 URL로 업데이트 (피드/스토리바 즉시 반영)
-                _setAvatarConfig(config);
-                useGameStore.getState().updateProfile({ avatar: avatarUrl });
             }
         } catch {/* ignore */}
     };
@@ -204,8 +198,7 @@ export default function ProfilePage() {
                 <EditProfileModal onClose={() => setShowEditModal(false)} />
             )}
             {showAvatarBuilder && (
-                <AvatarBuilder
-                    initialConfig={user.avatarConfig ?? {}}
+                <AvatarMaker
                     seed={user.handle || user.name || "user"}
                     onSave={handleAvatarSave}
                     onClose={() => setShowAvatarBuilder(false)}
