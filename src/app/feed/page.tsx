@@ -265,8 +265,10 @@ export default function FeedPage() {
                     </div>
                 </div>
 
-                {/* 일일 마케팅 챌린지 */}
-                <DailyChallenge />
+                {/* 일일 마케팅 챌린지 — 모바일 전용 */}
+                <div className="lg:hidden">
+                    <DailyChallenge />
+                </div>
 
                 {/* 피드 헤더 */}
                 <div className="flex justify-between items-center px-1 mt-2">
@@ -312,11 +314,22 @@ export default function FeedPage() {
             {/* ── 사이드 대시보드 (LG+) ── */}
             <aside className="hidden lg:flex flex-col gap-5 w-80 shrink-0 sticky top-10 h-fit">
                 <Insights />
+                <DailyChallenge />
                 <div className="px-2 py-1 text-[10px] flex flex-wrap gap-x-3 gap-y-1.5 uppercase tracking-wider font-bold" style={{ color: "var(--foreground-muted)" }}>
                     <Link href="#" className="hover:opacity-70 transition-opacity">이용약관</Link>
                     <Link href="#" className="hover:opacity-70 transition-opacity">개인정보</Link>
                     <Link href="#" className="hover:opacity-70 transition-opacity">도움말</Link>
-                    <span>© 2026 Sellstagram</span>
+                    <span>© 2026 SELLSTAGRAM</span>
+                    <span style={{ color: "var(--border)" }}>·</span>
+                    <Link
+                        href="https://arclabs.co.kr"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="hover:opacity-70 transition-opacity"
+                        style={{ color: "var(--secondary)" }}
+                    >
+                        아크랩스
+                    </Link>
                 </div>
             </aside>
 

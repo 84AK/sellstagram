@@ -190,7 +190,7 @@ export default function Insights() {
                         </p>
                     </div>
                 ) : (
-                    <div className="flex flex-col divide-y" style={{ borderColor: "var(--border)" }}>
+                    <div className="flex flex-col">
                         {teamRankings.map((team, idx) => {
                             const isMyTeam = team.name === user.team;
                             const pct = maxScore > 0 ? Math.round((team.score / maxScore) * 100) : 0;
@@ -202,6 +202,7 @@ export default function Insights() {
                                     className="flex items-center gap-3 px-4 py-2.5 transition-all"
                                     style={{
                                         background: isMyTeam ? `${team.color}0d` : "transparent",
+                                        borderTop: idx === 0 ? "none" : "1px solid var(--border)",
                                     }}
                                 >
                                     {/* 순위 */}
