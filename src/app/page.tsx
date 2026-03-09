@@ -1155,25 +1155,19 @@ export default function HomePage() {
                 {/* 오른쪽: 분석 결과 */}
                 <div className="flex flex-col gap-4">
                   {/* 완료 헤더 */}
-                  <div className="flex items-center justify-between glass-card rounded-2xl p-4">
-                    <div className="flex items-center gap-2.5">
+                  <div className="flex items-center justify-between glass-card rounded-2xl p-5">
+                    <div className="flex items-center gap-3">
                       <div
-                        className="w-8 h-8 rounded-xl flex items-center justify-center"
+                        className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
                         style={{background: "rgba(6,214,160,0.15)"}}
                       >
-                        <CheckCircle size={16} style={{color: "#06D6A0"}} />
+                        <CheckCircle size={20} style={{color: "#06D6A0"}} />
                       </div>
                       <div>
-                        <p
-                          className="text-sm font-black"
-                          style={{color: "var(--foreground)"}}
-                        >
+                        <p className="text-base font-black" style={{color: "var(--foreground)"}}>
                           분석 완료!
                         </p>
-                        <p
-                          className="text-[10px]"
-                          style={{color: "var(--foreground-muted)"}}
-                        >
+                        <p className="text-sm mt-0.5" style={{color: "#06D6A0"}}>
                           +10 XP 획득
                         </p>
                       </div>
@@ -1188,133 +1182,69 @@ export default function HomePage() {
                           setDemoTab("stats");
                         }, 1200);
                       }}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-bold transition-all hover:scale-[1.02]"
-                      style={{
-                        background: "var(--surface-2)",
-                        color: "var(--foreground-soft)",
-                      }}
+                      className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all hover:scale-[1.02]"
+                      style={{background: "var(--surface-2)", color: "var(--foreground-soft)"}}
                     >
-                      <RefreshCw
-                        size={11}
-                        className={demoAnalyzing ? "animate-spin" : ""}
-                      />
+                      <RefreshCw size={14} className={demoAnalyzing ? "animate-spin" : ""} />
                       분석 재현
                     </button>
                   </div>
 
                   {/* 탭 */}
-                  <div
-                    className="flex gap-1 p-1 rounded-2xl"
-                    style={{background: "var(--surface-2)"}}
-                  >
+                  <div className="flex gap-1 p-1 rounded-2xl" style={{background: "var(--surface-2)"}}>
                     {(
                       [
                         {key: "stats", icon: BarChart2, label: "시뮬레이션"},
-                        {
-                          key: "reactions",
-                          icon: MessageCircle,
-                          label: "고객 반응",
-                        },
+                        {key: "reactions", icon: MessageCircle, label: "고객 반응"},
                         {key: "coaching", icon: Sparkles, label: "AI 코칭"},
                       ] as const
                     ).map(({key, icon: Icon, label}) => (
                       <button
                         key={key}
                         onClick={() => setDemoTab(key)}
-                        className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-[11px] font-bold transition-all"
+                        className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold transition-all"
                         style={{
-                          background:
-                            demoTab === key
-                              ? "var(--background)"
-                              : "transparent",
-                          color:
-                            demoTab === key
-                              ? "var(--foreground)"
-                              : "var(--foreground-muted)",
-                          boxShadow:
-                            demoTab === key
-                              ? "0 1px 4px rgba(0,0,0,0.08)"
-                              : "none",
+                          background: demoTab === key ? "var(--background)" : "transparent",
+                          color: demoTab === key ? "var(--foreground)" : "var(--foreground-muted)",
+                          boxShadow: demoTab === key ? "0 1px 4px rgba(0,0,0,0.08)" : "none",
                         }}
                       >
-                        <Icon size={12} /> {label}
+                        <Icon size={14} /> {label}
                       </button>
                     ))}
                   </div>
 
                   {/* 탭 콘텐츠 */}
                   {demoAnalyzing ? (
-                    <div className="glass-card rounded-2xl p-8 flex flex-col items-center gap-3">
-                      <Loader2
-                        size={24}
-                        className="animate-spin"
-                        style={{color: "#4361EE"}}
-                      />
-                      <p
-                        className="text-sm font-bold"
-                        style={{color: "var(--foreground-muted)"}}
-                      >
+                    <div className="glass-card rounded-2xl p-10 flex flex-col items-center gap-4">
+                      <Loader2 size={28} className="animate-spin" style={{color: "#4361EE"}} />
+                      <p className="text-sm font-bold" style={{color: "var(--foreground-muted)"}}>
                         AI 분석 중...
                       </p>
                     </div>
                   ) : demoRevealed && demoTab === "stats" ? (
                     <div className="grid grid-cols-3 gap-3">
                       {[
-                        {
-                          icon: TrendingUp,
-                          label: "예상 노출",
-                          value: sim.impressions.toLocaleString(),
-                          unit: "명",
-                          color: "#FF6B35",
-                        },
-                        {
-                          icon: BarChart2,
-                          label: "인게이지먼트",
-                          value: sim.engagementRate.toFixed(1),
-                          unit: "%",
-                          color: "#4361EE",
-                        },
-                        {
-                          icon: Zap,
-                          label: "예상 클릭",
-                          value: sim.clicks.toLocaleString(),
-                          unit: "회",
-                          color: "#06D6A0",
-                        },
+                        {icon: TrendingUp, label: "예상 노출", value: sim.impressions.toLocaleString(), unit: "명", color: "#FF6B35"},
+                        {icon: BarChart2, label: "인게이지먼트", value: sim.engagementRate.toFixed(1), unit: "%", color: "#4361EE"},
+                        {icon: Zap, label: "예상 클릭", value: sim.clicks.toLocaleString(), unit: "회", color: "#06D6A0"},
                       ].map(({icon: Icon, label, value, unit, color}) => (
-                        <div
-                          key={label}
-                          className="glass-card rounded-2xl p-4 flex flex-col items-center gap-1.5 text-center"
-                        >
-                          <Icon size={16} style={{color}} />
-                          <span
-                            className="text-[9px] font-bold uppercase tracking-wider"
-                            style={{color: "var(--foreground-muted)"}}
-                          >
+                        <div key={label} className="glass-card rounded-2xl p-5 flex flex-col items-center gap-2 text-center">
+                          <Icon size={20} style={{color}} />
+                          <span className="text-xs font-bold" style={{color: "var(--foreground-muted)"}}>
                             {label}
                           </span>
-                          <span className="text-xl font-black" style={{color}}>
-                            {value}
-                            <span className="text-sm">{unit}</span>
+                          <span className="text-2xl font-black" style={{color}}>
+                            {value}<span className="text-base">{unit}</span>
                           </span>
                         </div>
                       ))}
                       <div
-                        className="col-span-3 glass-card rounded-2xl p-4 flex items-start gap-2.5"
-                        style={{
-                          background: "rgba(255,107,53,0.05)",
-                          border: "1px solid rgba(255,107,53,0.15)",
-                        }}
+                        className="col-span-3 glass-card rounded-2xl p-4 flex items-start gap-3"
+                        style={{background: "rgba(255,107,53,0.05)", border: "1px solid rgba(255,107,53,0.15)"}}
                       >
-                        <Sparkles
-                          size={14}
-                          style={{color: "#FF6B35"}}
-                          className="mt-0.5 shrink-0"
-                        />
-                        <p
-                          className="text-xs leading-relaxed"
-                          style={{color: "var(--foreground-soft)"}}
-                        >
+                        <Sparkles size={16} style={{color: "#FF6B35"}} className="mt-0.5 shrink-0" />
+                        <p className="text-sm leading-relaxed" style={{color: "var(--foreground-soft)"}}>
                           {sim.engagementRate >= 8
                             ? "인게이지먼트가 높아요! 이미지 퀄리티와 해시태그 전략이 잘 맞았어요."
                             : sim.engagementRate >= 5
@@ -1326,72 +1256,44 @@ export default function HomePage() {
                   ) : demoRevealed && demoTab === "reactions" ? (
                     <div className="flex flex-col gap-3">
                       {post.reactions.map((r, i) => (
-                        <div
-                          key={i}
-                          className="glass-card rounded-2xl flex items-start gap-3 p-4"
-                        >
-                          <span className="text-xl">{r.emoji}</span>
+                        <div key={i} className="glass-card rounded-2xl flex items-start gap-4 p-4">
+                          <span className="text-2xl shrink-0">{r.emoji}</span>
                           <div>
-                            <p
-                              className="text-[10px] font-black mb-0.5"
-                              style={{color: "var(--foreground-muted)"}}
-                            >
+                            <p className="text-sm font-black mb-1" style={{color: "var(--foreground-muted)"}}>
                               {r.name}
                             </p>
-                            <p
-                              className="text-sm"
-                              style={{color: "var(--foreground)"}}
-                            >
+                            <p className="text-sm leading-relaxed" style={{color: "var(--foreground)"}}>
                               {r.comment}
                             </p>
                           </div>
                         </div>
                       ))}
-                      <p
-                        className="text-[10px] text-center font-medium"
-                        style={{color: "var(--foreground-muted)"}}
-                      >
-                        * AI 페르소나가 게시물 내용을 분석해 생성한 가상
-                        반응입니다
+                      <p className="text-xs text-center font-medium" style={{color: "var(--foreground-muted)"}}>
+                        * AI 페르소나가 게시물 내용을 분석해 생성한 가상 반응입니다
                       </p>
                     </div>
                   ) : demoRevealed && demoTab === "coaching" ? (
                     <div
-                      className="glass-card rounded-2xl p-5 flex flex-col gap-3"
-                      style={{
-                        background: "rgba(67,97,238,0.04)",
-                        border: "1px solid rgba(67,97,238,0.15)",
-                      }}
+                      className="glass-card rounded-2xl p-5 flex flex-col gap-4"
+                      style={{background: "rgba(67,97,238,0.04)", border: "1px solid rgba(67,97,238,0.15)"}}
                     >
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-3">
                         <div
-                          className="w-8 h-8 rounded-xl flex items-center justify-center"
-                          style={{
-                            background:
-                              "linear-gradient(135deg, #4361EE, #6B8EFF)",
-                          }}
+                          className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+                          style={{background: "linear-gradient(135deg, #4361EE, #6B8EFF)"}}
                         >
-                          <Brain size={14} className="text-white" />
+                          <Brain size={18} className="text-white" />
                         </div>
                         <div>
-                          <p
-                            className="text-[10px] font-black uppercase tracking-widest"
-                            style={{color: "#4361EE"}}
-                          >
+                          <p className="text-sm font-black" style={{color: "#4361EE"}}>
                             Gemini AI 코치
                           </p>
-                          <p
-                            className="text-[10px]"
-                            style={{color: "var(--foreground-muted)"}}
-                          >
+                          <p className="text-xs mt-0.5" style={{color: "var(--foreground-muted)"}}>
                             게시물 분석 완료
                           </p>
                         </div>
                       </div>
-                      <p
-                        className="text-sm leading-relaxed"
-                        style={{color: "var(--foreground)"}}
-                      >
+                      <p className="text-sm leading-relaxed" style={{color: "var(--foreground)"}}>
                         {post.coaching}
                       </p>
                     </div>
