@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import GlassCard from "@/components/common/GlassCard";
 import EditProfileModal from "@/components/profile/EditProfileModal";
 import SkillTree from "@/components/profile/SkillTree";
+import IDCard from "@/components/profile/IDCard";
+import AvatarBuilder from "@/components/profile/AvatarBuilder";
 import {
     User,
     Settings,
@@ -20,9 +22,11 @@ import {
     Bookmark,
     Image as ImageIcon,
     TrendingUp,
+    Palette,
 } from "lucide-react";
 import { useGameStore } from "@/store/useGameStore";
 import { supabase, isSupabaseConfigured, DbProfile } from "@/lib/supabase/client";
+import { getSavedAvatarConfig } from "@/lib/avatar/items";
 
 interface TeamMember {
     id: string;
@@ -34,13 +38,23 @@ interface TeamMember {
 
 export default function ProfilePage() {
     const router = useRouter();
-    const { user } = useGameStore();
+    const { user, setAvatarConfig: _setAvatarConfig } = useGameStore();
+    // Load saved avatarConfig from localStorage on mount
+    useEffect(() => {
+        const saved = getSavedAvatarConfig();
+        if (saved && Object.keys(saved).length > 0 && !user.avatarConfig) {
+            _setAvatarConfig(saved);
+        }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
+    const { setAvatarConfig } = useGameStore();
     const [showEditModal, setShowEditModal] = useState(false);
+    const [showAvatarBuilder, setShowAvatarBuilder] = useState(false);
     const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
     const [teamCreatedAt, setTeamCreatedAt] = useState<string | null>(null);
     const [loadingTeam, setLoadingTeam] = useState(true);
-    const [activeTab, setActiveTab] = useState<"team" | "skills" | "bookmarks">("team");
+    const [activeTab, setActiveTab] = useState<"team" | "skills" | "bookmarks" | "idcard">("idcard");
     const [bookmarkedPosts, setBookmarkedPosts] = useState<{ id: string; image_url: string | null; caption: string | null; likes: number }[]>([]);
     const [loadingBookmarks, setLoadingBookmarks] = useState(false);
     const [recentPosts, setRecentPosts] = useState<{ id: string; caption: string | null; image_url: string | null; likes: number; engagement_rate: string; created_at: string; week: number | null }[]>([]);
@@ -165,10 +179,32 @@ export default function ProfilePage() {
     // 팀장 = 첫 번째 멤버 (가장 먼저 가입)
     const leaderId = teamMembers.length > 0 ? teamMembers[0].id : null;
 
+    const handleAvatarSave = async (config: typeof user.avatarConfig & object) => {
+        _setAvatarConfig(config);
+        setShowAvatarBuilder(false);
+        // Supabase 동기화 (선택)
+        try {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (session?.user?.id) {
+                await supabase.from("profiles")
+                    .update({ avatar: JSON.stringify(config) })
+                    .eq("id", session.user.id);
+            }
+        } catch {/* ignore */}
+    };
+
     return (
         <>
             {showEditModal && (
                 <EditProfileModal onClose={() => setShowEditModal(false)} />
+            )}
+            {showAvatarBuilder && (
+                <AvatarBuilder
+                    initialConfig={user.avatarConfig ?? {}}
+                    seed={user.handle || user.name || "user"}
+                    onSave={handleAvatarSave}
+                    onClose={() => setShowAvatarBuilder(false)}
+                />
             )}
 
             <div className="flex flex-col gap-8 p-4 pt-12 lg:pt-16 max-w-5xl mx-auto pb-32">
@@ -207,6 +243,13 @@ export default function ProfilePage() {
                             >
                                 프로필 편집 <Settings size={14} />
                             </button>
+                            <button
+                                onClick={() => setShowAvatarBuilder(true)}
+                                className="px-6 py-2.5 rounded-2xl text-xs font-black italic transition-all flex items-center gap-2 active:scale-[0.97]"
+                                style={{ background: "var(--primary)", color: "white" }}
+                            >
+                                아바타 꾸미기 <Palette size={14} />
+                            </button>
                             {isTeacher && (
                                 <button
                                     onClick={handleManageTeam}
@@ -237,8 +280,9 @@ export default function ProfilePage() {
                 </div>
 
                 {/* 탭 전환 */}
-                <div className="flex gap-1 p-1 rounded-2xl w-fit" style={{ background: "var(--surface-2)" }}>
+                <div className="flex gap-1 p-1 rounded-2xl w-fit overflow-x-auto no-scrollbar" style={{ background: "var(--surface-2)" }}>
                     {([
+                        { key: "idcard", label: "ID 카드", icon: ShieldCheck },
                         { key: "team", label: "팀 워크스페이스", icon: Users },
                         { key: "skills", label: "스킬 트리", icon: TrendingUp },
                         { key: "bookmarks", label: "북마크", icon: Bookmark },
@@ -261,6 +305,88 @@ export default function ProfilePage() {
 
                 {/* Main Content Area: Team & Activity */}
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+
+                    {/* ID 카드 탭 */}
+                    {activeTab === "idcard" && (
+                        <div className="lg:col-span-3 flex flex-col lg:flex-row gap-10 items-start">
+                            {/* 카드 */}
+                            <div className="flex flex-col items-center gap-4">
+                                <IDCard
+                                    name={user.name}
+                                    handle={user.handle}
+                                    team={user.team}
+                                    rank={user.rank}
+                                    points={user.points}
+                                    avatar={user.avatar}
+                                    avatarConfig={user.avatarConfig}
+                                    onCustomize={() => setShowAvatarBuilder(true)}
+                                />
+                                <p className="text-xs text-center" style={{ color: "var(--foreground-muted)" }}>
+                                    나만의 마케터 ID 카드 🪪
+                                </p>
+                            </div>
+
+                            {/* 아바타 안내 */}
+                            <div className="flex flex-col gap-5 flex-1 max-w-lg">
+                                <div>
+                                    <h3 className="text-2xl font-black italic tracking-tight" style={{ color: "var(--foreground)" }}>
+                                        나만의 마케터 아이덴티티
+                                    </h3>
+                                    <p className="text-sm mt-1" style={{ color: "var(--foreground-muted)" }}>
+                                        XP를 모아 아바타를 꾸미고, 팀 피드와 랭킹에서 나만의 스타일로 표시돼요.
+                                    </p>
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-3">
+                                    {[
+                                        { label: "헤어 스타일", count: 14, emoji: "💇", desc: "14가지 헤어" },
+                                        { label: "눈 표현", count: 11, emoji: "👁️", desc: "11가지 눈" },
+                                        { label: "의상", count: 18, emoji: "👕", desc: "8종 × 10색상" },
+                                        { label: "액세서리", count: 7, emoji: "👓", desc: "안경·선글라스" },
+                                        { label: "머리색", count: 10, emoji: "🎨", desc: "10가지 색상" },
+                                        { label: "배경색", count: 12, emoji: "🖼️", desc: "12가지 배경" },
+                                    ].map(({ label, emoji, desc }) => (
+                                        <div
+                                            key={label}
+                                            className="flex items-center gap-3 p-3 rounded-2xl"
+                                            style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
+                                        >
+                                            <span style={{ fontSize: 24 }}>{emoji}</span>
+                                            <div>
+                                                <p className="text-xs font-black" style={{ color: "var(--foreground)" }}>{label}</p>
+                                                <p className="text-[10px]" style={{ color: "var(--foreground-muted)" }}>{desc}</p>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+
+                                <button
+                                    onClick={() => setShowAvatarBuilder(true)}
+                                    className="w-full py-4 rounded-2xl flex items-center justify-center gap-2 font-black text-sm transition-all hover:opacity-90 active:scale-[0.98]"
+                                    style={{ background: "var(--primary)", color: "white" }}
+                                >
+                                    <Palette size={18} />
+                                    지금 아바타 꾸미기
+                                </button>
+
+                                <div
+                                    className="flex items-start gap-3 p-4 rounded-2xl"
+                                    style={{ background: "var(--highlight-light)", border: "1px solid rgba(255,194,51,0.3)" }}
+                                >
+                                    <Zap size={16} style={{ color: "var(--highlight)", marginTop: 2 }} />
+                                    <div>
+                                        <p className="text-xs font-black" style={{ color: "var(--highlight-dark)" }}>
+                                            XP로 잠금 해제
+                                        </p>
+                                        <p className="text-[11px] mt-0.5" style={{ color: "var(--foreground-soft)" }}>
+                                            콘텐츠 업로드, 미션 완료, 상품 구매로 XP를 쌓고 셀러 상점 → 아바타 탭에서 새 아이템을 언락하세요.
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
                     {/* 스킬 트리 탭 */}
                     {activeTab === "skills" && (
                         <div className="lg:col-span-3 flex flex-col gap-4">

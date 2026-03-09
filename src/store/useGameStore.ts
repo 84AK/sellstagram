@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { SkillXP, DEFAULT_SKILL_XP, SkillKey } from "@/lib/skills/skillTree";
+import type { AvatarConfig } from "@/lib/avatar/types";
 
 interface Product {
     id: string;
@@ -42,6 +43,7 @@ interface UserProfile {
     points: number;
     role: "student" | "teacher" | "";
     skillXP: SkillXP;
+    avatarConfig?: AvatarConfig;
 }
 
 interface Post {
@@ -113,6 +115,7 @@ interface GameState {
     updateProfile: (data: Partial<UserProfile>) => void;
     addPoints: (amount: number) => void;
     addSkillXP: (skill: SkillKey, amount: number) => void;
+    setAvatarConfig: (config: AvatarConfig) => void;
     clearMissionCompletionQueue: () => void;
     setUploadModalOpen: (open: boolean, context?: "general" | "mission") => void;
     setGuideModalOpen: (open: boolean) => void;
@@ -252,6 +255,10 @@ export const useGameStore = create<GameState>((set) => ({
 
     addPoints: (amount) => set((state) => ({
         user: { ...state.user, points: state.user.points + amount }
+    })),
+
+    setAvatarConfig: (config) => set((state) => ({
+        user: { ...state.user, avatarConfig: config },
     })),
 
     addSkillXP: (skill, amount) => set((state) => ({

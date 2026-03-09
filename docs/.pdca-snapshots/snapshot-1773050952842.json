@@ -1,0 +1,3887 @@
+{
+  "timestamp": "2026-03-09T10:09:12.840Z",
+  "reason": "compaction",
+  "status": {
+    "version": "2.0",
+    "lastUpdated": "2026-03-09T09:33:20.283Z",
+    "activeFeatures": [
+      "marketing_simulation",
+      "layout",
+      "dashboard",
+      "analyze",
+      "profile",
+      "onboarding",
+      "curriculum",
+      "session",
+      "learn",
+      "store",
+      "teacher",
+      "supabase",
+      "feed",
+      "callback",
+      "login",
+      "ai",
+      "verify-teacher-pin",
+      "admin",
+      "admin-login",
+      "admin-logout",
+      "admin-check",
+      "shop",
+      "landing",
+      "class-guide",
+      "missions",
+      "weekly-report",
+      "update-profile",
+      "update-team",
+      "update-settings",
+      "challenges",
+      "reactions",
+      "skills",
+      "rewards",
+      "draft",
+      "refine",
+      "gemini-key",
+      "teams",
+      "simulation",
+      "simulate",
+      "save-result",
+      "guide"
+    ],
+    "primaryFeature": "marketing_simulation",
+    "features": {
+      "marketing_simulation": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-03-02T00:59:27.350Z",
+          "lastUpdated": "2026-03-09T06:26:23.146Z"
+        },
+        "lastFile": "/Users/byunmose/Desktop/vibe_coding/marketing_simulation/src/components/common/TermTooltip.tsx"
+      },
+      "layout": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-03-02T01:00:05.111Z",
+          "lastUpdated": "2026-03-09T09:33:20.282Z"
+        },
+        "lastFile": "/Users/byunmose/Desktop/vibe_coding/marketing_simulation/src/components/layout/Sidebar.tsx"
+      },
+      "dashboard": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-03-02T01:01:30.468Z",
+          "lastUpdated": "2026-03-09T07:01:34.752Z"
+        },
+        "lastFile": "/Users/byunmose/Desktop/vibe_coding/marketing_simulation/src/components/dashboard/Insights.tsx"
+      },
+      "analyze": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-03-02T01:02:38.636Z",
+          "lastUpdated": "2026-03-09T01:58:00.732Z"
+        },
+        "lastFile": "/Users/byunmose/Desktop/vibe_coding/marketing_simulation/src/app/api/ai/analyze/route.ts"
+      },
+      "profile": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-03-02T01:03:01.472Z",
+          "lastUpdated": "2026-03-08T12:02:52.492Z"
+        },
+        "lastFile": "/Users/byunmose/Desktop/vibe_coding/marketing_simulation/src/app/profile/page.tsx"
+      },
+      "onboarding": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-03-02T01:04:53.091Z",
+          "lastUpdated": "2026-03-08T08:38:45.667Z"
+        },
+        "lastFile": "/Users/byunmose/Desktop/vibe_coding/marketing_simulation/src/components/onboarding/OnboardingGate.tsx"
+      },
+      "curriculum": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-03-02T01:08:58.980Z",
+          "lastUpdated": "2026-03-02T01:08:58.980Z"
+        },
+        "lastFile": "/Users/byunmose/Desktop/vibe_coding/marketing_simulation/src/lib/curriculum/sessions.ts"
+      },
+      "session": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-03-02T01:10:13.156Z",
+          "lastUpdated": "2026-03-08T04:17:58.023Z"
+        },
+        "lastFile": "/Users/byunmose/Desktop/vibe_coding/marketing_simulation/src/app/session/page.tsx"
+      },
+      "learn": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-03-02T02:05:08.398Z",
+          "lastUpdated": "2026-03-07T10:37:41.610Z"
+        },
+        "lastFile": "/Users/byunmose/Desktop/vibe_coding/marketing_simulation/src/app/learn/page.tsx"
+      },
+      "store": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-03-02T02:13:55.752Z",
+          "lastUpdated": "2026-03-08T17:01:20.390Z"
+        },
+        "lastFile": "/Users/byunmose/Desktop/vibe_coding/marketing_simulation/src/store/useGameStore.ts"
+      },
+      "teacher": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-03-02T02:16:45.721Z",
+          "lastUpdated": "2026-03-09T04:09:45.030Z"
+        },
+        "lastFile": "/Users/byunmose/Desktop/vibe_coding/marketing_simulation/src/app/teacher/page.tsx"
+      },
+      "supabase": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-03-02T02:25:15.038Z",
+          "lastUpdated": "2026-03-08T11:41:09.893Z"
+        },
+        "lastFile": "/Users/byunmose/Desktop/vibe_coding/marketing_simulation/src/lib/supabase/client.ts"
+      },
+      "feed": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-03-02T02:26:43.915Z",
+          "lastUpdated": "2026-03-09T07:08:07.986Z"
+        },
+        "lastFile": "/Users/byunmose/Desktop/vibe_coding/marketing_simulation/src/components/feed/StoryBar.tsx"
+      },
+      "callback": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-03-02T03:00:09.846Z",
+          "lastUpdated": "2026-03-07T09:25:10.724Z"
+        },
+        "lastFile": "/Users/byunmose/Desktop/vibe_coding/marketing_simulation/src/app/auth/callback/page.tsx"
+      },
+      "login": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-03-02T03:00:40.041Z",
+          "lastUpdated": "2026-03-07T09:25:14.977Z"
+        },
+        "lastFile": "/Users/byunmose/Desktop/vibe_coding/marketing_simulation/src/app/login/page.tsx"
+      },
+      "ai": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-03-02T05:34:20.174Z",
+          "lastUpdated": "2026-03-09T02:07:16.422Z"
+        },
+        "lastFile": "/Users/byunmose/Desktop/vibe_coding/marketing_simulation/src/lib/ai/gemini.ts"
+      },
+      "verify-teacher-pin": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-03-02T05:34:32.623Z",
+          "lastUpdated": "2026-03-08T01:25:09.038Z"
+        },
+        "lastFile": "/Users/byunmose/Desktop/vibe_coding/marketing_simulation/src/app/api/auth/verify-teacher-pin/route.ts"
+      },
+      "admin": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-03-02T05:38:54.416Z",
+          "lastUpdated": "2026-03-06T15:12:10.666Z"
+        },
+        "lastFile": "/Users/byunmose/Desktop/vibe_coding/marketing_simulation/src/app/admin/page.tsx"
+      },
+      "admin-login": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-03-02T05:39:00.695Z",
+          "lastUpdated": "2026-03-02T05:39:00.695Z"
+        },
+        "lastFile": "/Users/byunmose/Desktop/vibe_coding/marketing_simulation/src/app/api/auth/admin-login/route.ts"
+      },
+      "admin-logout": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-03-02T05:39:03.847Z",
+          "lastUpdated": "2026-03-02T05:39:03.847Z"
+        },
+        "lastFile": "/Users/byunmose/Desktop/vibe_coding/marketing_simulation/src/app/api/auth/admin-logout/route.ts"
+      },
+      "admin-check": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-03-02T05:39:07.041Z",
+          "lastUpdated": "2026-03-02T05:39:07.041Z"
+        },
+        "lastFile": "/Users/byunmose/Desktop/vibe_coding/marketing_simulation/src/app/api/auth/admin-check/route.ts"
+      },
+      "shop": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-03-06T14:39:53.472Z",
+          "lastUpdated": "2026-03-08T04:37:44.918Z"
+        },
+        "lastFile": "/Users/byunmose/Desktop/vibe_coding/marketing_simulation/src/app/shop/page.tsx"
+      },
+      "landing": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-03-07T08:46:17.859Z",
+          "lastUpdated": "2026-03-07T09:25:19.703Z"
+        },
+        "lastFile": "/Users/byunmose/Desktop/vibe_coding/marketing_simulation/src/app/landing/page.tsx"
+      },
+      "class-guide": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-03-07T11:23:57.100Z",
+          "lastUpdated": "2026-03-07T11:34:58.597Z"
+        },
+        "lastFile": "/Users/byunmose/Desktop/vibe_coding/marketing_simulation/src/app/class-guide/page.tsx"
+      },
+      "missions": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-03-07T13:52:29.944Z",
+          "lastUpdated": "2026-03-07T13:52:29.944Z"
+        },
+        "lastFile": "/Users/byunmose/Desktop/vibe_coding/marketing_simulation/src/app/missions/page.tsx"
+      },
+      "weekly-report": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-03-07T15:38:40.368Z",
+          "lastUpdated": "2026-03-07T15:38:40.368Z"
+        },
+        "lastFile": "/Users/byunmose/Desktop/vibe_coding/marketing_simulation/src/app/api/ai/weekly-report/route.ts"
+      },
+      "update-profile": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-03-08T01:07:32.128Z",
+          "lastUpdated": "2026-03-08T01:18:03.831Z"
+        },
+        "lastFile": "/Users/byunmose/Desktop/vibe_coding/marketing_simulation/src/app/api/admin/update-profile/route.ts"
+      },
+      "update-team": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-03-08T01:25:20.043Z",
+          "lastUpdated": "2026-03-09T03:11:38.165Z"
+        },
+        "lastFile": "/Users/byunmose/Desktop/vibe_coding/marketing_simulation/src/app/api/teacher/update-team/route.ts"
+      },
+      "update-settings": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-03-08T04:00:11.647Z",
+          "lastUpdated": "2026-03-08T04:05:40.459Z"
+        },
+        "lastFile": "/Users/byunmose/Desktop/vibe_coding/marketing_simulation/src/app/api/admin/update-settings/route.ts"
+      },
+      "challenges": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-03-08T08:23:03.628Z",
+          "lastUpdated": "2026-03-08T08:23:03.628Z"
+        },
+        "lastFile": "/Users/byunmose/Desktop/vibe_coding/marketing_simulation/src/lib/challenges/dailyChallenges.ts"
+      },
+      "reactions": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-03-08T08:29:15.685Z",
+          "lastUpdated": "2026-03-09T01:58:31.669Z"
+        },
+        "lastFile": "/Users/byunmose/Desktop/vibe_coding/marketing_simulation/src/app/api/ai/reactions/route.ts"
+      },
+      "skills": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-03-08T08:35:51.443Z",
+          "lastUpdated": "2026-03-08T11:53:37.316Z"
+        },
+        "lastFile": "/Users/byunmose/Desktop/vibe_coding/marketing_simulation/src/lib/skills/skillTree.ts"
+      },
+      "rewards": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-03-08T08:42:40.147Z",
+          "lastUpdated": "2026-03-08T08:42:40.147Z"
+        },
+        "lastFile": "/Users/byunmose/Desktop/vibe_coding/marketing_simulation/src/app/rewards/page.tsx"
+      },
+      "draft": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-03-08T16:59:14.930Z",
+          "lastUpdated": "2026-03-09T01:58:10.557Z"
+        },
+        "lastFile": "/Users/byunmose/Desktop/vibe_coding/marketing_simulation/src/app/api/ai/draft/route.ts"
+      },
+      "refine": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-03-08T16:59:20.272Z",
+          "lastUpdated": "2026-03-09T01:58:18.456Z"
+        },
+        "lastFile": "/Users/byunmose/Desktop/vibe_coding/marketing_simulation/src/app/api/ai/refine/route.ts"
+      },
+      "gemini-key": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-03-09T02:03:49.776Z",
+          "lastUpdated": "2026-03-09T02:04:23.881Z"
+        },
+        "lastFile": "/Users/byunmose/Desktop/vibe_coding/marketing_simulation/src/app/api/admin/gemini-key/route.ts"
+      },
+      "teams": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-03-09T03:11:31.308Z",
+          "lastUpdated": "2026-03-09T03:46:14.345Z"
+        },
+        "lastFile": "/Users/byunmose/Desktop/vibe_coding/marketing_simulation/src/app/api/teacher/teams/route.ts"
+      },
+      "simulation": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-03-09T03:36:10.162Z",
+          "lastUpdated": "2026-03-09T03:36:10.163Z"
+        },
+        "lastFile": "/Users/byunmose/Desktop/vibe_coding/marketing_simulation/src/lib/simulation/events.ts"
+      },
+      "simulate": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-03-09T03:39:49.841Z",
+          "lastUpdated": "2026-03-09T06:10:31.934Z"
+        },
+        "lastFile": "/Users/byunmose/Desktop/vibe_coding/marketing_simulation/src/app/simulate/page.tsx"
+      },
+      "save-result": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-03-09T03:40:04.171Z",
+          "lastUpdated": "2026-03-09T06:10:01.959Z"
+        },
+        "lastFile": "/Users/byunmose/Desktop/vibe_coding/marketing_simulation/src/app/api/simulate/save-result/route.ts"
+      },
+      "guide": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-03-09T09:33:04.826Z",
+          "lastUpdated": "2026-03-09T09:33:04.826Z"
+        },
+        "lastFile": "/Users/byunmose/Desktop/vibe_coding/marketing_simulation/src/app/guide/page.tsx"
+      }
+    },
+    "pipeline": {
+      "currentPhase": 1,
+      "level": "Dynamic",
+      "phaseHistory": []
+    },
+    "session": {
+      "startedAt": "2026-03-02T00:46:47.990Z",
+      "onboardingCompleted": false,
+      "lastActivity": "2026-03-09T09:33:20.283Z"
+    },
+    "history": [
+      {
+        "timestamp": "2026-03-02T00:59:27.350Z",
+        "feature": "marketing_simulation",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-02T01:00:05.111Z",
+        "feature": "layout",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-02T01:00:10.558Z",
+        "feature": "marketing_simulation",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-02T01:00:16.767Z",
+        "feature": "marketing_simulation",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-02T01:00:59.855Z",
+        "feature": "marketing_simulation",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-02T01:01:30.468Z",
+        "feature": "dashboard",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-02T01:02:38.636Z",
+        "feature": "analyze",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-02T01:03:01.472Z",
+        "feature": "profile",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-02T01:04:53.091Z",
+        "feature": "onboarding",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-02T01:05:00.593Z",
+        "feature": "onboarding",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-02T01:05:04.119Z",
+        "feature": "marketing_simulation",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-02T01:05:11.660Z",
+        "feature": "marketing_simulation",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-02T01:08:58.980Z",
+        "feature": "curriculum",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-02T01:10:13.156Z",
+        "feature": "session",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-02T02:05:08.398Z",
+        "feature": "learn",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-02T02:06:27.384Z",
+        "feature": "learn",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-02T02:11:28.315Z",
+        "feature": "learn",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-02T02:13:55.752Z",
+        "feature": "store",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-02T02:14:03.798Z",
+        "feature": "store",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-02T02:14:11.597Z",
+        "feature": "store",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-02T02:14:17.470Z",
+        "feature": "store",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-02T02:16:45.721Z",
+        "feature": "teacher",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-02T02:25:15.038Z",
+        "feature": "supabase",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-02T02:25:47.243Z",
+        "feature": "onboarding",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-02T02:25:51.069Z",
+        "feature": "onboarding",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-02T02:26:00.907Z",
+        "feature": "onboarding",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-02T02:26:25.643Z",
+        "feature": "marketing_simulation",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-02T02:26:43.915Z",
+        "feature": "feed",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-02T02:26:57.526Z",
+        "feature": "feed",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-02T02:28:56.553Z",
+        "feature": "teacher",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-02T02:29:17.090Z",
+        "feature": "teacher",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-02T02:29:30.814Z",
+        "feature": "teacher",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-02T02:29:36.066Z",
+        "feature": "teacher",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-02T02:29:42.187Z",
+        "feature": "teacher",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-02T02:29:58.470Z",
+        "feature": "teacher",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-02T02:30:09.072Z",
+        "feature": "teacher",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-02T02:30:15.152Z",
+        "feature": "teacher",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-02T02:30:18.688Z",
+        "feature": "teacher",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-02T02:30:23.815Z",
+        "feature": "teacher",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-02T02:31:00.970Z",
+        "feature": "supabase",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-02T02:32:00.371Z",
+        "feature": "supabase",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-02T03:00:09.846Z",
+        "feature": "callback",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-02T03:00:40.041Z",
+        "feature": "login",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-02T03:00:55.521Z",
+        "feature": "onboarding",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-02T03:02:33.700Z",
+        "feature": "onboarding",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-02T03:02:56.308Z",
+        "feature": "teacher",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-02T03:03:00.381Z",
+        "feature": "teacher",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-02T03:07:34.960Z",
+        "feature": "onboarding",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-02T03:10:25.032Z",
+        "feature": "supabase",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-02T03:10:35.609Z",
+        "feature": "callback",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-02T03:10:48.824Z",
+        "feature": "onboarding",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-02T05:07:16.351Z",
+        "feature": "onboarding",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-02T05:07:27.149Z",
+        "feature": "onboarding",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-02T05:11:45.267Z",
+        "feature": "feed",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-02T05:11:55.466Z",
+        "feature": "feed",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-02T05:12:03.132Z",
+        "feature": "feed",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-02T05:14:21.491Z",
+        "feature": "feed",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-02T05:14:28.303Z",
+        "feature": "feed",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-02T05:14:47.439Z",
+        "feature": "feed",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-02T05:15:01.636Z",
+        "feature": "feed",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-02T05:23:18.056Z",
+        "feature": "onboarding",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-02T05:34:20.174Z",
+        "feature": "ai",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-02T05:34:32.623Z",
+        "feature": "verify-teacher-pin",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-02T05:34:36.283Z",
+        "feature": "onboarding",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-02T05:34:41.216Z",
+        "feature": "onboarding",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-02T05:34:45.615Z",
+        "feature": "teacher",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-02T05:34:52.073Z",
+        "feature": "teacher",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-02T05:38:54.416Z",
+        "feature": "admin",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-02T05:39:00.695Z",
+        "feature": "admin-login",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-02T05:39:03.847Z",
+        "feature": "admin-logout",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-02T05:39:07.041Z",
+        "feature": "admin-check",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-02T05:39:25.049Z",
+        "feature": "admin",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-02T05:39:32.164Z",
+        "feature": "onboarding",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-02T05:39:38.270Z",
+        "feature": "onboarding",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-02T05:39:45.200Z",
+        "feature": "teacher",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-02T05:39:57.014Z",
+        "feature": "layout",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-02T05:40:02.261Z",
+        "feature": "layout",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-02T05:40:09.358Z",
+        "feature": "layout",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-02T05:40:19.950Z",
+        "feature": "layout",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-02T05:40:37.904Z",
+        "feature": "layout",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-02T05:46:41.826Z",
+        "feature": "profile",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-02T05:47:39.210Z",
+        "feature": "profile",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-02T05:54:30.686Z",
+        "feature": "store",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-02T05:54:38.511Z",
+        "feature": "store",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-02T05:54:42.046Z",
+        "feature": "store",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-02T05:54:53.204Z",
+        "feature": "marketing_simulation",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-02T05:55:00.132Z",
+        "feature": "marketing_simulation",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-02T05:55:04.411Z",
+        "feature": "marketing_simulation",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-02T05:55:09.442Z",
+        "feature": "marketing_simulation",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-02T05:55:15.956Z",
+        "feature": "feed",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-02T05:55:22.019Z",
+        "feature": "feed",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-02T05:55:26.791Z",
+        "feature": "feed",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-02T05:55:33.296Z",
+        "feature": "onboarding",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-02T05:58:06.696Z",
+        "feature": "store",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-02T05:58:42.926Z",
+        "feature": "store",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-02T05:58:51.135Z",
+        "feature": "teacher",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-02T05:58:55.552Z",
+        "feature": "teacher",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-02T05:59:00.306Z",
+        "feature": "teacher",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-02T05:59:09.727Z",
+        "feature": "teacher",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-02T05:59:19.347Z",
+        "feature": "teacher",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-02T05:59:25.278Z",
+        "feature": "teacher",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-02T06:00:17.592Z",
+        "feature": "teacher",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-02T06:00:28.322Z",
+        "feature": "marketing_simulation",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-02T06:00:35.371Z",
+        "feature": "marketing_simulation",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-06T12:31:15.678Z",
+        "feature": "store",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-06T12:31:25.051Z",
+        "feature": "store",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-06T12:31:34.259Z",
+        "feature": "store",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-06T12:31:41.094Z",
+        "feature": "store",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-06T12:31:47.533Z",
+        "feature": "store",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-06T12:31:52.031Z",
+        "feature": "store",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-06T12:32:04.794Z",
+        "feature": "marketing_simulation",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-06T12:32:12.922Z",
+        "feature": "marketing_simulation",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-06T12:32:15.991Z",
+        "feature": "marketing_simulation",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-06T12:32:27.213Z",
+        "feature": "dashboard",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-06T12:32:30.750Z",
+        "feature": "dashboard",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-06T12:32:50.918Z",
+        "feature": "dashboard",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-06T12:33:12.448Z",
+        "feature": "teacher",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-06T12:33:16.685Z",
+        "feature": "teacher",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-06T12:33:33.234Z",
+        "feature": "dashboard",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-06T12:47:08.843Z",
+        "feature": "store",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-06T12:47:13.292Z",
+        "feature": "onboarding",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-06T12:47:24.328Z",
+        "feature": "layout",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-06T12:47:29.110Z",
+        "feature": "layout",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-06T12:47:44.362Z",
+        "feature": "layout",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-06T12:47:51.734Z",
+        "feature": "layout",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-06T12:48:10.445Z",
+        "feature": "dashboard",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-06T12:48:15.411Z",
+        "feature": "dashboard",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-06T12:48:20.233Z",
+        "feature": "dashboard",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-06T12:48:36.931Z",
+        "feature": "dashboard",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-06T12:48:44.702Z",
+        "feature": "marketing_simulation",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-06T12:50:52.701Z",
+        "feature": "layout",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-06T12:50:59.181Z",
+        "feature": "layout",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-06T12:51:23.986Z",
+        "feature": "layout",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-06T12:55:49.862Z",
+        "feature": "onboarding",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-06T13:01:14.669Z",
+        "feature": "store",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-06T13:01:20.301Z",
+        "feature": "store",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-06T13:01:27.772Z",
+        "feature": "onboarding",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-06T13:01:36.567Z",
+        "feature": "layout",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-06T13:03:38.529Z",
+        "feature": "feed",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-06T13:06:07.582Z",
+        "feature": "feed",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-06T13:08:14.445Z",
+        "feature": "feed",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-06T13:08:49.958Z",
+        "feature": "feed",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-06T13:15:13.590Z",
+        "feature": "feed",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-06T13:16:21.469Z",
+        "feature": "feed",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-06T13:16:57.192Z",
+        "feature": "feed",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-06T13:19:47.603Z",
+        "feature": "feed",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-06T13:20:03.940Z",
+        "feature": "feed",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-06T13:20:15.080Z",
+        "feature": "feed",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-06T13:24:58.528Z",
+        "feature": "feed",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-06T13:25:06.724Z",
+        "feature": "feed",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-06T13:25:12.482Z",
+        "feature": "feed",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-06T13:25:29.645Z",
+        "feature": "feed",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-06T13:27:16.908Z",
+        "feature": "feed",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-06T13:27:23.557Z",
+        "feature": "feed",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-06T13:31:10.997Z",
+        "feature": "feed",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-06T13:31:27.931Z",
+        "feature": "feed",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-06T13:32:21.720Z",
+        "feature": "profile",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-06T13:32:29.760Z",
+        "feature": "profile",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-06T13:32:39.105Z",
+        "feature": "profile",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-06T13:32:48.980Z",
+        "feature": "profile",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-06T13:33:01.049Z",
+        "feature": "profile",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-06T13:33:06.091Z",
+        "feature": "profile",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-06T13:33:27.200Z",
+        "feature": "profile",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-06T13:33:40.593Z",
+        "feature": "profile",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-06T14:26:22.189Z",
+        "feature": "teacher",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-06T14:26:29.921Z",
+        "feature": "teacher",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-06T14:26:39.348Z",
+        "feature": "teacher",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-06T14:26:43.874Z",
+        "feature": "teacher",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-06T14:27:01.947Z",
+        "feature": "teacher",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-06T14:39:53.472Z",
+        "feature": "shop",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-06T14:40:09.764Z",
+        "feature": "teacher",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-06T14:40:15.472Z",
+        "feature": "teacher",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-06T14:41:06.049Z",
+        "feature": "teacher",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-06T15:12:04.709Z",
+        "feature": "dashboard",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-06T15:12:10.666Z",
+        "feature": "admin",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-06T16:06:19.453Z",
+        "feature": "layout",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-06T16:22:38.801Z",
+        "feature": "verify-teacher-pin",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-06T16:22:44.152Z",
+        "feature": "dashboard",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-06T16:22:46.950Z",
+        "feature": "dashboard",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-06T16:22:51.671Z",
+        "feature": "dashboard",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-06T16:23:03.049Z",
+        "feature": "dashboard",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-06T16:23:09.699Z",
+        "feature": "dashboard",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-06T16:23:14.301Z",
+        "feature": "dashboard",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-06T16:23:32.852Z",
+        "feature": "dashboard",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-06T16:31:29.322Z",
+        "feature": "teacher",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-06T16:34:39.454Z",
+        "feature": "layout",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-06T16:34:43.149Z",
+        "feature": "layout",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-06T16:49:59.696Z",
+        "feature": "dashboard",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-06T16:50:04.253Z",
+        "feature": "dashboard",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-06T16:50:11.327Z",
+        "feature": "dashboard",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-06T16:50:34.124Z",
+        "feature": "dashboard",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-06T16:50:53.269Z",
+        "feature": "dashboard",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-06T16:56:06.898Z",
+        "feature": "onboarding",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-06T16:59:47.883Z",
+        "feature": "onboarding",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-06T16:59:54.283Z",
+        "feature": "onboarding",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-06T17:00:03.563Z",
+        "feature": "onboarding",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-07T08:03:14.092Z",
+        "feature": "teacher",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-07T08:04:25.958Z",
+        "feature": "teacher",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-07T08:46:17.859Z",
+        "feature": "landing",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-07T08:46:24.438Z",
+        "feature": "onboarding",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-07T08:46:27.660Z",
+        "feature": "onboarding",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-07T09:22:40.833Z",
+        "feature": "feed",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-07T09:24:53.140Z",
+        "feature": "marketing_simulation",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-07T09:24:59.035Z",
+        "feature": "onboarding",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-07T09:25:02.479Z",
+        "feature": "onboarding",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-07T09:25:07.444Z",
+        "feature": "layout",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-07T09:25:10.724Z",
+        "feature": "callback",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-07T09:25:14.977Z",
+        "feature": "login",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-07T09:25:19.703Z",
+        "feature": "landing",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-07T09:27:41.100Z",
+        "feature": "onboarding",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-07T09:27:45.960Z",
+        "feature": "onboarding",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-07T09:54:36.146Z",
+        "feature": "onboarding",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-07T09:54:41.576Z",
+        "feature": "layout",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-07T10:08:56.886Z",
+        "feature": "layout",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-07T10:09:02.793Z",
+        "feature": "marketing_simulation",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-07T10:09:07.801Z",
+        "feature": "marketing_simulation",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-07T10:09:14.545Z",
+        "feature": "layout",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-07T10:09:19.972Z",
+        "feature": "layout",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-07T10:09:25.266Z",
+        "feature": "layout",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-07T10:11:51.494Z",
+        "feature": "marketing_simulation",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-07T10:33:59.643Z",
+        "feature": "learn",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-07T10:34:17.022Z",
+        "feature": "learn",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-07T10:34:22.217Z",
+        "feature": "learn",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-07T10:36:34.808Z",
+        "feature": "learn",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-07T10:37:29.009Z",
+        "feature": "learn",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-07T10:37:41.610Z",
+        "feature": "learn",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-07T11:23:57.100Z",
+        "feature": "class-guide",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-07T11:24:02.678Z",
+        "feature": "layout",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-07T11:24:07.980Z",
+        "feature": "layout",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-07T11:32:29.018Z",
+        "feature": "class-guide",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-07T11:32:49.133Z",
+        "feature": "class-guide",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-07T11:32:54.342Z",
+        "feature": "class-guide",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-07T11:34:34.256Z",
+        "feature": "layout",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-07T11:34:45.313Z",
+        "feature": "layout",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-07T11:34:52.013Z",
+        "feature": "class-guide",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-07T11:34:58.597Z",
+        "feature": "class-guide",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-07T13:02:45.477Z",
+        "feature": "teacher",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-07T13:02:54.904Z",
+        "feature": "teacher",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-07T13:03:05.586Z",
+        "feature": "teacher",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-07T13:03:11.151Z",
+        "feature": "feed",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-07T13:03:19.631Z",
+        "feature": "feed",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-07T13:03:34.439Z",
+        "feature": "feed",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-07T13:35:14.633Z",
+        "feature": "store",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-07T13:35:22.306Z",
+        "feature": "store",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-07T13:35:30.657Z",
+        "feature": "onboarding",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-07T13:35:42.656Z",
+        "feature": "shop",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-07T13:35:52.062Z",
+        "feature": "teacher",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-07T13:35:59.152Z",
+        "feature": "teacher",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-07T13:36:06.484Z",
+        "feature": "teacher",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-07T13:36:25.972Z",
+        "feature": "teacher",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-07T13:52:29.944Z",
+        "feature": "missions",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-07T13:59:35.684Z",
+        "feature": "session",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-07T13:59:41.690Z",
+        "feature": "session",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-07T14:00:00.262Z",
+        "feature": "session",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-07T14:10:20.060Z",
+        "feature": "dashboard",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-07T15:06:18.516Z",
+        "feature": "profile",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-07T15:06:26.573Z",
+        "feature": "profile",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-07T15:06:32.727Z",
+        "feature": "profile",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-07T15:06:42.410Z",
+        "feature": "profile",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-07T15:24:54.554Z",
+        "feature": "feed",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-07T15:25:00.919Z",
+        "feature": "feed",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-07T15:25:05.573Z",
+        "feature": "feed",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-07T15:25:14.764Z",
+        "feature": "feed",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-07T15:25:42.034Z",
+        "feature": "feed",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-07T15:25:55.121Z",
+        "feature": "feed",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-07T15:38:26.629Z",
+        "feature": "ai",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-07T15:38:40.368Z",
+        "feature": "weekly-report",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-07T15:39:17.742Z",
+        "feature": "feed",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-07T15:39:23.653Z",
+        "feature": "session",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-07T15:39:27.215Z",
+        "feature": "session",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-07T15:39:30.992Z",
+        "feature": "session",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-07T15:39:43.976Z",
+        "feature": "session",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-07T15:39:49.598Z",
+        "feature": "session",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-07T15:39:53.872Z",
+        "feature": "session",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-07T15:58:20.618Z",
+        "feature": "marketing_simulation",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-07T15:58:35.743Z",
+        "feature": "marketing_simulation",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-07T15:58:42.013Z",
+        "feature": "marketing_simulation",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-07T15:59:26.900Z",
+        "feature": "marketing_simulation",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-07T16:02:12.281Z",
+        "feature": "marketing_simulation",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-07T16:02:17.483Z",
+        "feature": "marketing_simulation",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-08T00:43:58.022Z",
+        "feature": "onboarding",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-08T00:58:31.431Z",
+        "feature": "teacher",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-08T00:58:36.439Z",
+        "feature": "teacher",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-08T00:58:42.666Z",
+        "feature": "teacher",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-08T00:58:46.191Z",
+        "feature": "teacher",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-08T00:59:06.350Z",
+        "feature": "teacher",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-08T01:07:22.625Z",
+        "feature": "supabase",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-08T01:07:32.128Z",
+        "feature": "update-profile",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-08T01:07:42.300Z",
+        "feature": "dashboard",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-08T01:17:54.244Z",
+        "feature": "teacher",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-08T01:17:57.343Z",
+        "feature": "teacher",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-08T01:18:03.831Z",
+        "feature": "update-profile",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-08T01:18:09.688Z",
+        "feature": "dashboard",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-08T01:25:09.038Z",
+        "feature": "verify-teacher-pin",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-08T01:25:20.043Z",
+        "feature": "update-team",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-08T01:25:32.497Z",
+        "feature": "teacher",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-08T01:30:27.793Z",
+        "feature": "update-team",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-08T01:30:36.076Z",
+        "feature": "teacher",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-08T01:34:59.162Z",
+        "feature": "session",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-08T01:35:06.325Z",
+        "feature": "session",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-08T03:39:37.895Z",
+        "feature": "session",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-08T03:39:45.262Z",
+        "feature": "session",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-08T03:39:57.716Z",
+        "feature": "session",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-08T03:40:08.379Z",
+        "feature": "session",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-08T03:40:24.957Z",
+        "feature": "session",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-08T03:40:29.409Z",
+        "feature": "session",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-08T03:40:59.004Z",
+        "feature": "teacher",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-08T03:41:04.971Z",
+        "feature": "teacher",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-08T03:41:13.668Z",
+        "feature": "teacher",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-08T03:41:30.783Z",
+        "feature": "teacher",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-08T03:51:25.624Z",
+        "feature": "teacher",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-08T03:51:30.344Z",
+        "feature": "teacher",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-08T03:51:44.450Z",
+        "feature": "teacher",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-08T03:51:52.656Z",
+        "feature": "teacher",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-08T03:52:19.201Z",
+        "feature": "teacher",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-08T03:52:25.051Z",
+        "feature": "teacher",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-08T03:52:44.174Z",
+        "feature": "session",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-08T03:52:49.313Z",
+        "feature": "session",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-08T03:54:21.300Z",
+        "feature": "session",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-08T03:54:27.596Z",
+        "feature": "session",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-08T03:54:36.158Z",
+        "feature": "session",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-08T03:54:39.916Z",
+        "feature": "session",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-08T03:55:04.497Z",
+        "feature": "teacher",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-08T04:00:11.647Z",
+        "feature": "update-settings",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-08T04:00:18.720Z",
+        "feature": "dashboard",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-08T04:00:23.594Z",
+        "feature": "dashboard",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-08T04:00:29.897Z",
+        "feature": "dashboard",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-08T04:00:43.172Z",
+        "feature": "dashboard",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-08T04:00:51.485Z",
+        "feature": "dashboard",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-08T04:00:55.548Z",
+        "feature": "dashboard",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-08T04:01:17.266Z",
+        "feature": "dashboard",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-08T04:01:24.309Z",
+        "feature": "teacher",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-08T04:01:36.453Z",
+        "feature": "teacher",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-08T04:02:02.658Z",
+        "feature": "teacher",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-08T04:02:14.370Z",
+        "feature": "teacher",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-08T04:05:40.459Z",
+        "feature": "update-settings",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-08T04:16:07.133Z",
+        "feature": "session",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-08T04:16:21.366Z",
+        "feature": "session",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-08T04:16:46.731Z",
+        "feature": "session",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-08T04:17:40.938Z",
+        "feature": "session",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-08T04:17:58.023Z",
+        "feature": "session",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-08T04:25:33.514Z",
+        "feature": "dashboard",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-08T04:25:45.777Z",
+        "feature": "dashboard",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-08T04:37:20.957Z",
+        "feature": "shop",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-08T04:37:31.572Z",
+        "feature": "shop",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-08T04:37:44.918Z",
+        "feature": "shop",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-08T04:54:34.103Z",
+        "feature": "feed",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-08T05:04:32.487Z",
+        "feature": "feed",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-08T05:04:54.820Z",
+        "feature": "feed",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-08T05:05:06.789Z",
+        "feature": "dashboard",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-08T05:05:13.630Z",
+        "feature": "dashboard",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-08T05:05:27.672Z",
+        "feature": "feed",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-08T05:05:33.160Z",
+        "feature": "feed",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-08T05:05:47.185Z",
+        "feature": "feed",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-08T05:05:58.132Z",
+        "feature": "feed",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-08T08:23:03.628Z",
+        "feature": "challenges",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-08T08:23:25.626Z",
+        "feature": "feed",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-08T08:24:08.165Z",
+        "feature": "feed",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-08T08:24:15.108Z",
+        "feature": "feed",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-08T08:24:27.832Z",
+        "feature": "feed",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-08T08:24:32.499Z",
+        "feature": "feed",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-08T08:24:38.791Z",
+        "feature": "feed",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-08T08:24:44.735Z",
+        "feature": "feed",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-08T08:24:54.684Z",
+        "feature": "feed",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-08T08:25:00.798Z",
+        "feature": "feed",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-08T08:25:12.433Z",
+        "feature": "feed",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-08T08:25:30.311Z",
+        "feature": "feed",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-08T08:25:45.746Z",
+        "feature": "feed",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-08T08:29:01.456Z",
+        "feature": "ai",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-08T08:29:15.685Z",
+        "feature": "reactions",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-08T08:29:28.983Z",
+        "feature": "feed",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-08T08:29:38.218Z",
+        "feature": "feed",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-08T08:29:45.359Z",
+        "feature": "feed",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-08T08:29:55.931Z",
+        "feature": "feed",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-08T08:30:11.552Z",
+        "feature": "feed",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-08T08:35:51.443Z",
+        "feature": "skills",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-08T08:35:56.974Z",
+        "feature": "store",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-08T08:36:02.228Z",
+        "feature": "store",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-08T08:36:06.485Z",
+        "feature": "store",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-08T08:36:11.513Z",
+        "feature": "store",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-08T08:36:20.186Z",
+        "feature": "store",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-08T08:36:51.166Z",
+        "feature": "profile",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-08T08:36:56.527Z",
+        "feature": "profile",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-08T08:37:02.058Z",
+        "feature": "profile",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-08T08:37:07.672Z",
+        "feature": "profile",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-08T08:37:13.354Z",
+        "feature": "profile",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-08T08:37:20.523Z",
+        "feature": "profile",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-08T08:37:30.728Z",
+        "feature": "feed",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-08T08:37:38.498Z",
+        "feature": "feed",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-08T08:37:43.881Z",
+        "feature": "feed",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-08T08:37:49.274Z",
+        "feature": "feed",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-08T08:38:01.658Z",
+        "feature": "feed",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-08T08:38:45.667Z",
+        "feature": "onboarding",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-08T08:42:40.147Z",
+        "feature": "rewards",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-08T08:43:00.636Z",
+        "feature": "teacher",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-08T08:43:10.396Z",
+        "feature": "teacher",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-08T08:43:17.841Z",
+        "feature": "teacher",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-08T08:44:33.516Z",
+        "feature": "teacher",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-08T08:44:45.304Z",
+        "feature": "layout",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-08T08:44:52.708Z",
+        "feature": "layout",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-08T11:18:59.893Z",
+        "feature": "teacher",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-08T11:19:11.822Z",
+        "feature": "teacher",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-08T11:19:21.454Z",
+        "feature": "teacher",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-08T11:19:26.127Z",
+        "feature": "teacher",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-08T11:19:35.437Z",
+        "feature": "teacher",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-08T11:32:33.197Z",
+        "feature": "feed",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-08T11:32:41.566Z",
+        "feature": "feed",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-08T11:32:49.330Z",
+        "feature": "feed",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-08T11:33:11.449Z",
+        "feature": "teacher",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-08T11:33:18.586Z",
+        "feature": "teacher",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-08T11:33:31.620Z",
+        "feature": "teacher",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-08T11:34:48.926Z",
+        "feature": "teacher",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-08T11:40:00.498Z",
+        "feature": "teacher",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-08T11:40:08.204Z",
+        "feature": "teacher",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-08T11:40:13.324Z",
+        "feature": "teacher",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-08T11:40:57.839Z",
+        "feature": "teacher",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-08T11:41:09.893Z",
+        "feature": "supabase",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-08T11:49:41.375Z",
+        "feature": "feed",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-08T11:49:49.048Z",
+        "feature": "feed",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-08T11:49:58.080Z",
+        "feature": "feed",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-08T11:53:33.327Z",
+        "feature": "profile",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-08T11:53:37.316Z",
+        "feature": "skills",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-08T11:53:43.883Z",
+        "feature": "profile",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-08T11:53:49.449Z",
+        "feature": "profile",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-08T11:54:10.471Z",
+        "feature": "profile",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-08T12:02:23.730Z",
+        "feature": "profile",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-08T12:02:31.215Z",
+        "feature": "profile",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-08T12:02:52.492Z",
+        "feature": "profile",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-08T16:59:03.110Z",
+        "feature": "ai",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-08T16:59:14.930Z",
+        "feature": "draft",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-08T16:59:20.272Z",
+        "feature": "refine",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-08T16:59:27.830Z",
+        "feature": "store",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-08T16:59:32.368Z",
+        "feature": "store",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-08T16:59:37.373Z",
+        "feature": "store",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-08T17:01:20.390Z",
+        "feature": "store",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-08T17:03:31.592Z",
+        "feature": "feed",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-08T17:03:38.204Z",
+        "feature": "feed",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-08T17:03:43.651Z",
+        "feature": "feed",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-08T17:03:52.998Z",
+        "feature": "feed",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-08T17:03:58.251Z",
+        "feature": "feed",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-08T17:04:06.831Z",
+        "feature": "feed",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-09T01:49:26.257Z",
+        "feature": "feed",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-09T01:57:51.343Z",
+        "feature": "ai",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-09T01:58:00.732Z",
+        "feature": "analyze",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-09T01:58:07.318Z",
+        "feature": "draft",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-09T01:58:10.557Z",
+        "feature": "draft",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-09T01:58:13.985Z",
+        "feature": "refine",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-09T01:58:18.456Z",
+        "feature": "refine",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-09T01:58:21.587Z",
+        "feature": "reactions",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-09T01:58:31.669Z",
+        "feature": "reactions",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-09T01:58:37.601Z",
+        "feature": "feed",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-09T01:58:46.160Z",
+        "feature": "feed",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-09T01:58:54.000Z",
+        "feature": "feed",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-09T01:59:01.904Z",
+        "feature": "feed",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-09T01:59:11.330Z",
+        "feature": "feed",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-09T02:03:49.776Z",
+        "feature": "gemini-key",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-09T02:04:10.197Z",
+        "feature": "ai",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-09T02:04:14.966Z",
+        "feature": "gemini-key",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-09T02:04:19.688Z",
+        "feature": "gemini-key",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-09T02:04:23.881Z",
+        "feature": "gemini-key",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-09T02:04:34.040Z",
+        "feature": "teacher",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-09T02:04:37.962Z",
+        "feature": "teacher",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-09T02:04:42.275Z",
+        "feature": "teacher",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-09T02:07:12.438Z",
+        "feature": "ai",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-09T02:07:16.422Z",
+        "feature": "ai",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-09T02:18:26.177Z",
+        "feature": "dashboard",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-09T02:18:31.641Z",
+        "feature": "dashboard",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-09T02:18:37.456Z",
+        "feature": "dashboard",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-09T02:19:04.267Z",
+        "feature": "dashboard",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-09T02:19:18.344Z",
+        "feature": "teacher",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-09T02:31:44.586Z",
+        "feature": "marketing_simulation",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-09T02:31:48.757Z",
+        "feature": "marketing_simulation",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-09T02:31:57.177Z",
+        "feature": "marketing_simulation",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-09T02:32:01.788Z",
+        "feature": "marketing_simulation",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-09T02:32:06.522Z",
+        "feature": "marketing_simulation",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-09T02:34:21.331Z",
+        "feature": "marketing_simulation",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-09T02:34:30.526Z",
+        "feature": "marketing_simulation",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-09T02:37:25.314Z",
+        "feature": "marketing_simulation",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-09T02:48:40.853Z",
+        "feature": "marketing_simulation",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-09T02:58:36.801Z",
+        "feature": "marketing_simulation",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-09T03:11:31.308Z",
+        "feature": "teams",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-09T03:11:38.165Z",
+        "feature": "update-team",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-09T03:12:35.200Z",
+        "feature": "dashboard",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-09T03:12:48.221Z",
+        "feature": "feed",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-09T03:12:52.835Z",
+        "feature": "feed",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-09T03:13:00.336Z",
+        "feature": "feed",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-09T03:13:04.810Z",
+        "feature": "teacher",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-09T03:13:10.957Z",
+        "feature": "teacher",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-09T03:13:16.021Z",
+        "feature": "teacher",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-09T03:14:14.050Z",
+        "feature": "teacher",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-09T03:14:40.390Z",
+        "feature": "teacher",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-09T03:14:44.977Z",
+        "feature": "teacher",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-09T03:14:53.225Z",
+        "feature": "teacher",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-09T03:14:57.201Z",
+        "feature": "teacher",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-09T03:36:10.163Z",
+        "feature": "simulation",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-09T03:39:49.841Z",
+        "feature": "simulate",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-09T03:40:04.171Z",
+        "feature": "save-result",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-09T03:40:10.187Z",
+        "feature": "layout",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-09T03:40:50.090Z",
+        "feature": "teacher",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-09T03:40:55.650Z",
+        "feature": "teacher",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-09T03:41:01.499Z",
+        "feature": "teacher",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-09T03:41:21.862Z",
+        "feature": "teacher",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-09T03:41:29.185Z",
+        "feature": "layout",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-09T03:46:14.345Z",
+        "feature": "teams",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-09T03:46:26.925Z",
+        "feature": "teacher",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-09T04:09:12.533Z",
+        "feature": "simulate",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-09T04:09:18.560Z",
+        "feature": "teacher",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-09T04:09:24.597Z",
+        "feature": "teacher",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-09T04:09:28.751Z",
+        "feature": "teacher",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-09T04:09:45.030Z",
+        "feature": "teacher",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-09T06:09:50.182Z",
+        "feature": "feed",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-09T06:10:01.959Z",
+        "feature": "save-result",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-09T06:10:15.260Z",
+        "feature": "simulate",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-09T06:10:31.934Z",
+        "feature": "simulate",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-09T06:18:13.815Z",
+        "feature": "marketing_simulation",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-09T06:18:21.649Z",
+        "feature": "feed",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-09T06:18:28.324Z",
+        "feature": "feed",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-09T06:18:33.814Z",
+        "feature": "dashboard",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-09T06:18:42.889Z",
+        "feature": "dashboard",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-09T06:18:47.676Z",
+        "feature": "dashboard",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-09T06:18:56.499Z",
+        "feature": "dashboard",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-09T06:26:23.146Z",
+        "feature": "marketing_simulation",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-09T06:32:18.157Z",
+        "feature": "dashboard",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-09T06:32:26.304Z",
+        "feature": "dashboard",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-09T06:32:35.262Z",
+        "feature": "dashboard",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-09T06:37:41.758Z",
+        "feature": "feed",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-09T06:37:50.156Z",
+        "feature": "feed",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-09T06:38:00.641Z",
+        "feature": "feed",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-09T06:56:39.439Z",
+        "feature": "dashboard",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-09T06:56:44.200Z",
+        "feature": "dashboard",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-09T06:56:51.623Z",
+        "feature": "dashboard",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-09T06:57:40.701Z",
+        "feature": "dashboard",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-09T06:57:53.014Z",
+        "feature": "dashboard",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-09T06:57:56.502Z",
+        "feature": "dashboard",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-09T07:01:15.457Z",
+        "feature": "dashboard",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-09T07:01:34.752Z",
+        "feature": "dashboard",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-09T07:04:46.438Z",
+        "feature": "feed",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-09T07:04:50.829Z",
+        "feature": "feed",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-09T07:04:59.105Z",
+        "feature": "feed",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-09T07:05:06.495Z",
+        "feature": "feed",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-09T07:05:12.478Z",
+        "feature": "feed",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-09T07:07:49.552Z",
+        "feature": "feed",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-09T07:07:54.837Z",
+        "feature": "feed",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-09T07:08:00.162Z",
+        "feature": "feed",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-09T07:08:07.986Z",
+        "feature": "feed",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-09T09:33:04.826Z",
+        "feature": "guide",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-09T09:33:15.111Z",
+        "feature": "layout",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-03-09T09:33:20.283Z",
+        "feature": "layout",
+        "phase": "do",
+        "action": "updated"
+      }
+    ]
+  }
+}

@@ -1,6 +1,6 @@
 {
   "version": "2.0",
-  "lastUpdated": "2026-03-09T03:14:57.201Z",
+  "lastUpdated": "2026-03-09T15:59:23.397Z",
   "activeFeatures": [
     "marketing_simulation",
     "layout",
@@ -38,7 +38,12 @@
     "draft",
     "refine",
     "gemini-key",
-    "teams"
+    "teams",
+    "simulation",
+    "simulate",
+    "save-result",
+    "guide",
+    "avatar"
   ],
   "primaryFeature": "marketing_simulation",
   "features": {
@@ -51,9 +56,9 @@
       "documents": {},
       "timestamps": {
         "started": "2026-03-02T00:59:27.350Z",
-        "lastUpdated": "2026-03-09T02:58:36.801Z"
+        "lastUpdated": "2026-03-09T15:54:44.831Z"
       },
-      "lastFile": "/Users/byunmose/Desktop/vibe_coding/marketing_simulation/src/app/page.tsx"
+      "lastFile": "/Users/byunmose/Desktop/vibe_coding/marketing_simulation/src/components/common/AvatarRenderer.tsx"
     },
     "layout": {
       "phase": "do",
@@ -64,7 +69,7 @@
       "documents": {},
       "timestamps": {
         "started": "2026-03-02T01:00:05.111Z",
-        "lastUpdated": "2026-03-08T08:44:52.708Z"
+        "lastUpdated": "2026-03-09T09:33:20.282Z"
       },
       "lastFile": "/Users/byunmose/Desktop/vibe_coding/marketing_simulation/src/components/layout/Sidebar.tsx"
     },
@@ -77,7 +82,7 @@
       "documents": {},
       "timestamps": {
         "started": "2026-03-02T01:01:30.468Z",
-        "lastUpdated": "2026-03-09T03:12:35.200Z"
+        "lastUpdated": "2026-03-09T07:01:34.752Z"
       },
       "lastFile": "/Users/byunmose/Desktop/vibe_coding/marketing_simulation/src/components/dashboard/Insights.tsx"
     },
@@ -103,7 +108,7 @@
       "documents": {},
       "timestamps": {
         "started": "2026-03-02T01:03:01.472Z",
-        "lastUpdated": "2026-03-08T12:02:52.492Z"
+        "lastUpdated": "2026-03-09T15:59:23.397Z"
       },
       "lastFile": "/Users/byunmose/Desktop/vibe_coding/marketing_simulation/src/app/profile/page.tsx"
     },
@@ -168,7 +173,7 @@
       "documents": {},
       "timestamps": {
         "started": "2026-03-02T02:13:55.752Z",
-        "lastUpdated": "2026-03-08T17:01:20.390Z"
+        "lastUpdated": "2026-03-09T15:56:21.987Z"
       },
       "lastFile": "/Users/byunmose/Desktop/vibe_coding/marketing_simulation/src/store/useGameStore.ts"
     },
@@ -181,7 +186,7 @@
       "documents": {},
       "timestamps": {
         "started": "2026-03-02T02:16:45.721Z",
-        "lastUpdated": "2026-03-09T03:14:57.201Z"
+        "lastUpdated": "2026-03-09T04:09:45.030Z"
       },
       "lastFile": "/Users/byunmose/Desktop/vibe_coding/marketing_simulation/src/app/teacher/page.tsx"
     },
@@ -207,9 +212,9 @@
       "documents": {},
       "timestamps": {
         "started": "2026-03-02T02:26:43.915Z",
-        "lastUpdated": "2026-03-09T03:13:00.336Z"
+        "lastUpdated": "2026-03-09T07:08:07.986Z"
       },
-      "lastFile": "/Users/byunmose/Desktop/vibe_coding/marketing_simulation/src/app/feed/page.tsx"
+      "lastFile": "/Users/byunmose/Desktop/vibe_coding/marketing_simulation/src/components/feed/StoryBar.tsx"
     },
     "callback": {
       "phase": "do",
@@ -324,7 +329,7 @@
       "documents": {},
       "timestamps": {
         "started": "2026-03-06T14:39:53.472Z",
-        "lastUpdated": "2026-03-08T04:37:44.918Z"
+        "lastUpdated": "2026-03-09T15:58:07.977Z"
       },
       "lastFile": "/Users/byunmose/Desktop/vibe_coding/marketing_simulation/src/app/shop/page.tsx"
     },
@@ -519,9 +524,74 @@
       "documents": {},
       "timestamps": {
         "started": "2026-03-09T03:11:31.308Z",
-        "lastUpdated": "2026-03-09T03:11:31.308Z"
+        "lastUpdated": "2026-03-09T03:46:14.345Z"
       },
       "lastFile": "/Users/byunmose/Desktop/vibe_coding/marketing_simulation/src/app/api/teacher/teams/route.ts"
+    },
+    "simulation": {
+      "phase": "do",
+      "phaseNumber": 3,
+      "matchRate": null,
+      "iterationCount": 0,
+      "requirements": [],
+      "documents": {},
+      "timestamps": {
+        "started": "2026-03-09T03:36:10.162Z",
+        "lastUpdated": "2026-03-09T03:36:10.163Z"
+      },
+      "lastFile": "/Users/byunmose/Desktop/vibe_coding/marketing_simulation/src/lib/simulation/events.ts"
+    },
+    "simulate": {
+      "phase": "do",
+      "phaseNumber": 3,
+      "matchRate": null,
+      "iterationCount": 0,
+      "requirements": [],
+      "documents": {},
+      "timestamps": {
+        "started": "2026-03-09T03:39:49.841Z",
+        "lastUpdated": "2026-03-09T06:10:31.934Z"
+      },
+      "lastFile": "/Users/byunmose/Desktop/vibe_coding/marketing_simulation/src/app/simulate/page.tsx"
+    },
+    "save-result": {
+      "phase": "do",
+      "phaseNumber": 3,
+      "matchRate": null,
+      "iterationCount": 0,
+      "requirements": [],
+      "documents": {},
+      "timestamps": {
+        "started": "2026-03-09T03:40:04.171Z",
+        "lastUpdated": "2026-03-09T06:10:01.959Z"
+      },
+      "lastFile": "/Users/byunmose/Desktop/vibe_coding/marketing_simulation/src/app/api/simulate/save-result/route.ts"
+    },
+    "guide": {
+      "phase": "do",
+      "phaseNumber": 3,
+      "matchRate": null,
+      "iterationCount": 0,
+      "requirements": [],
+      "documents": {},
+      "timestamps": {
+        "started": "2026-03-09T09:33:04.826Z",
+        "lastUpdated": "2026-03-09T09:33:04.826Z"
+      },
+      "lastFile": "/Users/byunmose/Desktop/vibe_coding/marketing_simulation/src/app/guide/page.tsx"
+    },
+    "avatar": {
+      "phase": "do",
+      "phaseNumber": 3,
+      "matchRate": null,
+      "iterationCount": 0,
+      "requirements": [],
+      "documents": {},
+      "timestamps": {
+        "started": "2026-03-09T15:53:18.204Z",
+        "lastUpdated": "2026-03-09T15:54:27.616Z"
+      },
+      "lastFile": "/Users/byunmose/Desktop/vibe_coding/marketing_simulation/src/lib/avatar/items.ts"
     }
   },
   "pipeline": {
@@ -532,7 +602,7 @@
   "session": {
     "startedAt": "2026-03-02T00:46:47.990Z",
     "onboardingCompleted": false,
-    "lastActivity": "2026-03-09T03:14:57.201Z"
+    "lastActivity": "2026-03-09T15:59:23.397Z"
   },
   "history": [
     {
@@ -3496,6 +3566,462 @@
     {
       "timestamp": "2026-03-09T03:14:57.201Z",
       "feature": "teacher",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-09T03:36:10.163Z",
+      "feature": "simulation",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-09T03:39:49.841Z",
+      "feature": "simulate",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-09T03:40:04.171Z",
+      "feature": "save-result",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-09T03:40:10.187Z",
+      "feature": "layout",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-09T03:40:50.090Z",
+      "feature": "teacher",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-09T03:40:55.650Z",
+      "feature": "teacher",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-09T03:41:01.499Z",
+      "feature": "teacher",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-09T03:41:21.862Z",
+      "feature": "teacher",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-09T03:41:29.185Z",
+      "feature": "layout",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-09T03:46:14.345Z",
+      "feature": "teams",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-09T03:46:26.925Z",
+      "feature": "teacher",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-09T04:09:12.533Z",
+      "feature": "simulate",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-09T04:09:18.560Z",
+      "feature": "teacher",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-09T04:09:24.597Z",
+      "feature": "teacher",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-09T04:09:28.751Z",
+      "feature": "teacher",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-09T04:09:45.030Z",
+      "feature": "teacher",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-09T06:09:50.182Z",
+      "feature": "feed",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-09T06:10:01.959Z",
+      "feature": "save-result",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-09T06:10:15.260Z",
+      "feature": "simulate",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-09T06:10:31.934Z",
+      "feature": "simulate",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-09T06:18:13.815Z",
+      "feature": "marketing_simulation",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-09T06:18:21.649Z",
+      "feature": "feed",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-09T06:18:28.324Z",
+      "feature": "feed",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-09T06:18:33.814Z",
+      "feature": "dashboard",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-09T06:18:42.889Z",
+      "feature": "dashboard",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-09T06:18:47.676Z",
+      "feature": "dashboard",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-09T06:18:56.499Z",
+      "feature": "dashboard",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-09T06:26:23.146Z",
+      "feature": "marketing_simulation",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-09T06:32:18.157Z",
+      "feature": "dashboard",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-09T06:32:26.304Z",
+      "feature": "dashboard",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-09T06:32:35.262Z",
+      "feature": "dashboard",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-09T06:37:41.758Z",
+      "feature": "feed",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-09T06:37:50.156Z",
+      "feature": "feed",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-09T06:38:00.641Z",
+      "feature": "feed",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-09T06:56:39.439Z",
+      "feature": "dashboard",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-09T06:56:44.200Z",
+      "feature": "dashboard",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-09T06:56:51.623Z",
+      "feature": "dashboard",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-09T06:57:40.701Z",
+      "feature": "dashboard",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-09T06:57:53.014Z",
+      "feature": "dashboard",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-09T06:57:56.502Z",
+      "feature": "dashboard",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-09T07:01:15.457Z",
+      "feature": "dashboard",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-09T07:01:34.752Z",
+      "feature": "dashboard",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-09T07:04:46.438Z",
+      "feature": "feed",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-09T07:04:50.829Z",
+      "feature": "feed",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-09T07:04:59.105Z",
+      "feature": "feed",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-09T07:05:06.495Z",
+      "feature": "feed",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-09T07:05:12.478Z",
+      "feature": "feed",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-09T07:07:49.552Z",
+      "feature": "feed",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-09T07:07:54.837Z",
+      "feature": "feed",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-09T07:08:00.162Z",
+      "feature": "feed",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-09T07:08:07.986Z",
+      "feature": "feed",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-09T09:33:04.826Z",
+      "feature": "guide",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-09T09:33:15.111Z",
+      "feature": "layout",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-09T09:33:20.283Z",
+      "feature": "layout",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-09T15:53:18.204Z",
+      "feature": "avatar",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-09T15:54:27.616Z",
+      "feature": "avatar",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-09T15:54:44.831Z",
+      "feature": "marketing_simulation",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-09T15:55:11.787Z",
+      "feature": "profile",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-09T15:56:00.106Z",
+      "feature": "profile",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-09T15:56:06.432Z",
+      "feature": "store",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-09T15:56:11.939Z",
+      "feature": "store",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-09T15:56:16.770Z",
+      "feature": "store",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-09T15:56:21.987Z",
+      "feature": "store",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-09T15:56:36.558Z",
+      "feature": "shop",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-09T15:56:49.344Z",
+      "feature": "shop",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-09T15:56:59.994Z",
+      "feature": "shop",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-09T15:57:10.556Z",
+      "feature": "shop",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-09T15:57:56.576Z",
+      "feature": "shop",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-09T15:58:07.977Z",
+      "feature": "shop",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-09T15:58:17.525Z",
+      "feature": "profile",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-09T15:58:24.285Z",
+      "feature": "profile",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-09T15:58:30.009Z",
+      "feature": "profile",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-09T15:58:39.700Z",
+      "feature": "profile",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-09T15:58:49.322Z",
+      "feature": "profile",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-09T15:58:57.240Z",
+      "feature": "profile",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-09T15:59:23.397Z",
+      "feature": "profile",
       "phase": "do",
       "action": "updated"
     }
