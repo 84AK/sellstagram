@@ -1395,7 +1395,17 @@ export default function HomePage() {
               className="text-center text-xs mt-6"
               style={{color: "var(--foreground-muted)"}}
             >
-              © 2025 Sellstagram · 마케팅 시뮬레이션 플랫폼
+              © 2026{" "}
+              <a
+                href="https://litt.ly/aklabs"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hover:underline"
+                style={{color: "var(--foreground-muted)"}}
+              >
+                aklabs
+              </a>
+              {" · "}Sellstagram · 마케팅 시뮬레이션 플랫폼
             </p>
           </div>
         )}
