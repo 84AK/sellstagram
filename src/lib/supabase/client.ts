@@ -27,6 +27,7 @@ export interface DbProfile {
     name: string;
     handle: string;
     avatar: string;
+    avatar_config?: Record<string, string> | null; // SQL: ALTER TABLE profiles ADD COLUMN IF NOT EXISTS avatar_config JSONB DEFAULT '{}'
     marketer_type: string | null;
     team: string;
     points: number;

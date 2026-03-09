@@ -182,15 +182,15 @@ export default function ProfilePage() {
     const handleAvatarSave = async (config: typeof user.avatarConfig & object) => {
         _setAvatarConfig(config);
         setShowAvatarBuilder(false);
-        // Supabase 동기화 (선택)
+        // Supabase avatar_config 컬럼 동기화 (SQL: ALTER TABLE profiles ADD COLUMN IF NOT EXISTS avatar_config JSONB DEFAULT '{}')
         try {
             const { data: { session } } = await supabase.auth.getSession();
             if (session?.user?.id) {
                 await supabase.from("profiles")
-                    .update({ avatar: JSON.stringify(config) })
+                    .update({ avatar_config: config })
                     .eq("id", session.user.id);
             }
-        } catch {/* ignore */}
+        } catch {/* ignore: column may not exist yet */}
     };
 
     return (
