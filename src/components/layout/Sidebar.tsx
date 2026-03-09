@@ -17,6 +17,7 @@ import {
     Globe,
     PlayCircle,
     Gift,
+    HelpCircle,
 } from "lucide-react";
 import ThemeToggle from "@/components/common/ThemeToggle";
 import { useGameStore } from "@/store/useGameStore";
@@ -82,6 +83,13 @@ const navItems = [
         activeColor: "#FFC233",
         activeBg: "rgba(255,194,51,0.12)",
         badge: "NEW",
+    },
+    {
+        name: "사용 가이드",
+        href: "/guide",
+        icon: HelpCircle,
+        activeColor: "#4361EE",
+        activeBg: "var(--secondary-light)",
     },
     {
         name: "프로필",
