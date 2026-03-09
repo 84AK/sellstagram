@@ -200,6 +200,7 @@ function Dashboard({ onLogout }: { onLogout: () => void }) {
     const [simActive, setSimActive] = useState(false);
     const [simLoading, setSimLoading] = useState(false);
     const [simDuration, setSimDuration] = useState(10);
+    const [simStartedAt, setSimStartedAt] = useState<string | null>(null);
     const [showResetConfirm, setShowResetConfirm] = useState(false);
     const [initialBalance, setInitialBalance] = useState(1000000);
     const [balanceInput, setBalanceInput] = useState("1000000");
@@ -390,7 +391,10 @@ function Dashboard({ onLogout }: { onLogout: () => void }) {
             .from("app_settings")
             .update(updatePayload)
             .eq("id", 1);
-        if (!error) setSimActive(next);
+        if (!error) {
+            setSimActive(next);
+            setSimStartedAt(next ? new Date().toISOString() : null);
+        }
         setSimLoading(false);
     };
 
@@ -400,12 +404,13 @@ function Dashboard({ onLogout }: { onLogout: () => void }) {
         loadMissionsFromDB();
 
         // 수업 상태 로드
-        supabase.from("app_settings").select("class_active, sim_active, sim_duration_minutes").eq("id", 1).single()
+        supabase.from("app_settings").select("class_active, sim_active, sim_duration_minutes, sim_started_at").eq("id", 1).single()
             .then(({ data }) => {
                 if (data) {
                     setClassActive(data.class_active);
                     setSimActive(data.sim_active ?? false);
                     setSimDuration(data.sim_duration_minutes ?? 10);
+                    setSimStartedAt(data.sim_started_at ?? null);
                 }
             });
 
@@ -775,6 +780,15 @@ function Dashboard({ onLogout }: { onLogout: () => void }) {
                                 )}
                             </button>
                         </div>
+
+                        {/* 교사용 시뮬레이션 모니터 */}
+                        {simActive && simStartedAt && (
+                            <TeacherSimMonitor
+                                startedAt={simStartedAt}
+                                durationMinutes={simDuration}
+                                dbPosts={dbPosts}
+                            />
+                        )}
 
                         {/* 팀 리더보드 */}
                         <div className="rounded-2xl overflow-hidden"
@@ -2593,6 +2607,335 @@ function WeeklyResultsTab() {
                     </div>
                 )}
             </div>
+        </div>
+    );
+}
+
+// ─── 교사용 시뮬레이션 모니터 컴포넌트 ──────────────────────
+import { generateSimEvents, SimEvent } from "@/lib/simulation/events";
+
+interface TeacherEventExtended extends SimEvent {
+    studentName: string;
+    postCaption: string;
+}
+
+const T_EVENT_META = {
+    like:     { color: "#FF6B35", bg: "rgba(255,107,53,0.08)", label: "좋아요", emoji: "❤️" },
+    comment:  { color: "#4361EE", bg: "rgba(67,97,238,0.08)",  label: "댓글",   emoji: "💬" },
+    share:    { color: "#06D6A0", bg: "rgba(6,214,160,0.08)",  label: "공유",   emoji: "🔗" },
+    purchase: { color: "#D97706", bg: "rgba(255,194,51,0.12)", label: "구매",   emoji: "🛍️" },
+};
+
+function TeacherEventRow({ event, isNew }: { event: TeacherEventExtended; isNew: boolean }) {
+    const [visible, setVisible] = React.useState(!isNew);
+    const meta = T_EVENT_META[event.type];
+
+    React.useEffect(() => {
+        if (isNew) {
+            const raf1 = requestAnimationFrame(() => {
+                requestAnimationFrame(() => setVisible(true));
+            });
+            return () => cancelAnimationFrame(raf1);
+        }
+    }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+    return (
+        <div
+            className="flex items-start gap-3 px-4 py-3 transition-all duration-400"
+            style={{
+                borderBottom: "1px solid var(--border)",
+                background: meta.bg,
+                opacity: visible ? 1 : 0,
+                transform: visible ? "translateX(0)" : "translateX(-8px)",
+            }}
+        >
+            <span className="text-base shrink-0">{event.persona.avatar}</span>
+            <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-1.5 flex-wrap">
+                    <span className="text-[13px] font-black" style={{ color: "var(--foreground)" }}>
+                        {event.persona.name}
+                    </span>
+                    <span className="text-[10px]" style={{ color: "var(--foreground-muted)" }}>
+                        {event.persona.age}세
+                    </span>
+                    <span
+                        className="text-[10px] font-bold px-1.5 py-0.5 rounded-full"
+                        style={{ background: meta.bg, color: meta.color, border: `1px solid ${meta.color}44` }}
+                    >
+                        {meta.emoji} {meta.label}
+                    </span>
+                    <span className="ml-auto text-[10px] font-semibold shrink-0" style={{ color: "var(--foreground-muted)" }}>
+                        {event.simHour}시간째
+                    </span>
+                </div>
+                {event.type === "comment" && event.comment && (
+                    <p className="text-[12px] mt-0.5 italic" style={{ color: "var(--foreground-soft)" }}>
+                        "{event.comment}"
+                    </p>
+                )}
+                {event.type === "purchase" && (
+                    <p className="text-[12px] font-bold mt-0.5" style={{ color: "#D97706" }}>
+                        ₩{(event.amount ?? 0).toLocaleString()} 결제
+                    </p>
+                )}
+                <p className="text-[10px] mt-0.5 truncate" style={{ color: "var(--foreground-muted)" }}>
+                    📝 {event.studentName} · {event.postCaption.slice(0, 30)}{event.postCaption.length > 30 ? "..." : ""}
+                </p>
+            </div>
+        </div>
+    );
+}
+
+function TeacherSimMonitor({
+    startedAt,
+    durationMinutes,
+    dbPosts,
+}: {
+    startedAt: string;
+    durationMinutes: number;
+    dbPosts: DbPost[];
+}) {
+    const [elapsedMs, setElapsedMs] = React.useState(0);
+    const [allEvents, setAllEvents] = React.useState<TeacherEventExtended[]>([]);
+    const [visibleEvents, setVisibleEvents] = React.useState<TeacherEventExtended[]>([]);
+    const [newEventIds, setNewEventIds] = React.useState<Set<string>>(new Set());
+    const [finished, setFinished] = React.useState(false);
+    const [logTab, setLogTab] = React.useState<"live" | "result">("live");
+    const timerRef = React.useRef<ReturnType<typeof setInterval> | null>(null);
+    const feedRef = React.useRef<HTMLDivElement>(null);
+    const lastCountRef = React.useRef(0);
+
+    const durationMs = durationMinutes * 60 * 1000;
+    const remainingMs = Math.max(0, durationMs - elapsedMs);
+    const remainingMin = Math.floor(remainingMs / 60000);
+    const remainingSec = Math.floor((remainingMs % 60000) / 1000);
+    const progressPct = Math.min(100, (elapsedMs / durationMs) * 100);
+
+    // 모든 게시물에서 이벤트 생성
+    React.useEffect(() => {
+        if (!startedAt || dbPosts.length === 0) return;
+        const postPosts = dbPosts.filter(p => p.type === "post");
+        const merged: TeacherEventExtended[] = [];
+        postPosts.forEach(post => {
+            const engRate = post.engagement_rate ?? "5%";
+            const price = post.sales
+                ? parseFloat(String(post.sales).replace(/[^0-9.]/g, "")) || 10000
+                : 10000;
+            const events = generateSimEvents(post.id, engRate, price, durationMinutes, startedAt);
+            events.forEach(e => merged.push({
+                ...e,
+                id: `${post.id}-${e.id}`,
+                studentName: post.user_name,
+                postCaption: post.caption ?? "",
+            }));
+        });
+        merged.sort((a, b) => a.realMs - b.realMs);
+        setAllEvents(merged);
+        setVisibleEvents([]);
+        lastCountRef.current = 0;
+    }, [startedAt, durationMinutes, dbPosts.length]); // eslint-disable-line react-hooks/exhaustive-deps
+
+    // 타이머
+    React.useEffect(() => {
+        const tick = () => {
+            const elapsed = Date.now() - new Date(startedAt).getTime();
+            setElapsedMs(elapsed);
+            if (elapsed >= durationMs) {
+                setFinished(true);
+                if (timerRef.current) clearInterval(timerRef.current);
+                setLogTab("result");
+            }
+        };
+        tick();
+        timerRef.current = setInterval(tick, 500);
+        return () => { if (timerRef.current) clearInterval(timerRef.current); };
+    }, [startedAt, durationMs]);
+
+    // 이벤트 순차 표시
+    React.useEffect(() => {
+        if (allEvents.length === 0) return;
+        const shouldShow = allEvents.filter(e => e.realMs <= elapsedMs);
+        if (shouldShow.length > lastCountRef.current) {
+            const newOnes = shouldShow.slice(lastCountRef.current);
+            setNewEventIds(new Set(newOnes.map(e => e.id)));
+            setVisibleEvents(shouldShow);
+            lastCountRef.current = shouldShow.length;
+            setTimeout(() => setNewEventIds(new Set()), 600);
+            if (feedRef.current) feedRef.current.scrollTop = feedRef.current.scrollHeight;
+        }
+    }, [elapsedMs, allEvents]);
+
+    const likes     = visibleEvents.filter(e => e.type === "like").length;
+    const comments  = visibleEvents.filter(e => e.type === "comment").length;
+    const shares    = visibleEvents.filter(e => e.type === "share").length;
+    const purchases = visibleEvents.filter(e => e.type === "purchase").length;
+    const revenue   = visibleEvents.filter(e => e.type === "purchase").reduce((s, e) => s + (e.amount ?? 0), 0);
+
+    return (
+        <div
+            className="rounded-2xl overflow-hidden"
+            style={{ border: "1.5px solid rgba(6,214,160,0.4)", background: "var(--surface)" }}
+        >
+            {/* 타이머 헤더 */}
+            <div
+                className="px-5 py-4"
+                style={{
+                    background: finished
+                        ? "linear-gradient(135deg, #06D6A0, #4361EE)"
+                        : "linear-gradient(135deg, #FF6B35, #FFC233)",
+                }}
+            >
+                <div className="flex items-center justify-between mb-2">
+                    <p className="text-white/80 text-[11px] font-bold uppercase tracking-wider">
+                        {finished ? "시뮬레이션 완료" : "마켓 진행 중"}
+                    </p>
+                    <div className="flex items-center gap-1.5">
+                        {!finished && <span className="w-2 h-2 rounded-full bg-white animate-pulse" />}
+                        <span className="text-white/80 text-[11px] font-bold">
+                            {finished ? "완료 🎉" : "LIVE"}
+                        </span>
+                    </div>
+                </div>
+                <div className="flex items-center justify-between mb-2">
+                    <span className="text-3xl font-black text-white font-outfit tabular-nums">
+                        {finished ? "완료!" : `${String(remainingMin).padStart(2, "0")}:${String(remainingSec).padStart(2, "0")}`}
+                    </span>
+                    <div className="flex gap-4 text-white/90 text-sm font-bold">
+                        <span>❤️ {likes}</span>
+                        <span>💬 {comments}</span>
+                        <span>🔗 {shares}</span>
+                        <span>🛍️ {purchases}</span>
+                    </div>
+                </div>
+                <div className="h-1.5 rounded-full overflow-hidden bg-white/20">
+                    <div className="h-full rounded-full bg-white transition-all duration-500" style={{ width: `${progressPct}%` }} />
+                </div>
+                <div className="flex justify-between mt-1">
+                    <span className="text-white/60 text-[10px]">{Math.floor(elapsedMs / 60000)}분 경과 · 전체 {durationMinutes}분</span>
+                    <span className="text-white/60 text-[10px]">총 이벤트 {visibleEvents.length}개</span>
+                </div>
+            </div>
+
+            {/* 탭 */}
+            <div className="flex" style={{ borderBottom: "1px solid var(--border)" }}>
+                {(["live", "result"] as const).map(tab => (
+                    <button key={tab} onClick={() => setLogTab(tab)}
+                        className="flex-1 py-2.5 text-xs font-bold transition-all"
+                        style={{
+                            color: logTab === tab ? "var(--accent)" : "var(--foreground-muted)",
+                            borderBottom: logTab === tab ? "2px solid var(--accent)" : "2px solid transparent",
+                        }}>
+                        {tab === "live" ? "📡 실시간 반응 로그" : "📊 결과 요약"}
+                    </button>
+                ))}
+            </div>
+
+            {/* 실시간 로그 */}
+            {logTab === "live" && (
+                <div ref={feedRef} className="overflow-y-auto" style={{ maxHeight: "400px" }}>
+                    {visibleEvents.length === 0 ? (
+                        <div className="py-10 text-center">
+                            <div className="text-2xl mb-2 animate-bounce">⏳</div>
+                            <p className="text-xs" style={{ color: "var(--foreground-muted)" }}>반응 대기 중...</p>
+                        </div>
+                    ) : (
+                        [...visibleEvents].reverse().map(event => (
+                            <TeacherEventRow
+                                key={event.id}
+                                event={event}
+                                isNew={newEventIds.has(event.id)}
+                            />
+                        ))
+                    )}
+                </div>
+            )}
+
+            {/* 결과 요약 */}
+            {logTab === "result" && (
+                <div className="p-5">
+                    {/* 스탯 그리드 */}
+                    <div className="grid grid-cols-4 gap-3 mb-4">
+                        {[
+                            { label: "좋아요", value: likes,     emoji: "❤️", color: "#FF6B35" },
+                            { label: "댓글",   value: comments,  emoji: "💬", color: "#4361EE" },
+                            { label: "공유",   value: shares,    emoji: "🔗", color: "#06D6A0" },
+                            { label: "구매",   value: purchases, emoji: "🛍️", color: "#D97706" },
+                        ].map(s => (
+                            <div key={s.label} className="rounded-xl p-3 text-center"
+                                style={{ background: "var(--surface-2)" }}>
+                                <div className="text-xl mb-0.5">{s.emoji}</div>
+                                <div className="text-xl font-black" style={{ color: s.color }}>{s.value}</div>
+                                <div className="text-[10px]" style={{ color: "var(--foreground-muted)" }}>{s.label}</div>
+                            </div>
+                        ))}
+                    </div>
+
+                    {/* 총 매출 */}
+                    <div className="p-3 rounded-xl text-center mb-4"
+                        style={{ background: "rgba(255,194,51,0.12)", border: "1.5px solid rgba(255,194,51,0.4)" }}>
+                        <p className="text-[10px] font-bold mb-0.5" style={{ color: "#D97706" }}>전체 예상 매출</p>
+                        <p className="text-2xl font-black" style={{ color: "#D97706" }}>₩{revenue.toLocaleString()}</p>
+                    </div>
+
+                    {/* 구매 상세 */}
+                    {purchases > 0 && (
+                        <div>
+                            <p className="text-[11px] font-bold mb-2 px-1" style={{ color: "var(--foreground-muted)" }}>
+                                🛍️ 구매 상세
+                            </p>
+                            <div className="flex flex-col gap-1.5 max-h-40 overflow-y-auto">
+                                {visibleEvents.filter(e => e.type === "purchase").map(e => (
+                                    <div key={e.id} className="flex items-center gap-2 p-2.5 rounded-xl"
+                                        style={{ background: "rgba(255,194,51,0.10)" }}>
+                                        <span className="text-base">{e.persona.avatar}</span>
+                                        <div className="flex-1 min-w-0">
+                                            <span className="text-[12px] font-black" style={{ color: "var(--foreground)" }}>
+                                                {e.persona.name}
+                                            </span>
+                                            <span className="text-[10px] ml-1" style={{ color: "var(--foreground-muted)" }}>
+                                                {e.persona.age}세 · {e.studentName}의 게시물
+                                            </span>
+                                        </div>
+                                        <span className="text-[12px] font-black shrink-0" style={{ color: "#D97706" }}>
+                                            ₩{(e.amount ?? 0).toLocaleString()}
+                                        </span>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* 댓글 상세 */}
+                    {comments > 0 && (
+                        <div className="mt-3">
+                            <p className="text-[11px] font-bold mb-2 px-1" style={{ color: "var(--foreground-muted)" }}>
+                                💬 주요 댓글
+                            </p>
+                            <div className="flex flex-col gap-1.5 max-h-40 overflow-y-auto">
+                                {visibleEvents.filter(e => e.type === "comment").slice(0, 8).map(e => (
+                                    <div key={e.id} className="flex items-start gap-2 p-2.5 rounded-xl"
+                                        style={{ background: "rgba(67,97,238,0.06)" }}>
+                                        <span className="text-base shrink-0">{e.persona.avatar}</span>
+                                        <div className="flex-1 min-w-0">
+                                            <span className="text-[11px] font-bold" style={{ color: "var(--foreground)" }}>
+                                                {e.persona.name}
+                                            </span>
+                                            <span className="text-[10px] ml-1" style={{ color: "var(--foreground-muted)" }}>
+                                                ({e.persona.age}세)
+                                            </span>
+                                            {e.comment && (
+                                                <p className="text-[12px] mt-0.5 italic" style={{ color: "var(--foreground-soft)" }}>
+                                                    "{e.comment}"
+                                                </p>
+                                            )}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+                </div>
+            )}
         </div>
     );
 }
