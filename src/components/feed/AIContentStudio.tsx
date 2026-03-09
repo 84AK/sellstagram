@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import {
     X, Sparkles, ChevronRight, ChevronLeft, Loader2,
-    RefreshCw, Check, Lightbulb, Target, Zap, MessageSquare,
+    RefreshCw, Check, Lightbulb, Zap, MessageSquare,
     Copy, CheckCheck, ArrowRight,
 } from "lucide-react";
 import GlassCard from "../common/GlassCard";
@@ -97,22 +97,21 @@ interface AIContentStudioProps {
 export default function AIContentStudio({ onApply, onClose }: AIContentStudioProps) {
     const { addSkillXP } = useGameStore();
 
-    // Step 상태
-    const [step, setStep] = useState(1); // 1:설정 2:초안 3:개선 4:완성
+    const [step, setStep] = useState(1);
 
-    // Step 1 - 설정
+    // Step 1
     const [productName, setProductName] = useState("");
     const [targetAudience, setTargetAudience] = useState("");
     const [selectedStrategy, setSelectedStrategy] = useState<string | null>(null);
     const [selectedTone, setSelectedTone] = useState<string | null>(null);
 
-    // Step 2 - AI 초안
+    // Step 2
     const [drafts, setDrafts] = useState<Draft[]>([]);
     const [isGenerating, setIsGenerating] = useState(false);
     const [selectedDraftId, setSelectedDraftId] = useState<string | null>(null);
     const [promptSummary, setPromptSummary] = useState("");
 
-    // Step 3 - 개선
+    // Step 3
     const [feedback, setFeedback] = useState("");
     const [refinedCaption, setRefinedCaption] = useState("");
     const [refinedHashtags, setRefinedHashtags] = useState<string[]>([]);
@@ -120,60 +119,40 @@ export default function AIContentStudio({ onApply, onClose }: AIContentStudioPro
     const [promptHint, setPromptHint] = useState("");
     const [isRefining, setIsRefining] = useState(false);
 
-    // 복사 상태
     const [copied, setCopied] = useState(false);
 
     const strategy = MARKETING_STRATEGIES.find(s => s.id === selectedStrategy);
     const tone = TONES.find(t => t.id === selectedTone);
     const selectedDraft = drafts.find(d => d.id === selectedDraftId);
-
     const canProceedStep1 = productName.trim() && selectedStrategy && selectedTone;
 
-    // ── Step 1 → Step 2: 초안 생성 ──────────────────────────────────
     const handleGenerate = async () => {
         if (!canProceedStep1 || !strategy || !tone) return;
         setIsGenerating(true);
         setStep(2);
         setDrafts([]);
-
         try {
             const res = await fetch("/api/ai/draft", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    productName,
-                    targetAudience: targetAudience || "10~20대",
-                    strategy,
-                    tone: tone.label,
-                }),
+                body: JSON.stringify({ productName, targetAudience: targetAudience || "10~20대", strategy, tone: tone.label }),
             });
             const data = await res.json();
             setDrafts(data.drafts ?? []);
             setPromptSummary(data.promptSummary ?? "");
             addSkillXP("copywriting", 10);
-        } catch {
-            setDrafts([]);
-        } finally {
-            setIsGenerating(false);
-        }
+        } catch { setDrafts([]); }
+        finally { setIsGenerating(false); }
     };
 
-    // ── Step 3: 피드백 개선 ──────────────────────────────────────────
     const handleRefine = async () => {
         if (!selectedDraft || !feedback.trim() || !strategy) return;
         setIsRefining(true);
-
         try {
             const res = await fetch("/api/ai/refine", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    currentCaption: selectedDraft.caption,
-                    feedback,
-                    productName,
-                    strategy,
-                    tone: tone?.label ?? "친근한",
-                }),
+                body: JSON.stringify({ currentCaption: selectedDraft.caption, feedback, productName, strategy, tone: tone?.label ?? "친근한" }),
             });
             const data = await res.json();
             setRefinedCaption(data.caption ?? "");
@@ -182,14 +161,10 @@ export default function AIContentStudio({ onApply, onClose }: AIContentStudioPro
             setPromptHint(data.promptHint ?? "");
             addSkillXP("copywriting", 15);
             setStep(4);
-        } catch {
-            setRefinedCaption("");
-        } finally {
-            setIsRefining(false);
-        }
+        } catch { setRefinedCaption(""); }
+        finally { setIsRefining(false); }
     };
 
-    // ── 완성된 캡션 적용 ─────────────────────────────────────────────
     const handleApply = () => {
         const finalCaption = refinedCaption || selectedDraft?.caption || "";
         const finalTags = (refinedHashtags.length > 0 ? refinedHashtags : selectedDraft?.hashtags ?? []).join(", ");
@@ -198,148 +173,181 @@ export default function AIContentStudio({ onApply, onClose }: AIContentStudioPro
     };
 
     const handleCopy = (text: string) => {
-        navigator.clipboard.writeText(text).then(() => {
-            setCopied(true);
-            setTimeout(() => setCopied(false), 2000);
-        });
+        navigator.clipboard.writeText(text).then(() => { setCopied(true); setTimeout(() => setCopied(false), 2000); });
     };
 
-    // ── 단계 표시 ────────────────────────────────────────────────────
-    const steps = ["전략 설정", "AI 초안", "피드백 개선", "완성"];
+    const STEP_META = [
+        { num: 1, label: "전략 설정" },
+        { num: 2, label: "AI 초안" },
+        { num: 3, label: "피드백" },
+        { num: 4, label: "완성" },
+    ];
 
     return (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-in fade-in duration-200">
-            <GlassCard className="w-full max-w-xl p-0 overflow-hidden border-foreground/10 shadow-2xl flex flex-col max-h-[92vh]">
+            <GlassCard className="w-full max-w-lg p-0 overflow-hidden border-foreground/10 shadow-2xl flex flex-col max-h-[92vh]">
 
-                {/* 헤더 */}
-                <div className="flex items-center justify-between px-6 py-4 border-b border-foreground/5 flex-shrink-0"
+                {/* ── 헤더 ── */}
+                <div className="flex items-center justify-between px-6 py-5 border-b border-foreground/8 flex-shrink-0"
                     style={{ background: "linear-gradient(135deg, rgba(255,107,53,0.08), rgba(67,97,238,0.06))" }}>
                     <div className="flex items-center gap-3">
-                        <div className="p-2 rounded-xl" style={{ background: "linear-gradient(135deg,#FF6B35,#4361EE)" }}>
-                            <Sparkles size={16} className="text-white" />
+                        <div className="w-10 h-10 rounded-2xl flex items-center justify-center shrink-0"
+                            style={{ background: "linear-gradient(135deg,#FF6B35,#4361EE)" }}>
+                            <Sparkles size={18} className="text-white" />
                         </div>
                         <div>
-                            <h3 className="text-base font-black italic tracking-tight">AI 콘텐츠 스튜디오</h3>
-                            <p className="text-[10px] text-foreground/40 font-bold uppercase tracking-widest">AI와 함께 마케팅 캡션 만들기</p>
+                            <h3 className="text-lg font-black tracking-tight leading-tight">AI 콘텐츠 스튜디오</h3>
+                            <p className="text-xs text-foreground/50 mt-0.5">AI와 함께 마케팅 캡션 만들기</p>
                         </div>
                     </div>
-                    <button onClick={onClose} className="p-2 hover:bg-foreground/5 rounded-full transition-colors">
-                        <X size={18} className="text-foreground/40" />
+                    <button onClick={onClose} className="p-2 hover:bg-foreground/8 rounded-full transition-colors">
+                        <X size={20} className="text-foreground/40" />
                     </button>
                 </div>
 
-                {/* 스텝 인디케이터 */}
-                <div className="flex items-center px-6 py-3 gap-1 flex-shrink-0 border-b border-foreground/5">
-                    {steps.map((s, i) => {
-                        const num = i + 1;
-                        const active = step === num;
-                        const done = step > num;
+                {/* ── 스텝 인디케이터 ── */}
+                <div className="flex items-center px-6 py-4 gap-1 flex-shrink-0 border-b border-foreground/5">
+                    {STEP_META.map((s, i) => {
+                        const active = step === s.num;
+                        const done = step > s.num;
                         return (
-                            <React.Fragment key={s}>
-                                <div className="flex items-center gap-1.5">
-                                    <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-black transition-all ${
+                            <React.Fragment key={s.num}>
+                                <div className="flex items-center gap-2 shrink-0">
+                                    <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-black transition-all ${
                                         done ? "bg-accent text-white" : active ? "bg-primary text-white" : "bg-foreground/10 text-foreground/30"
                                     }`}>
-                                        {done ? <Check size={10} /> : num}
+                                        {done ? <Check size={12} /> : s.num}
                                     </div>
-                                    <span className={`text-[9px] font-bold uppercase tracking-widest hidden sm:block ${active ? "text-primary" : done ? "text-accent" : "text-foreground/30"}`}>
-                                        {s}
+                                    <span className={`text-xs font-bold ${active ? "text-primary" : done ? "text-accent" : "text-foreground/30"}`}>
+                                        {s.label}
                                     </span>
                                 </div>
-                                {i < steps.length - 1 && (
-                                    <div className={`flex-1 h-0.5 rounded-full mx-1 transition-all ${done ? "bg-accent" : "bg-foreground/10"}`} />
+                                {i < STEP_META.length - 1 && (
+                                    <div className={`flex-1 h-0.5 rounded-full mx-1 transition-all ${done ? "bg-accent/60" : "bg-foreground/10"}`} />
                                 )}
                             </React.Fragment>
                         );
                     })}
                 </div>
 
-                {/* 바디 */}
+                {/* ── 바디 ── */}
                 <div className="flex-1 overflow-y-auto custom-scrollbar">
 
                     {/* ── STEP 1: 전략 설정 ── */}
                     {step === 1 && (
-                        <div className="p-6 flex flex-col gap-5">
+                        <div className="p-6 flex flex-col gap-6">
+                            {/* 안내 문구 */}
+                            <div>
+                                <h4 className="text-base font-black leading-snug">어떤 제품을 홍보할 건가요?</h4>
+                                <p className="text-sm text-foreground/50 mt-1">제품 정보와 마케팅 전략을 선택하면 AI가 캡션 초안을 만들어줘요.</p>
+                            </div>
+
+                            {/* 제품명 */}
                             <div className="flex flex-col gap-2">
-                                <label className="text-[10px] font-bold text-foreground/40 uppercase tracking-widest">
+                                <label className="text-sm font-bold text-foreground/70">
                                     제품 / 서비스 이름 <span className="text-red-400">*</span>
                                 </label>
                                 <input
                                     value={productName}
                                     onChange={e => setProductName(e.target.value)}
                                     placeholder="예: 오트밀 프로틴 쉐이크, 핸드메이드 캔들..."
-                                    className="w-full bg-foreground/5 border border-foreground/10 rounded-2xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
+                                    className="w-full bg-foreground/5 border border-foreground/10 rounded-2xl px-4 py-3.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
                                 />
                             </div>
 
+                            {/* 타겟 고객 */}
                             <div className="flex flex-col gap-2">
-                                <label className="text-[10px] font-bold text-foreground/40 uppercase tracking-widest">
-                                    타겟 고객 <span className="text-foreground/20 text-[9px]">(선택)</span>
+                                <label className="text-sm font-bold text-foreground/70">
+                                    타겟 고객
+                                    <span className="text-xs font-normal text-foreground/40 ml-1.5">(선택 사항)</span>
                                 </label>
                                 <input
                                     value={targetAudience}
                                     onChange={e => setTargetAudience(e.target.value)}
                                     placeholder="예: 다이어트 중인 20대, 홈카페 좋아하는 직장인..."
-                                    className="w-full bg-foreground/5 border border-foreground/10 rounded-2xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
+                                    className="w-full bg-foreground/5 border border-foreground/10 rounded-2xl px-4 py-3.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
                                 />
                             </div>
 
+                            {/* 마케팅 전략 */}
                             <div className="flex flex-col gap-3">
-                                <label className="text-[10px] font-bold text-foreground/40 uppercase tracking-widest">
-                                    마케팅 전략 선택 <span className="text-red-400">*</span>
+                                <label className="text-sm font-bold text-foreground/70">
+                                    마케팅 전략 <span className="text-red-400">*</span>
                                 </label>
-                                <div className="grid grid-cols-2 gap-2">
-                                    {MARKETING_STRATEGIES.map(s => (
-                                        <button
-                                            key={s.id}
-                                            onClick={() => setSelectedStrategy(s.id)}
-                                            className={`flex items-start gap-2.5 p-3 rounded-2xl border text-left transition-all ${
-                                                selectedStrategy === s.id
-                                                    ? "border-primary/40 shadow-md"
-                                                    : "border-foreground/10 hover:border-foreground/20"
-                                            }`}
-                                            style={selectedStrategy === s.id ? { background: `${s.color}12` } : { background: "var(--surface)" }}
-                                        >
-                                            <span className="text-xl shrink-0">{s.emoji}</span>
-                                            <div>
-                                                <p className="text-xs font-black">{s.theme}</p>
-                                                <p className="text-[9px] text-foreground/40 leading-tight mt-0.5">{s.description}</p>
-                                            </div>
-                                        </button>
-                                    ))}
+                                <div className="grid grid-cols-2 gap-2.5">
+                                    {MARKETING_STRATEGIES.map(s => {
+                                        const isSelected = selectedStrategy === s.id;
+                                        return (
+                                            <button
+                                                key={s.id}
+                                                onClick={() => setSelectedStrategy(s.id)}
+                                                className="flex flex-col gap-2 p-4 rounded-2xl border text-left transition-all"
+                                                style={{
+                                                    border: isSelected ? `1.5px solid ${s.color}60` : "1.5px solid transparent",
+                                                    background: isSelected ? `${s.color}10` : "var(--surface)",
+                                                    outline: isSelected ? `none` : "1px solid var(--border)",
+                                                }}
+                                            >
+                                                <div className="flex items-center justify-between">
+                                                    <span className="text-2xl">{s.emoji}</span>
+                                                    {isSelected && (
+                                                        <div className="w-5 h-5 rounded-full flex items-center justify-center shrink-0"
+                                                            style={{ background: s.color }}>
+                                                            <Check size={11} className="text-white" />
+                                                        </div>
+                                                    )}
+                                                </div>
+                                                <div>
+                                                    <p className="text-sm font-bold leading-snug">{s.theme}</p>
+                                                    {/* 설명은 선택 시에만 표시 */}
+                                                    {isSelected && (
+                                                        <p className="text-xs text-foreground/55 leading-relaxed mt-1.5 animate-in slide-in-from-top-1 duration-200">
+                                                            {s.description}
+                                                        </p>
+                                                    )}
+                                                </div>
+                                            </button>
+                                        );
+                                    })}
                                 </div>
+
+                                {/* 선택된 전략 팁 */}
+                                {strategy && (
+                                    <div className="flex items-start gap-2.5 p-3.5 rounded-2xl animate-in slide-in-from-top-2 duration-200"
+                                        style={{ background: "var(--surface-2)" }}>
+                                        <Lightbulb size={15} className="text-primary shrink-0 mt-0.5" />
+                                        <p className="text-sm text-foreground/65 leading-relaxed">{strategy.tip}</p>
+                                    </div>
+                                )}
                             </div>
 
-                            {strategy && (
-                                <div className="flex items-start gap-2.5 p-3 rounded-2xl border border-foreground/10" style={{ background: "var(--surface-2)" }}>
-                                    <Lightbulb size={14} className="text-primary shrink-0 mt-0.5" />
-                                    <p className="text-[11px] text-foreground/60 leading-relaxed">{strategy.tip}</p>
-                                </div>
-                            )}
-
+                            {/* 톤앤매너 */}
                             <div className="flex flex-col gap-3">
-                                <label className="text-[10px] font-bold text-foreground/40 uppercase tracking-widest">
+                                <label className="text-sm font-bold text-foreground/70">
                                     톤앤매너 <span className="text-red-400">*</span>
                                 </label>
-                                <div className="grid grid-cols-2 gap-2">
-                                    {TONES.map(t => (
-                                        <button
-                                            key={t.id}
-                                            onClick={() => setSelectedTone(t.id)}
-                                            className={`flex items-center gap-2.5 p-3 rounded-2xl border transition-all ${
-                                                selectedTone === t.id
-                                                    ? "border-secondary/40 bg-secondary/8 shadow-md"
-                                                    : "border-foreground/10 hover:border-foreground/20"
-                                            }`}
-                                            style={selectedTone === t.id ? { background: "rgba(67,97,238,0.08)" } : { background: "var(--surface)" }}
-                                        >
-                                            <span className="text-lg">{t.emoji}</span>
-                                            <div className="text-left">
-                                                <p className="text-xs font-black">{t.label}</p>
-                                                <p className="text-[9px] text-foreground/40">{t.desc}</p>
-                                            </div>
-                                        </button>
-                                    ))}
+                                <div className="grid grid-cols-2 gap-2.5">
+                                    {TONES.map(t => {
+                                        const isSelected = selectedTone === t.id;
+                                        return (
+                                            <button
+                                                key={t.id}
+                                                onClick={() => setSelectedTone(t.id)}
+                                                className="flex items-center gap-3 p-4 rounded-2xl text-left transition-all"
+                                                style={{
+                                                    border: isSelected ? "1.5px solid rgba(67,97,238,0.5)" : "1.5px solid transparent",
+                                                    background: isSelected ? "rgba(67,97,238,0.08)" : "var(--surface)",
+                                                    outline: isSelected ? "none" : "1px solid var(--border)",
+                                                }}
+                                            >
+                                                <span className="text-2xl shrink-0">{t.emoji}</span>
+                                                <div>
+                                                    <p className="text-sm font-bold">{t.label}</p>
+                                                    <p className="text-xs text-foreground/45 mt-0.5">{t.desc}</p>
+                                                </div>
+                                            </button>
+                                        );
+                                    })}
                                 </div>
                             </div>
                         </div>
@@ -347,81 +355,93 @@ export default function AIContentStudio({ onApply, onClose }: AIContentStudioPro
 
                     {/* ── STEP 2: AI 초안 ── */}
                     {step === 2 && (
-                        <div className="p-6 flex flex-col gap-4">
-                            {/* 프롬프트 요약 */}
-                            {promptSummary && (
-                                <div className="flex items-start gap-2.5 p-3 rounded-2xl" style={{ background: "var(--surface-2)" }}>
-                                    <Target size={14} className="text-secondary shrink-0 mt-0.5" />
-                                    <p className="text-[11px] text-foreground/60 leading-relaxed">{promptSummary}</p>
-                                </div>
-                            )}
-
+                        <div className="p-6 flex flex-col gap-5">
                             {isGenerating ? (
-                                <div className="flex flex-col items-center gap-4 py-12">
+                                <div className="flex flex-col items-center gap-5 py-16">
                                     <div className="relative">
-                                        <div className="w-16 h-16 rounded-2xl flex items-center justify-center"
+                                        <div className="w-20 h-20 rounded-3xl flex items-center justify-center"
                                             style={{ background: "linear-gradient(135deg,#FF6B35,#4361EE)" }}>
-                                            <Sparkles size={28} className="text-white animate-pulse" />
+                                            <Sparkles size={32} className="text-white animate-pulse" />
                                         </div>
-                                        <Loader2 size={48} className="animate-spin text-primary/20 absolute -inset-4" />
+                                        <Loader2 size={56} className="animate-spin text-primary/20 absolute -inset-4" />
                                     </div>
                                     <div className="text-center">
-                                        <p className="text-sm font-black italic">AI가 3가지 전략 초안을 생성 중...</p>
-                                        <p className="text-[11px] text-foreground/40 mt-1">{strategy?.theme} 전략으로 {tone?.label} 톤 적용 중</p>
+                                        <p className="text-base font-black">AI가 초안 3개를 만드는 중...</p>
+                                        <p className="text-sm text-foreground/45 mt-1.5">{strategy?.theme} 전략 · {tone?.label} 톤 적용 중</p>
                                     </div>
                                 </div>
                             ) : (
                                 <>
-                                    <p className="text-[10px] font-bold text-foreground/40 uppercase tracking-widest">3가지 초안 중 하나를 선택하세요</p>
-                                    <div className="flex flex-col gap-3">
-                                        {drafts.map(draft => (
-                                            <button
-                                                key={draft.id}
-                                                onClick={() => setSelectedDraftId(draft.id)}
-                                                className={`flex flex-col gap-2.5 p-4 rounded-2xl border text-left transition-all ${
-                                                    selectedDraftId === draft.id
-                                                        ? "border-primary/40 shadow-lg"
-                                                        : "border-foreground/10 hover:border-foreground/20"
-                                                }`}
-                                                style={selectedDraftId === draft.id ? { background: "rgba(255,107,53,0.06)" } : { background: "var(--surface)" }}
-                                            >
-                                                <div className="flex items-center justify-between">
-                                                    <span className="text-[10px] font-black uppercase tracking-widest text-primary">{draft.label}</span>
-                                                    {selectedDraftId === draft.id && (
-                                                        <div className="w-5 h-5 rounded-full bg-primary flex items-center justify-center">
-                                                            <Check size={10} className="text-white" />
-                                                        </div>
-                                                    )}
-                                                </div>
-                                                <p className="text-sm font-medium leading-relaxed">{draft.caption}</p>
-                                                <div className="flex flex-wrap gap-1">
-                                                    {draft.hashtags.map(tag => (
-                                                        <span key={tag} className="text-[9px] font-bold px-2 py-0.5 rounded-full"
-                                                            style={{ background: "var(--primary-light)", color: "var(--primary)" }}>
-                                                            #{tag}
-                                                        </span>
-                                                    ))}
-                                                </div>
-                                                <div className="flex items-start gap-1.5 pt-1 border-t border-foreground/5">
-                                                    <Zap size={10} className="text-secondary shrink-0 mt-0.5" />
-                                                    <p className="text-[9px] text-foreground/50 leading-relaxed">{draft.strategyPoint}</p>
-                                                </div>
-                                                {selectedDraftId === draft.id && (
-                                                    <div className="flex items-start gap-1.5 p-2.5 rounded-xl"
-                                                        style={{ background: "rgba(255,107,53,0.08)" }}>
-                                                        <Lightbulb size={10} className="text-primary shrink-0 mt-0.5" />
-                                                        <p className="text-[9px] text-foreground/60 leading-relaxed">{draft.marketingTip}</p>
-                                                    </div>
-                                                )}
-                                            </button>
-                                        ))}
+                                    {/* 안내 */}
+                                    <div>
+                                        <h4 className="text-base font-black">마음에 드는 초안을 골라보세요</h4>
+                                        {promptSummary && (
+                                            <p className="text-sm text-foreground/50 mt-1 leading-relaxed">{promptSummary}</p>
+                                        )}
                                     </div>
 
+                                    {/* 초안 카드 */}
+                                    <div className="flex flex-col gap-3">
+                                        {drafts.map(draft => {
+                                            const isSelected = selectedDraftId === draft.id;
+                                            return (
+                                                <button
+                                                    key={draft.id}
+                                                    onClick={() => setSelectedDraftId(draft.id)}
+                                                    className="flex flex-col gap-3 p-5 rounded-2xl border text-left transition-all"
+                                                    style={{
+                                                        border: isSelected ? "1.5px solid rgba(255,107,53,0.5)" : "1.5px solid transparent",
+                                                        background: isSelected ? "rgba(255,107,53,0.05)" : "var(--surface)",
+                                                        outline: isSelected ? "none" : "1px solid var(--border)",
+                                                    }}
+                                                >
+                                                    <div className="flex items-center justify-between">
+                                                        <span className="text-xs font-black text-primary uppercase tracking-wide">{draft.label}</span>
+                                                        {isSelected && (
+                                                            <div className="w-5 h-5 rounded-full bg-primary flex items-center justify-center">
+                                                                <Check size={11} className="text-white" />
+                                                            </div>
+                                                        )}
+                                                    </div>
+
+                                                    {/* 캡션 */}
+                                                    <p className="text-sm font-medium leading-relaxed">{draft.caption}</p>
+
+                                                    {/* 해시태그 */}
+                                                    <div className="flex flex-wrap gap-1.5">
+                                                        {draft.hashtags.map(tag => (
+                                                            <span key={tag} className="text-xs font-bold px-2.5 py-1 rounded-full"
+                                                                style={{ background: "var(--primary-light)", color: "var(--primary)" }}>
+                                                                #{tag}
+                                                            </span>
+                                                        ))}
+                                                    </div>
+
+                                                    {/* 전략 포인트 - 선택 시만 */}
+                                                    {isSelected && (
+                                                        <div className="flex flex-col gap-2 pt-1 border-t border-foreground/8 animate-in slide-in-from-top-1 duration-200">
+                                                            <div className="flex items-start gap-2">
+                                                                <Zap size={13} className="text-secondary shrink-0 mt-0.5" />
+                                                                <p className="text-xs text-foreground/55 leading-relaxed">{draft.strategyPoint}</p>
+                                                            </div>
+                                                            <div className="flex items-start gap-2 p-3 rounded-xl"
+                                                                style={{ background: "rgba(255,107,53,0.06)" }}>
+                                                                <Lightbulb size={13} className="text-primary shrink-0 mt-0.5" />
+                                                                <p className="text-xs text-foreground/65 leading-relaxed">{draft.marketingTip}</p>
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+
+                                    {/* 재생성 버튼 */}
                                     <button
                                         onClick={() => { setSelectedDraftId(null); handleGenerate(); }}
-                                        className="flex items-center justify-center gap-2 py-2.5 px-4 rounded-2xl border border-foreground/10 text-xs font-bold text-foreground/50 hover:text-foreground/70 transition-all hover:border-foreground/20"
+                                        className="flex items-center justify-center gap-2 py-3 rounded-2xl border border-foreground/10 text-sm font-bold text-foreground/50 hover:text-foreground/70 transition-all hover:border-foreground/20"
                                     >
-                                        <RefreshCw size={12} /> 다시 생성하기
+                                        <RefreshCw size={14} /> 다시 생성하기
                                     </button>
                                 </>
                             )}
@@ -430,13 +450,20 @@ export default function AIContentStudio({ onApply, onClose }: AIContentStudioPro
 
                     {/* ── STEP 3: 피드백 개선 ── */}
                     {step === 3 && selectedDraft && (
-                        <div className="p-6 flex flex-col gap-4">
-                            <div className="flex flex-col gap-2 p-4 rounded-2xl" style={{ background: "var(--surface-2)" }}>
-                                <p className="text-[10px] font-bold text-foreground/40 uppercase tracking-widest">선택한 초안</p>
+                        <div className="p-6 flex flex-col gap-5">
+                            {/* 안내 */}
+                            <div>
+                                <h4 className="text-base font-black">AI에게 개선을 요청하세요</h4>
+                                <p className="text-sm text-foreground/50 mt-1">원하는 방향을 자연스럽게 말해주면 AI가 수정해줘요.</p>
+                            </div>
+
+                            {/* 선택한 초안 미리보기 */}
+                            <div className="flex flex-col gap-2.5 p-4 rounded-2xl" style={{ background: "var(--surface-2)" }}>
+                                <p className="text-xs font-bold text-foreground/40">선택한 초안</p>
                                 <p className="text-sm font-medium leading-relaxed">{selectedDraft.caption}</p>
-                                <div className="flex flex-wrap gap-1 mt-1">
+                                <div className="flex flex-wrap gap-1.5">
                                     {selectedDraft.hashtags.map(tag => (
-                                        <span key={tag} className="text-[9px] font-bold px-2 py-0.5 rounded-full"
+                                        <span key={tag} className="text-xs font-bold px-2.5 py-1 rounded-full"
                                             style={{ background: "var(--primary-light)", color: "var(--primary)" }}>
                                             #{tag}
                                         </span>
@@ -444,39 +471,41 @@ export default function AIContentStudio({ onApply, onClose }: AIContentStudioPro
                                 </div>
                             </div>
 
+                            {/* 피드백 입력 */}
                             <div className="flex flex-col gap-2">
-                                <label className="text-[10px] font-bold text-foreground/40 uppercase tracking-widest flex items-center gap-1.5">
-                                    <MessageSquare size={10} />
-                                    AI에게 개선 요청하기
+                                <label className="text-sm font-bold text-foreground/70 flex items-center gap-1.5">
+                                    <MessageSquare size={14} /> 개선 요청 내용
                                 </label>
                                 <textarea
                                     value={feedback}
                                     onChange={e => setFeedback(e.target.value)}
-                                    placeholder="예: 더 짧게 만들어줘 / 이모지 더 추가해줘 / 10대 친구들이 좋아할 말투로 / 가격을 강조해줘..."
+                                    placeholder="예: 더 짧게 만들어줘 / 이모지 더 추가해줘 / 10대 친구들이 좋아할 말투로..."
                                     rows={3}
-                                    className="w-full bg-foreground/5 border border-foreground/10 rounded-2xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all resize-none"
+                                    className="w-full bg-foreground/5 border border-foreground/10 rounded-2xl px-4 py-3.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all resize-none"
                                 />
-                                <p className="text-[10px] text-foreground/30 ml-1">AI에게 원하는 방향을 자연스럽게 말해보세요!</p>
                             </div>
 
-                            {/* 피드백 예시 버튼들 */}
-                            <div className="flex flex-wrap gap-1.5">
-                                {["더 짧게!", "이모지 추가", "더 유머러스하게", "가격 강조", "Z세대 언어로", "감성적으로"].map(ex => (
-                                    <button
-                                        key={ex}
-                                        onClick={() => setFeedback(ex)}
-                                        className="text-[10px] font-bold px-2.5 py-1 rounded-full border border-foreground/10 hover:border-primary/30 hover:text-primary transition-all"
-                                        style={{ background: "var(--surface)" }}
-                                    >
-                                        {ex}
-                                    </button>
-                                ))}
+                            {/* 빠른 예시 칩 */}
+                            <div className="flex flex-col gap-2">
+                                <p className="text-xs font-bold text-foreground/40">빠른 선택</p>
+                                <div className="flex flex-wrap gap-2">
+                                    {["더 짧게!", "이모지 추가", "더 유머러스하게", "가격 강조", "Z세대 언어로", "감성적으로"].map(ex => (
+                                        <button
+                                            key={ex}
+                                            onClick={() => setFeedback(ex)}
+                                            className="text-sm font-bold px-3.5 py-2 rounded-xl border border-foreground/10 hover:border-primary/40 hover:text-primary transition-all"
+                                            style={{ background: "var(--surface)" }}
+                                        >
+                                            {ex}
+                                        </button>
+                                    ))}
+                                </div>
                             </div>
 
                             {isRefining && (
-                                <div className="flex items-center gap-2 py-2">
-                                    <Loader2 size={14} className="animate-spin text-primary" />
-                                    <span className="text-xs font-bold text-primary italic">피드백 반영 중...</span>
+                                <div className="flex items-center gap-2.5 py-2">
+                                    <Loader2 size={16} className="animate-spin text-primary" />
+                                    <span className="text-sm font-bold text-primary">피드백 반영 중...</span>
                                 </div>
                             )}
                         </div>
@@ -484,34 +513,40 @@ export default function AIContentStudio({ onApply, onClose }: AIContentStudioPro
 
                     {/* ── STEP 4: 완성 ── */}
                     {step === 4 && (
-                        <div className="p-6 flex flex-col gap-4">
-                            <div className="flex items-center gap-2.5 p-3 rounded-2xl"
-                                style={{ background: "rgba(6,214,160,0.08)", border: "1px solid rgba(6,214,160,0.2)" }}>
-                                <Check size={16} className="text-accent shrink-0" />
-                                <p className="text-xs font-black text-accent">캡션 개선 완료! 업로드 모달에 바로 적용해요.</p>
+                        <div className="p-6 flex flex-col gap-5">
+                            {/* 완성 배너 */}
+                            <div className="flex items-center gap-3 p-4 rounded-2xl"
+                                style={{ background: "rgba(6,214,160,0.08)", border: "1.5px solid rgba(6,214,160,0.25)" }}>
+                                <div className="w-8 h-8 rounded-full bg-accent flex items-center justify-center shrink-0">
+                                    <Check size={16} className="text-white" />
+                                </div>
+                                <div>
+                                    <p className="text-sm font-black text-accent">캡션이 완성됐어요!</p>
+                                    <p className="text-xs text-foreground/50 mt-0.5">아래 버튼을 눌러 업로드 화면에 바로 적용하세요.</p>
+                                </div>
                             </div>
 
                             {/* 변경 로그 */}
                             {changeLog && (
-                                <div className="flex items-start gap-2 p-3 rounded-2xl" style={{ background: "var(--surface-2)" }}>
-                                    <RefreshCw size={12} className="text-secondary shrink-0 mt-0.5" />
-                                    <p className="text-[11px] text-foreground/60 leading-relaxed">{changeLog}</p>
+                                <div className="flex items-start gap-2.5 p-4 rounded-2xl" style={{ background: "var(--surface-2)" }}>
+                                    <RefreshCw size={14} className="text-secondary shrink-0 mt-0.5" />
+                                    <p className="text-sm text-foreground/60 leading-relaxed">{changeLog}</p>
                                 </div>
                             )}
 
                             {/* 완성된 캡션 */}
-                            <div className="flex flex-col gap-2">
+                            <div className="flex flex-col gap-2.5">
                                 <div className="flex items-center justify-between">
-                                    <p className="text-[10px] font-bold text-foreground/40 uppercase tracking-widest">완성된 캡션</p>
+                                    <p className="text-sm font-bold text-foreground/70">완성된 캡션</p>
                                     <button
                                         onClick={() => handleCopy(refinedCaption)}
-                                        className="flex items-center gap-1 text-[9px] font-bold text-foreground/40 hover:text-primary transition-colors"
+                                        className="flex items-center gap-1.5 text-xs font-bold text-foreground/40 hover:text-primary transition-colors"
                                     >
-                                        {copied ? <CheckCheck size={10} className="text-accent" /> : <Copy size={10} />}
+                                        {copied ? <CheckCheck size={12} className="text-accent" /> : <Copy size={12} />}
                                         {copied ? "복사됨!" : "복사"}
                                     </button>
                                 </div>
-                                <div className="p-4 rounded-2xl border border-primary/20" style={{ background: "rgba(255,107,53,0.04)" }}>
+                                <div className="p-4 rounded-2xl" style={{ background: "rgba(255,107,53,0.05)", border: "1.5px solid rgba(255,107,53,0.2)" }}>
                                     <p className="text-sm font-medium leading-relaxed">{refinedCaption}</p>
                                 </div>
                             </div>
@@ -519,10 +554,10 @@ export default function AIContentStudio({ onApply, onClose }: AIContentStudioPro
                             {/* 해시태그 */}
                             {refinedHashtags.length > 0 && (
                                 <div className="flex flex-col gap-2">
-                                    <p className="text-[10px] font-bold text-foreground/40 uppercase tracking-widest">해시태그</p>
-                                    <div className="flex flex-wrap gap-1.5">
+                                    <p className="text-sm font-bold text-foreground/70">해시태그</p>
+                                    <div className="flex flex-wrap gap-2">
                                         {refinedHashtags.map(tag => (
-                                            <span key={tag} className="text-[10px] font-bold px-2.5 py-1 rounded-full"
+                                            <span key={tag} className="text-sm font-bold px-3 py-1.5 rounded-full"
                                                 style={{ background: "var(--primary-light)", color: "var(--primary)" }}>
                                                 #{tag}
                                             </span>
@@ -533,24 +568,24 @@ export default function AIContentStudio({ onApply, onClose }: AIContentStudioPro
 
                             {/* 프롬프트 힌트 */}
                             {promptHint && (
-                                <div className="flex items-start gap-2 p-3 rounded-2xl"
-                                    style={{ background: "rgba(67,97,238,0.08)", border: "1px solid rgba(67,97,238,0.15)" }}>
-                                    <Lightbulb size={12} className="text-secondary shrink-0 mt-0.5" />
-                                    <p className="text-[10px] text-foreground/60 leading-relaxed">{promptHint}</p>
+                                <div className="flex items-start gap-2.5 p-4 rounded-2xl"
+                                    style={{ background: "rgba(67,97,238,0.07)", border: "1px solid rgba(67,97,238,0.15)" }}>
+                                    <Lightbulb size={14} className="text-secondary shrink-0 mt-0.5" />
+                                    <p className="text-sm text-foreground/60 leading-relaxed">{promptHint}</p>
                                 </div>
                             )}
                         </div>
                     )}
                 </div>
 
-                {/* 푸터 - 네비게이션 버튼 */}
-                <div className="p-4 border-t border-foreground/5 flex items-center gap-2 flex-shrink-0 bg-background/80 backdrop-blur-md">
+                {/* ── 푸터 ── */}
+                <div className="px-6 py-4 border-t border-foreground/5 flex items-center gap-2.5 flex-shrink-0 bg-background/80 backdrop-blur-md">
                     {step > 1 && (
                         <button
                             onClick={() => setStep(s => Math.max(1, s - 1))}
-                            className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl border border-foreground/10 text-xs font-bold text-foreground/50 hover:text-foreground/70 transition-all"
+                            className="flex items-center gap-1.5 px-4 py-3 rounded-xl border border-foreground/10 text-sm font-bold text-foreground/50 hover:text-foreground/70 transition-all shrink-0"
                         >
-                            <ChevronLeft size={14} /> 이전
+                            <ChevronLeft size={15} /> 이전
                         </button>
                     )}
 
@@ -558,7 +593,7 @@ export default function AIContentStudio({ onApply, onClose }: AIContentStudioPro
                         <button
                             onClick={handleGenerate}
                             disabled={!canProceedStep1}
-                            className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-black text-white transition-all disabled:opacity-30 hover:opacity-90 active:scale-[0.98]"
+                            className="flex-1 flex items-center justify-center gap-2 py-3.5 rounded-xl text-sm font-black text-white transition-all disabled:opacity-30 hover:opacity-90 active:scale-[0.98]"
                             style={{ background: "linear-gradient(135deg,#FF6B35,#4361EE)" }}
                         >
                             <Sparkles size={16} /> AI 초안 생성하기 <ChevronRight size={16} />
@@ -569,8 +604,8 @@ export default function AIContentStudio({ onApply, onClose }: AIContentStudioPro
                         <button
                             onClick={() => setStep(3)}
                             disabled={!selectedDraftId || isGenerating}
-                            className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-black text-white transition-all disabled:opacity-30 hover:opacity-90"
-                            style={{ background: selectedDraftId ? "var(--foreground)" : "var(--foreground)" }}
+                            className="flex-1 flex items-center justify-center gap-2 py-3.5 rounded-xl text-sm font-black text-white transition-all disabled:opacity-30 hover:opacity-90"
+                            style={{ background: "var(--foreground)" }}
                         >
                             이 초안으로 개선하기 <ArrowRight size={16} />
                         </button>
@@ -580,27 +615,24 @@ export default function AIContentStudio({ onApply, onClose }: AIContentStudioPro
                         <>
                             <button
                                 onClick={() => {
-                                    // 개선 없이 바로 선택한 초안 적용
                                     const finalCaption = selectedDraft?.caption ?? "";
                                     const finalTags = (selectedDraft?.hashtags ?? []).join(", ");
                                     addSkillXP("analytics", 5);
                                     onApply(finalCaption, finalTags);
                                 }}
-                                className="px-4 py-2.5 rounded-xl text-xs font-bold border border-foreground/10 text-foreground/50 hover:text-foreground/70 transition-all"
+                                className="px-4 py-3 rounded-xl text-sm font-bold border border-foreground/10 text-foreground/50 hover:text-foreground/70 transition-all shrink-0"
                             >
                                 그냥 사용
                             </button>
                             <button
                                 onClick={handleRefine}
                                 disabled={!feedback.trim() || isRefining}
-                                className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-black text-white transition-all disabled:opacity-30 hover:opacity-90"
+                                className="flex-1 flex items-center justify-center gap-2 py-3.5 rounded-xl text-sm font-black text-white transition-all disabled:opacity-30 hover:opacity-90"
                                 style={{ background: "linear-gradient(135deg,#FF6B35,#FFC233)" }}
                             >
-                                {isRefining ? (
-                                    <><Loader2 size={14} className="animate-spin" /> 개선 중...</>
-                                ) : (
-                                    <><Sparkles size={14} /> AI에게 개선 요청 <ArrowRight size={14} /></>
-                                )}
+                                {isRefining
+                                    ? <><Loader2 size={15} className="animate-spin" /> 개선 중...</>
+                                    : <><Sparkles size={15} /> AI에게 개선 요청 <ArrowRight size={15} /></>}
                             </button>
                         </>
                     )}
@@ -608,7 +640,7 @@ export default function AIContentStudio({ onApply, onClose }: AIContentStudioPro
                     {step === 4 && (
                         <button
                             onClick={handleApply}
-                            className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-black text-white transition-all hover:opacity-90 active:scale-[0.98]"
+                            className="flex-1 flex items-center justify-center gap-2 py-3.5 rounded-xl text-sm font-black text-white transition-all hover:opacity-90 active:scale-[0.98]"
                             style={{ background: "linear-gradient(135deg,#06D6A0,#4361EE)" }}
                         >
                             <Check size={16} /> 업로드 모달에 적용하기
