@@ -6,6 +6,22 @@ import { supabase } from "@/lib/supabase/client";
 import { useGameStore } from "@/store/useGameStore";
 import Link from "next/link";
 
+/** avatar가 http로 시작하면 이미지, 아니면 이모지/이니셜로 처리 */
+function AvatarDisplay({ avatar, name, size }: { avatar?: string | null; name: string; size: "lg" | "md" | "sm" }) {
+    const fontSize = size === "lg" ? "1.6rem" : size === "md" ? "1.1rem" : "0.8rem";
+    if (avatar && (avatar.startsWith("http") || avatar.startsWith("/"))) {
+        return <img src={avatar} alt={name} className="w-full h-full object-cover" />;
+    }
+    if (avatar && avatar.trim().length > 0) {
+        return <span style={{ fontSize, lineHeight: 1 }}>{avatar}</span>;
+    }
+    return (
+        <span className="font-black text-white" style={{ fontSize }}>
+            {name[0]?.toUpperCase() ?? "?"}
+        </span>
+    );
+}
+
 interface StoryUser {
     id: string;
     name: string;
@@ -273,11 +289,7 @@ function UserPostsModal({ user, onClose }: UserModalProps) {
                         <div className="w-10 h-10 rounded-full overflow-hidden shrink-0 flex items-center justify-center"
                             style={{ background: "linear-gradient(135deg, var(--primary), var(--secondary))" }}
                         >
-                            {user.avatar ? (
-                                <img src={user.avatar} alt={user.name} className="w-full h-full object-cover" />
-                            ) : (
-                                <span className="text-sm font-black text-white">{user.name[0].toUpperCase()}</span>
-                            )}
+                            <AvatarDisplay avatar={user.avatar} name={user.name} size="md" />
                         </div>
                         <div>
                             <p className="text-sm font-black" style={{ color: "var(--foreground)" }}>{user.name}</p>
@@ -367,13 +379,7 @@ export default function StoryBar() {
                 <Link href="/profile" className="flex flex-col items-center gap-1.5 shrink-0 group">
                     <div className="relative p-[2.5px] rounded-full bg-foreground/5 border border-foreground/10 transition-transform duration-300 group-hover:scale-105">
                         <div className="w-14 h-14 rounded-full bg-background border-2 border-background overflow-hidden relative flex items-center justify-center">
-                            {user.avatar ? (
-                                <img src={user.avatar} alt={user.name} className="w-full h-full object-cover" />
-                            ) : (
-                                <span className="text-lg font-black" style={{ color: "var(--foreground-muted)" }}>
-                                    {user.name ? user.name[0].toUpperCase() : "?"}
-                                </span>
-                            )}
+                            <AvatarDisplay avatar={user.avatar} name={user.name || "?"} size="lg" />
                             <div className="absolute bottom-0 right-0 w-5 h-5 bg-primary rounded-full flex items-center justify-center border-2 border-background">
                                 <Plus size={10} className="text-white" strokeWidth={4} />
                             </div>
@@ -391,13 +397,7 @@ export default function StoryBar() {
                     >
                         <div className="relative p-[2.5px] rounded-full bg-gradient-to-tr from-primary via-accent to-secondary transition-transform duration-300 group-hover:scale-105">
                             <div className="w-14 h-14 rounded-full bg-background border-2 border-background overflow-hidden flex items-center justify-center">
-                                {s.avatar ? (
-                                    <img src={s.avatar} alt={s.name} className="w-full h-full object-cover" />
-                                ) : (
-                                    <span className="text-lg font-black" style={{ color: "var(--foreground-muted)" }}>
-                                        {s.name[0].toUpperCase()}
-                                    </span>
-                                )}
+                                <AvatarDisplay avatar={s.avatar} name={s.name} size="lg" />
                             </div>
                         </div>
                         <span className="text-[10px] font-bold text-foreground">{s.name}</span>
