@@ -10,6 +10,7 @@ interface StoryUser {
     id: string;
     name: string;
     handle: string;
+    avatar?: string | null;
 }
 
 interface UserPost {
@@ -269,11 +270,14 @@ function UserPostsModal({ user, onClose }: UserModalProps) {
                                 <ArrowLeft size={18} />
                             </button>
                         )}
-                        <div
-                            className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-black text-white shrink-0"
+                        <div className="w-10 h-10 rounded-full overflow-hidden shrink-0 flex items-center justify-center"
                             style={{ background: "linear-gradient(135deg, var(--primary), var(--secondary))" }}
                         >
-                            {user.name[0].toUpperCase()}
+                            {user.avatar ? (
+                                <img src={user.avatar} alt={user.name} className="w-full h-full object-cover" />
+                            ) : (
+                                <span className="text-sm font-black text-white">{user.name[0].toUpperCase()}</span>
+                            )}
                         </div>
                         <div>
                             <p className="text-sm font-black" style={{ color: "var(--foreground)" }}>{user.name}</p>
@@ -348,7 +352,7 @@ export default function StoryBar() {
         const load = async () => {
             const { data } = await supabase
                 .from("profiles")
-                .select("id, name, handle")
+                .select("id, name, handle, avatar")
                 .neq("handle", user.handle || "")
                 .limit(10);
             if (data) setOthers(data);
@@ -363,13 +367,15 @@ export default function StoryBar() {
                 <Link href="/profile" className="flex flex-col items-center gap-1.5 shrink-0 group">
                     <div className="relative p-[2.5px] rounded-full bg-foreground/5 border border-foreground/10 transition-transform duration-300 group-hover:scale-105">
                         <div className="w-14 h-14 rounded-full bg-background border-2 border-background overflow-hidden relative flex items-center justify-center">
-                            <span className="text-xs font-bold text-foreground/20 italic">
-                                {user.name ? user.name[0].toUpperCase() : "?"}
-                            </span>
-                            <div className="absolute inset-0 bg-black/5 flex items-center justify-center">
-                                <div className="w-5 h-5 bg-primary rounded-full flex items-center justify-center border-2 border-background">
-                                    <Plus size={12} className="text-white" strokeWidth={4} />
-                                </div>
+                            {user.avatar ? (
+                                <img src={user.avatar} alt={user.name} className="w-full h-full object-cover" />
+                            ) : (
+                                <span className="text-lg font-black" style={{ color: "var(--foreground-muted)" }}>
+                                    {user.name ? user.name[0].toUpperCase() : "?"}
+                                </span>
+                            )}
+                            <div className="absolute bottom-0 right-0 w-5 h-5 bg-primary rounded-full flex items-center justify-center border-2 border-background">
+                                <Plus size={10} className="text-white" strokeWidth={4} />
                             </div>
                         </div>
                     </div>
@@ -385,9 +391,13 @@ export default function StoryBar() {
                     >
                         <div className="relative p-[2.5px] rounded-full bg-gradient-to-tr from-primary via-accent to-secondary transition-transform duration-300 group-hover:scale-105">
                             <div className="w-14 h-14 rounded-full bg-background border-2 border-background overflow-hidden flex items-center justify-center">
-                                <span className="text-xs font-bold text-foreground/20 italic">
-                                    {s.name[0].toUpperCase()}
-                                </span>
+                                {s.avatar ? (
+                                    <img src={s.avatar} alt={s.name} className="w-full h-full object-cover" />
+                                ) : (
+                                    <span className="text-lg font-black" style={{ color: "var(--foreground-muted)" }}>
+                                        {s.name[0].toUpperCase()}
+                                    </span>
+                                )}
                             </div>
                         </div>
                         <span className="text-[10px] font-bold text-foreground">{s.name}</span>
