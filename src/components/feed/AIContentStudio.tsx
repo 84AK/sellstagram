@@ -110,6 +110,7 @@ export default function AIContentStudio({ onApply, onClose }: AIContentStudioPro
     const [isGenerating, setIsGenerating] = useState(false);
     const [selectedDraftId, setSelectedDraftId] = useState<string | null>(null);
     const [promptSummary, setPromptSummary] = useState("");
+    const [aiError, setAiError] = useState<string | null>(null);
 
     // Step 3
     const [feedback, setFeedback] = useState("");
@@ -129,6 +130,7 @@ export default function AIContentStudio({ onApply, onClose }: AIContentStudioPro
     const handleGenerate = async () => {
         if (!canProceedStep1 || !strategy || !tone) return;
         setIsGenerating(true);
+        setAiError(null);
         setStep(2);
         setDrafts([]);
         try {
@@ -138,16 +140,22 @@ export default function AIContentStudio({ onApply, onClose }: AIContentStudioPro
                 body: JSON.stringify({ productName, targetAudience: targetAudience || "10~20대", strategy, tone: tone.label }),
             });
             const data = await res.json();
+            if (!res.ok) {
+                setAiError(data.error ?? "AI 초안 생성에 실패했어요.");
+                return;
+            }
             setDrafts(data.drafts ?? []);
             setPromptSummary(data.promptSummary ?? "");
             addSkillXP("copywriting", 10);
-        } catch { setDrafts([]); }
-        finally { setIsGenerating(false); }
+        } catch {
+            setAiError("네트워크 연결을 확인해주세요. 🌐");
+        } finally { setIsGenerating(false); }
     };
 
     const handleRefine = async () => {
         if (!selectedDraft || !feedback.trim() || !strategy) return;
         setIsRefining(true);
+        setAiError(null);
         try {
             const res = await fetch("/api/ai/refine", {
                 method: "POST",
@@ -155,14 +163,19 @@ export default function AIContentStudio({ onApply, onClose }: AIContentStudioPro
                 body: JSON.stringify({ currentCaption: selectedDraft.caption, feedback, productName, strategy, tone: tone?.label ?? "친근한" }),
             });
             const data = await res.json();
+            if (!res.ok) {
+                setAiError(data.error ?? "AI 개선에 실패했어요.");
+                return;
+            }
             setRefinedCaption(data.caption ?? "");
             setRefinedHashtags(data.hashtags ?? []);
             setChangeLog(data.changeLog ?? "");
             setPromptHint(data.promptHint ?? "");
             addSkillXP("copywriting", 15);
             setStep(4);
-        } catch { setRefinedCaption(""); }
-        finally { setIsRefining(false); }
+        } catch {
+            setAiError("네트워크 연결을 확인해주세요. 🌐");
+        } finally { setIsRefining(false); }
     };
 
     const handleApply = () => {
@@ -356,6 +369,17 @@ export default function AIContentStudio({ onApply, onClose }: AIContentStudioPro
                     {/* ── STEP 2: AI 초안 ── */}
                     {step === 2 && (
                         <div className="p-6 flex flex-col gap-5">
+                            {/* AI 에러 배너 */}
+                            {aiError && !isGenerating && (
+                                <div className="flex items-start gap-3 p-4 rounded-2xl animate-in slide-in-from-top-2 duration-200"
+                                    style={{ background: "rgba(239,68,68,0.07)", border: "1.5px solid rgba(239,68,68,0.25)" }}>
+                                    <span className="text-lg shrink-0">⚠️</span>
+                                    <div>
+                                        <p className="text-sm font-bold text-red-500">AI를 사용할 수 없어요</p>
+                                        <p className="text-sm text-foreground/60 mt-0.5 leading-relaxed">{aiError}</p>
+                                    </div>
+                                </div>
+                            )}
                             {isGenerating ? (
                                 <div className="flex flex-col items-center gap-5 py-16">
                                     <div className="relative">
@@ -451,6 +475,18 @@ export default function AIContentStudio({ onApply, onClose }: AIContentStudioPro
                     {/* ── STEP 3: 피드백 개선 ── */}
                     {step === 3 && selectedDraft && (
                         <div className="p-6 flex flex-col gap-5">
+                            {/* AI 에러 배너 */}
+                            {aiError && (
+                                <div className="flex items-start gap-3 p-4 rounded-2xl animate-in slide-in-from-top-2 duration-200"
+                                    style={{ background: "rgba(239,68,68,0.07)", border: "1.5px solid rgba(239,68,68,0.25)" }}>
+                                    <span className="text-lg shrink-0">⚠️</span>
+                                    <div>
+                                        <p className="text-sm font-bold text-red-500">AI를 사용할 수 없어요</p>
+                                        <p className="text-sm text-foreground/60 mt-0.5 leading-relaxed">{aiError}</p>
+                                        <p className="text-xs text-foreground/40 mt-1">&quot;그냥 사용&quot; 버튼으로 선택한 초안을 바로 적용할 수 있어요.</p>
+                                    </div>
+                                </div>
+                            )}
                             {/* 안내 */}
                             <div>
                                 <h4 className="text-base font-black">AI에게 개선을 요청하세요</h4>

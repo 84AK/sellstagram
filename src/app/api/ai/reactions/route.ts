@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { askGemini } from "@/lib/ai/gemini";
+import { askGemini, GeminiError } from "@/lib/ai/gemini";
 import { AI_PROMPTS } from "@/lib/ai/prompts";
 import { CUSTOMER_PERSONAS } from "@/lib/ai/personas";
 
@@ -42,7 +42,19 @@ export async function POST(request: Request) {
             });
         }
     } catch (error) {
+        if (error instanceof GeminiError) {
+            // reactions는 실패해도 fallback 댓글 반환 (UX 우선)
+            console.warn(`[Gemini ${error.type}] reactions fallback 사용`);
+            return NextResponse.json({
+                reactions: [
+                    { name: "민지(18)", comment: "와 진짜 사고 싶어요! 😍", personaId: "p1", sentiment: "positive", personaEmoji: "🛍️" },
+                    { name: "재현(24)", comment: "친환경 제품이군요! 좋아요 ♻️", personaId: "p2", sentiment: "positive", personaEmoji: "♻️" },
+                    { name: "서준(30)", comment: "가격 대비 품질이 어때요? 🔍", personaId: "p3", sentiment: "skeptical", personaEmoji: "🔍" },
+                ],
+                aiError: error.userMessage,
+            });
+        }
         console.error("AI Reactions API Error:", error);
-        return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+        return NextResponse.json({ error: "AI가 잠시 쉬고 있어요. 🤖" }, { status: 500 });
     }
 }
