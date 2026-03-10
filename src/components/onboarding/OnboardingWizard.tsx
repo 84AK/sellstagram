@@ -505,7 +505,11 @@ export default function OnboardingWizard({ onComplete }: { onComplete?: () => vo
                             disabled={
                                 (step === 1 && !role) ||
                                 (step === 2 && role === "student" && !selectedType) ||
-                                (step === 3 && role === "student" && !name.trim())
+                                (step === 3 && role === "student" && (
+                                    !name.trim() ||                                          // 이름 미입력
+                                    joinCodeChecking ||                                      // 코드 검증 중
+                                    (joinCode.trim().length > 0 && !joinedTeam)             // 코드 입력했는데 유효하지 않음
+                                ))
                             }
                             className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-sm text-white transition-all hover:opacity-90 active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed"
                             style={{ background: "linear-gradient(135deg, var(--primary), #FF9A72)", boxShadow: "0 4px 14px var(--primary-glow)" }}>
