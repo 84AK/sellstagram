@@ -564,11 +564,15 @@ export default function SessionPage() {
                             {teamMembers.slice(0, 5).map((m, i) => (
                                 <div
                                     key={i}
-                                    className="w-10 h-10 rounded-full border-2 flex items-center justify-center text-lg"
+                                    className="w-10 h-10 rounded-full border-2 overflow-hidden flex items-center justify-center text-lg"
                                     style={{ background: "var(--surface-2)", borderColor: "var(--surface)" }}
                                     title={m.name}
                                 >
-                                    {m.avatar}
+                                    {m.avatar?.startsWith("http") ? (
+                                        <img src={m.avatar} alt={m.name} className="w-full h-full object-contain" />
+                                    ) : (
+                                        <span>{m.avatar || "🦊"}</span>
+                                    )}
                                 </div>
                             ))}
                             {teamMembers.length > 5 && (
