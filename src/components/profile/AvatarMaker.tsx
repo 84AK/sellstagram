@@ -21,19 +21,27 @@ interface AvatarMakerProps {
     onClose: () => void;
 }
 
-// 스타일 카드에 4개 샘플 아바타 미리보기
+// 스타일 카드에 2개 샘플 아바타 미리보기
 function StyleSamples({ style }: { style: DiceBearStyle }) {
-    const seeds = ["alpha", "beta", "gamma", "delta"];
+    const seeds = ["alpha", "beta"];
     return (
-        <div className="flex gap-1 justify-center">
+        <div className="flex gap-2 justify-center items-center" style={{ minHeight: 60 }}>
             {seeds.map(s => (
                 <img
                     key={s}
-                    src={buildStyleUrl(style.id, style.defaultOptions, s, 64)}
+                    src={buildStyleUrl(style.id, style.defaultOptions, s, 80)}
                     alt=""
-                    className="rounded-lg"
-                    style={{ width: 44, height: 44, objectFit: "contain", background: "#f7f6f3" }}
+                    className="rounded-xl"
+                    style={{ width: 52, height: 52, objectFit: "contain", background: "#f7f6f3" }}
                     loading="lazy"
+                    onError={e => {
+                        const t = e.currentTarget;
+                        t.style.display = "none";
+                        const span = document.createElement("span");
+                        span.style.fontSize = "28px";
+                        span.textContent = style.emoji;
+                        t.parentElement?.appendChild(span);
+                    }}
                 />
             ))}
         </div>
@@ -129,6 +137,18 @@ function ColorSwatch({
     );
 }
 
+// 스타일의 모든 avatar 타입 옵션을 첫 번째/기본 값으로 채워 무작위 렌더링 방지
+function buildFullDefaults(style: DiceBearStyle): Record<string, string> {
+    const defaults = { ...style.defaultOptions };
+    style.options.forEach(opt => {
+        if (!(opt.key in defaults) && opt.type === "avatar" && !opt.hasProbability && opt.values.length > 0) {
+            const plain = opt.values.find(v => v.value === "plain" || v.value === "default");
+            defaults[opt.key] = plain?.value ?? opt.values[0].value;
+        }
+    });
+    return defaults;
+}
+
 export default function AvatarMaker({ seed, onSave, onClose }: AvatarMakerProps) {
     const { user, addPoints } = useGameStore();
     const [view, setView] = useState<"styles" | "editor">("styles");
@@ -144,11 +164,13 @@ export default function AvatarMaker({ seed, onSave, onClose }: AvatarMakerProps)
         const saved = getSavedAvatarStyle();
         if (saved) {
             setActiveStyleId(saved.styleId);
-            setOptions(saved.options);
+            // 저장된 옵션에 없는 키를 기본값으로 채움
+            const style = DICEBEAR_STYLES.find(s => s.id === saved.styleId) ?? DICEBEAR_STYLES[0];
+            setOptions({ ...buildFullDefaults(style), ...saved.options });
         } else {
             const defaultStyle = DICEBEAR_STYLES[0];
             setActiveStyleId(defaultStyle.id);
-            setOptions({ ...defaultStyle.defaultOptions });
+            setOptions(buildFullDefaults(defaultStyle));
         }
     }, []);
 
@@ -158,7 +180,7 @@ export default function AvatarMaker({ seed, onSave, onClose }: AvatarMakerProps)
         const isUnlocked = unlockedIds.includes(style.id);
         if (!isUnlocked) return;
         setActiveStyleId(style.id);
-        setOptions({ ...style.defaultOptions });
+        setOptions(buildFullDefaults(style));
         setActiveOptKey(style.options[0]?.key ?? null);
         setView("editor");
     };

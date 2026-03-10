@@ -2095,12 +2095,79 @@ function RewardManageTab() {
     );
 }
 
+/* ─────────────────── 팀 코드 공개 팝업 ─────────────────── */
+function TeamCodePopup({ team, onClose }: { team: DbTeam; onClose: () => void }) {
+    const code = team.join_code ?? "------";
+    return (
+        <div
+            className="fixed inset-0 z-[9999] flex flex-col items-center justify-center"
+            style={{ background: team.color ?? "#1a1a2e" }}
+            onClick={onClose}
+        >
+            {/* 닫기 힌트 */}
+            <p className="absolute top-6 right-8 text-white/50 text-sm font-bold select-none">
+                화면을 클릭하면 닫혀요
+            </p>
+
+            {/* 팀 이모지 + 이름 */}
+            <div className="flex flex-col items-center gap-6 select-none">
+                <div
+                    className="text-[120px] leading-none"
+                    style={{ filter: "drop-shadow(0 8px 32px rgba(0,0,0,0.4))" }}
+                >
+                    {team.emoji}
+                </div>
+                <h1
+                    className="font-black tracking-tight text-center"
+                    style={{ fontSize: "clamp(3rem, 10vw, 7rem)", color: "white", textShadow: "0 4px 24px rgba(0,0,0,0.3)", lineHeight: 1.1 }}
+                >
+                    {team.name}
+                </h1>
+
+                {/* 코드 */}
+                <div className="flex flex-col items-center gap-3 mt-4">
+                    <p className="text-white/70 font-bold text-lg tracking-widest uppercase">입장 코드</p>
+                    <div
+                        className="flex gap-3"
+                        onClick={e => e.stopPropagation()}
+                    >
+                        {code.split("").map((ch, i) => (
+                            <div
+                                key={i}
+                                className="flex items-center justify-center font-black"
+                                style={{
+                                    width: "clamp(56px, 10vw, 88px)",
+                                    height: "clamp(72px, 14vw, 112px)",
+                                    fontSize: "clamp(2rem, 6vw, 4rem)",
+                                    background: "rgba(255,255,255,0.2)",
+                                    borderRadius: 20,
+                                    color: "white",
+                                    border: "2px solid rgba(255,255,255,0.4)",
+                                    backdropFilter: "blur(8px)",
+                                    textShadow: "0 2px 8px rgba(0,0,0,0.3)",
+                                    letterSpacing: 0,
+                                }}
+                            >
+                                {ch}
+                            </div>
+                        ))}
+                    </div>
+                    <p className="text-white/60 text-sm font-semibold mt-2">
+                        셀스타그램 가입 화면에서 이 코드를 입력하세요
+                    </p>
+                </div>
+            </div>
+        </div>
+    );
+}
+
 /* ─────────────────── 팀 관리 탭 ─────────────────── */
 interface DbTeam {
     id: string;
     name: string;
     emoji: string;
     color: string;
+    join_code?: string;
     created_at: string;
 }
 
@@ -2120,6 +2187,8 @@ function TeamsTab() {
     const [deletingId, setDeletingId] = useState<string | null>(null);
     const [updatingTeamId, setUpdatingTeamId] = useState<string | null>(null);
     const [msg, setMsg] = useState("");
+    const [codePopupTeam, setCodePopupTeam] = useState<DbTeam | null>(null);
+    const [regeneratingId, setRegeneratingId] = useState<string | null>(null);
 
     const loadTeams = async () => {
         setLoading(true);
@@ -2206,6 +2275,24 @@ function TeamsTab() {
             console.error("팀 배정 오류:", err);
         }
         setUpdatingTeamId(null);
+    };
+
+    const handleRegenerateCode = async (team: DbTeam) => {
+        setRegeneratingId(team.id);
+        const { data: { session } } = await supabase.auth.getSession();
+        const token = session?.access_token;
+        const res = await fetch("/api/teacher/teams", {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json", ...(token ? { "Authorization": `Bearer ${token}` } : {}) },
+            body: JSON.stringify({ id: team.id }),
+        });
+        if (res.ok) {
+            const json = await res.json();
+            setTeams(prev => prev.map(t => t.id === team.id ? json.team : t));
+            // 팝업이 열려있으면 업데이트
+            setCodePopupTeam(prev => prev?.id === team.id ? json.team : prev);
+        }
+        setRegeneratingId(null);
     };
 
     const memberCount = (teamName: string) => students.filter(s => s.team === teamName).length;
@@ -2330,7 +2417,7 @@ function TeamsTab() {
                 ) : (
                     <div className="divide-y" style={{ borderColor: "var(--border)" }}>
                         {teams.map(team => (
-                            <div key={team.id} className="flex items-center gap-4 px-5 py-4">
+                            <div key={team.id} className="flex items-center gap-3 px-5 py-4">
                                 <div
                                     className="w-11 h-11 rounded-2xl flex items-center justify-center text-2xl shrink-0"
                                     style={{ background: `${team.color}18` }}
@@ -2339,10 +2426,44 @@ function TeamsTab() {
                                 </div>
                                 <div className="flex-1 min-w-0">
                                     <p className="font-black text-base" style={{ color: team.color }}>{team.name}</p>
-                                    <p className="text-xs" style={{ color: "var(--foreground-muted)" }}>
-                                        {memberCount(team.name)}명 배정됨
-                                    </p>
+                                    <div className="flex items-center gap-2 mt-0.5">
+                                        <span className="text-xs" style={{ color: "var(--foreground-muted)" }}>
+                                            {memberCount(team.name)}명 배정됨
+                                        </span>
+                                        {team.join_code ? (
+                                            <span
+                                                className="text-[10px] font-black tracking-widest px-2 py-0.5 rounded-lg"
+                                                style={{ background: `${team.color}18`, color: team.color, letterSpacing: "0.12em" }}
+                                            >
+                                                {team.join_code}
+                                            </span>
+                                        ) : (
+                                            <span className="text-[10px]" style={{ color: "var(--foreground-muted)" }}>코드 없음</span>
+                                        )}
+                                    </div>
                                 </div>
+                                {/* 코드 공개 버튼 */}
+                                <button
+                                    onClick={() => setCodePopupTeam(team)}
+                                    className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold text-white transition-all hover:opacity-90"
+                                    style={{ background: team.color }}
+                                    title="팀 코드 공개"
+                                >
+                                    <Megaphone size={13} />
+                                    코드 공개
+                                </button>
+                                {/* 코드 재생성 */}
+                                <button
+                                    onClick={() => handleRegenerateCode(team)}
+                                    disabled={regeneratingId === team.id}
+                                    className="p-2 rounded-xl transition-all hover:opacity-80 disabled:opacity-50"
+                                    title="입장 코드 재생성"
+                                    style={{ background: "var(--surface-2)" }}
+                                >
+                                    {regeneratingId === team.id
+                                        ? <Loader2 size={14} className="animate-spin" style={{ color: "var(--foreground-muted)" }} />
+                                        : <RotateCcw size={14} style={{ color: "var(--foreground-muted)" }} />}
+                                </button>
                                 <button
                                     onClick={() => handleDelete(team.id)}
                                     disabled={deletingId === team.id}
@@ -2435,6 +2556,11 @@ function TeamsTab() {
                     </div>
                 )}
             </div>
+
+            {/* 팀 코드 공개 팝업 */}
+            {codePopupTeam && (
+                <TeamCodePopup team={codePopupTeam} onClose={() => setCodePopupTeam(null)} />
+            )}
         </div>
     );
 }

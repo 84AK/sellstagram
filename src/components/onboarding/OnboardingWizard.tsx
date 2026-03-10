@@ -45,7 +45,10 @@ export default function OnboardingWizard({ onComplete }: { onComplete?: () => vo
     const [role, setRole] = useState<Role>(null);
     const [selectedType, setSelectedType] = useState<MarketingType | null>(null);
     const [name, setName] = useState("");
-    const [teamCode, setTeamCode] = useState("");
+    const [joinCode, setJoinCode] = useState("");
+    const [joinedTeam, setJoinedTeam] = useState<{ name: string; emoji: string; color: string } | null>(null);
+    const [joinCodeChecking, setJoinCodeChecking] = useState(false);
+    const [joinCodeError, setJoinCodeError] = useState("");
     const [selectedAvatar, setSelectedAvatar] = useState("🦊");
     const [isComplete, setIsComplete] = useState(false);
     const [animating, setAnimating] = useState(false);
@@ -64,15 +67,26 @@ export default function OnboardingWizard({ onComplete }: { onComplete?: () => vo
         setTimeout(() => { setStep(s => s - 1); setAnimating(false); }, 200);
     };
 
-    const getTeamName = (code: string) => {
-        const upper = code.toUpperCase();
-        if (upper.includes("A")) return "A팀";
-        if (upper.includes("B")) return "B팀";
-        if (upper.includes("C")) return "C팀";
-        if (upper.includes("D")) return "D팀";
-        if (upper.includes("E")) return "E팀";
-        if (upper.includes("F")) return "F팀";
-        return "A팀";
+    const handleJoinCode = async (code: string) => {
+        setJoinCode(code);
+        setJoinedTeam(null);
+        setJoinCodeError("");
+        if (code.trim().length < 6) return;
+        setJoinCodeChecking(true);
+        try {
+            const res = await fetch(`/api/teams/join?code=${encodeURIComponent(code.trim())}`);
+            if (res.ok) {
+                const json = await res.json();
+                setJoinedTeam(json.team);
+            } else {
+                const json = await res.json();
+                setJoinCodeError(json.error ?? "유효하지 않은 코드예요");
+            }
+        } catch {
+            setJoinCodeError("네트워크 오류가 발생했어요");
+        } finally {
+            setJoinCodeChecking(false);
+        }
     };
 
     // 교사 완료
@@ -118,17 +132,19 @@ export default function OnboardingWizard({ onComplete }: { onComplete?: () => vo
 
         const handle = name.trim().toLowerCase().replace(/\s/g, "_") + "_marketer";
 
+        const assignedTeam = joinedTeam?.name ?? "미배정";
+
         const { data: { session } } = await supabase.auth.getSession();
         if (session?.user) {
             await supabase.from("profiles").upsert({
                 id: session.user.id, name: name.trim(), handle,
                 avatar: selectedAvatar, marketer_type: selectedType.id,
-                team: "미배정", points: 0, rank: selectedType.badge, role: "student",
+                team: assignedTeam, points: 0, rank: selectedType.badge, role: "student",
             });
             localStorage.setItem("sellstagram_user_id", session.user.id);
         }
 
-        updateProfile({ name: name.trim(), handle, avatar: selectedAvatar, rank: selectedType.badge, team: "미배정" });
+        updateProfile({ name: name.trim(), handle, avatar: selectedAvatar, rank: selectedType.badge, team: assignedTeam });
 
         setSaving(false);
         setIsComplete(true);
@@ -162,11 +178,13 @@ export default function OnboardingWizard({ onComplete }: { onComplete?: () => vo
                     <p className="text-xs mb-6" style={{ color: "var(--foreground-muted)" }}>
                         마케터로서의 첫 걸음을 내딛었어요 🎉
                     </p>
-                    <div className="rounded-2xl p-4 mb-6" style={{ background: "var(--surface-2)" }}>
+                    <div className="rounded-2xl p-4 mb-6" style={{ background: joinedTeam ? "var(--accent-light)" : "var(--surface-2)", border: joinedTeam ? "1px solid var(--accent)" : "none" }}>
                         <div className="flex items-center gap-2">
-                            <Users size={16} style={{ color: "var(--secondary)" }} />
+                            <Users size={16} style={{ color: joinedTeam ? "var(--accent)" : "var(--secondary)" }} />
                             <span className="text-sm font-semibold" style={{ color: "var(--foreground-soft)" }}>
-                                팀은 선생님이 곧 배정해 드릴 거예요!
+                                {joinedTeam
+                                    ? `${joinedTeam.emoji} ${joinedTeam.name}에 합류했어요!`
+                                    : "팀은 선생님이 곧 배정해 드릴 거예요!"}
                             </span>
                         </div>
                     </div>
@@ -347,9 +365,10 @@ export default function OnboardingWizard({ onComplete }: { onComplete?: () => vo
                                 내 마케터 정보 입력 ✏️
                             </h2>
                             <p className="text-sm mb-5" style={{ color: "var(--foreground-soft)" }}>
-                                이름과 아바타를 설정해요. 팀은 선생님이 배정해 드려요.
+                                이름과 아바타를 설정해요. 팀 코드가 있으면 입력해보세요!
                             </p>
                             <div className="flex flex-col gap-4">
+                                {/* 이름 */}
                                 <div>
                                     <label className="text-xs font-bold mb-1.5 block" style={{ color: "var(--foreground-soft)" }}>이름</label>
                                     <input type="text" value={name} onChange={e => setName(e.target.value)}
@@ -357,6 +376,56 @@ export default function OnboardingWizard({ onComplete }: { onComplete?: () => vo
                                         className="w-full px-4 py-3 rounded-xl text-sm font-semibold outline-none"
                                         style={{ background: "var(--surface-2)", border: name ? "2px solid var(--primary)" : "2px solid transparent", color: "var(--foreground)" }} />
                                 </div>
+
+                                {/* 팀 코드 (선택) */}
+                                <div>
+                                    <label className="text-xs font-bold mb-1.5 flex items-center gap-1.5 block" style={{ color: "var(--foreground-soft)" }}>
+                                        <Users size={12} />
+                                        팀 코드
+                                        <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full" style={{ background: "var(--surface-3)", color: "var(--foreground-muted)" }}>선택</span>
+                                    </label>
+                                    <div className="relative">
+                                        <input
+                                            type="text"
+                                            value={joinCode}
+                                            onChange={e => handleJoinCode(e.target.value.toUpperCase().slice(0, 6))}
+                                            placeholder="선생님께 받은 6자리 코드 입력"
+                                            maxLength={6}
+                                            className="w-full px-4 py-3 rounded-xl text-sm font-black outline-none tracking-widest uppercase"
+                                            style={{
+                                                background: "var(--surface-2)",
+                                                border: joinedTeam
+                                                    ? "2px solid var(--accent)"
+                                                    : joinCodeError
+                                                    ? "2px solid #EF4444"
+                                                    : "2px solid transparent",
+                                                color: "var(--foreground)",
+                                                letterSpacing: "0.15em",
+                                            }}
+                                        />
+                                        {joinCodeChecking && (
+                                            <Loader2 size={16} className="animate-spin absolute right-4 top-1/2 -translate-y-1/2" style={{ color: "var(--foreground-muted)" }} />
+                                        )}
+                                    </div>
+                                    {joinedTeam && (
+                                        <div className="mt-2 flex items-center gap-2 px-3 py-2 rounded-xl" style={{ background: "var(--accent-light)", border: "1px solid var(--accent)" }}>
+                                            <CheckCircle2 size={14} style={{ color: "var(--accent)" }} />
+                                            <span className="text-sm font-black" style={{ color: "var(--accent)" }}>
+                                                {joinedTeam.emoji} {joinedTeam.name} 배정 확인!
+                                            </span>
+                                        </div>
+                                    )}
+                                    {joinCodeError && (
+                                        <p className="mt-1.5 text-xs font-bold" style={{ color: "#EF4444" }}>{joinCodeError}</p>
+                                    )}
+                                    {!joinCode && (
+                                        <p className="mt-1.5 text-[10px]" style={{ color: "var(--foreground-muted)" }}>
+                                            코드가 없으면 비워두세요 — 팀 미배정으로 시작해요
+                                        </p>
+                                    )}
+                                </div>
+
+                                {/* 아바타 */}
                                 <div>
                                     <label className="text-xs font-bold mb-1.5 block" style={{ color: "var(--foreground-soft)" }}>아바타</label>
                                     <div className="flex flex-wrap gap-2">
@@ -398,9 +467,15 @@ export default function OnboardingWizard({ onComplete }: { onComplete?: () => vo
                                             style={{ background: selectedType.bg, color: selectedType.color }}>
                                             {selectedType.badge}
                                         </span>
-                                        <span className="text-xs font-semibold" style={{ color: "var(--foreground-soft)" }}>
-                                            팀 배정 대기 중
-                                        </span>
+                                        {joinedTeam ? (
+                                            <span className="text-xs font-black" style={{ color: "var(--accent)" }}>
+                                                {joinedTeam.emoji} {joinedTeam.name} 배정됨
+                                            </span>
+                                        ) : (
+                                            <span className="text-xs font-semibold" style={{ color: "var(--foreground-muted)" }}>
+                                                팀 미배정 (추후 배정 가능)
+                                            </span>
+                                        )}
                                     </div>
                                 </div>
                             </div>

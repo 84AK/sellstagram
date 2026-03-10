@@ -288,7 +288,7 @@ export default function ShopPage() {
                                 const isUnlocked = unlockedStyleIds.includes(style.id);
                                 const isBuying = buyingStyleId === style.id;
                                 const canAfford = user.points >= style.xpCost;
-                                const seeds = ["alpha", "beta", "gamma", "delta"];
+                                const seeds = ["alpha", "beta"];
 
                                 return (
                                     <div
@@ -301,22 +301,31 @@ export default function ShopPage() {
                                                 : "1.5px dashed var(--border)",
                                         }}
                                     >
-                                        {/* 샘플 아바타 4개 */}
+                                        {/* 샘플 아바타 2개 */}
                                         <div
-                                            className="flex gap-2 p-4 justify-center"
+                                            className="flex gap-3 p-4 justify-center items-center"
                                             style={{
                                                 background: isUnlocked ? "var(--surface-2)" : "var(--surface-3)",
                                                 filter: isUnlocked ? "none" : "grayscale(40%)",
+                                                minHeight: 76,
                                             }}
                                         >
                                             {seeds.map(s => (
                                                 <img
                                                     key={s}
-                                                    src={buildStyleUrl(style.id, style.defaultOptions, s, 64)}
+                                                    src={buildStyleUrl(style.id, style.defaultOptions, s, 80)}
                                                     alt=""
-                                                    className="rounded-lg"
-                                                    style={{ width: 44, height: 44, objectFit: "contain", background: "#f7f6f3" }}
+                                                    className="rounded-xl"
+                                                    style={{ width: 56, height: 56, objectFit: "contain", background: "#f7f6f3" }}
                                                     loading="lazy"
+                                                    onError={e => {
+                                                        const t = e.currentTarget;
+                                                        t.style.display = "none";
+                                                        const span = document.createElement("span");
+                                                        span.style.fontSize = "32px";
+                                                        span.textContent = style.emoji;
+                                                        t.parentElement?.appendChild(span);
+                                                    }}
                                                 />
                                             ))}
                                         </div>

@@ -44,6 +44,12 @@ export async function GET() {
     return NextResponse.json({ teams: data ?? [] });
 }
 
+/** 혼동 없는 문자 6자리 입장 코드 생성 */
+function generateJoinCode(): string {
+    const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+    return Array.from({ length: 6 }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
+}
+
 // POST: 팀 생성 (교사 전용)
 export async function POST(request: NextRequest) {
     if (!(await isAuthorized(request))) {
@@ -54,17 +60,43 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: "팀 이름은 필수입니다" }, { status: 400 });
     }
     const admin = createAdminClient();
-    const { data, error } = await admin
-        .from("teams")
-        .insert({ name: name.trim(), emoji: emoji ?? "🏆", color: color ?? "#FF6B35" })
-        .select()
-        .single();
+
+    // 코드 충돌 방지: 최대 3회 시도
+    let data = null, error = null;
+    for (let attempt = 0; attempt < 3; attempt++) {
+        const joinCode = generateJoinCode();
+        const result = await admin
+            .from("teams")
+            .insert({ name: name.trim(), emoji: emoji ?? "🏆", color: color ?? "#FF6B35", join_code: joinCode })
+            .select()
+            .single();
+        data = result.data; error = result.error;
+        if (!error || error.code !== "23505" || !error.message.includes("join_code")) break;
+    }
     if (error) {
         if (error.code === "23505") {
             return NextResponse.json({ error: "이미 존재하는 팀 이름입니다" }, { status: 409 });
         }
         return NextResponse.json({ error: error.message }, { status: 500 });
     }
+    return NextResponse.json({ team: data });
+}
+
+// PATCH: 팀 코드 재생성 (교사 전용)
+export async function PATCH(request: NextRequest) {
+    if (!(await isAuthorized(request))) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    const { id } = await request.json();
+    if (!id) return NextResponse.json({ error: "Missing id" }, { status: 400 });
+    const admin = createAdminClient();
+    const { data, error } = await admin
+        .from("teams")
+        .update({ join_code: generateJoinCode() })
+        .eq("id", id)
+        .select()
+        .single();
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
     return NextResponse.json({ team: data });
 }
 

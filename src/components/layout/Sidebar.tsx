@@ -189,7 +189,13 @@ export default function Sidebar() {
                     className="flex flex-col items-center gap-0.5 transition-all duration-200"
                     style={{ color: pathname === "/profile" ? "var(--primary)" : "var(--foreground-muted)" }}
                 >
-                    {user.name ? (
+                    {user.avatar?.startsWith("http") ? (
+                        <div className="w-6 h-6 rounded-lg overflow-hidden">
+                            <img src={user.avatar} alt={user.name} className="w-full h-full object-contain" />
+                        </div>
+                    ) : user.avatar ? (
+                        <span className="text-lg leading-none">{user.avatar}</span>
+                    ) : user.name ? (
                         <div className="w-6 h-6 rounded-lg flex items-center justify-center text-[10px] font-black text-white"
                             style={{ background: "linear-gradient(135deg, var(--secondary), var(--accent))" }}>
                             {user.name[0].toUpperCase()}
@@ -384,10 +390,16 @@ export default function Sidebar() {
                         <>
                             <div className="flex items-center gap-3 mb-3">
                                 <div
-                                    className="w-9 h-9 rounded-xl flex items-center justify-center font-bold text-sm text-white shrink-0"
+                                    className="w-9 h-9 rounded-xl overflow-hidden shrink-0 flex items-center justify-center"
                                     style={{ background: "linear-gradient(135deg, var(--secondary), var(--accent))" }}
                                 >
-                                    {user.name ? user.name[0].toUpperCase() : "?"}
+                                    {user.avatar?.startsWith("http") ? (
+                                        <img src={user.avatar} alt={user.name} className="w-full h-full object-contain" />
+                                    ) : user.avatar ? (
+                                        <span className="text-lg leading-none">{user.avatar}</span>
+                                    ) : (
+                                        <span className="font-bold text-sm text-white">{user.name ? user.name[0].toUpperCase() : "?"}</span>
+                                    )}
                                 </div>
                                 <div className="flex flex-col min-w-0 flex-1">
                                     <span className="text-sm font-bold truncate" style={{ color: "var(--foreground)" }}>
