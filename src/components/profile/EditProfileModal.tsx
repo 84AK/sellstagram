@@ -15,7 +15,9 @@ export default function EditProfileModal({ onClose }: EditProfileModalProps) {
     const { user, updateProfile } = useGameStore();
 
     const [name, setName] = useState(user.name);
-    const [avatar, setAvatar] = useState(user.avatar || "🦊");
+    // DiceBear URL이면 이모지 선택 시 교체, 아니면 그대로 사용
+    const initialAvatar = user.avatar?.startsWith("http") ? "🦊" : (user.avatar || "🦊");
+    const [avatar, setAvatar] = useState(initialAvatar);
     const [saving, setSaving] = useState(false);
     const [saved, setSaved] = useState(false);
     const [error, setError] = useState("");
@@ -77,10 +79,14 @@ export default function EditProfileModal({ onClose }: EditProfileModalProps) {
                     {/* 현재 아바타 미리보기 */}
                     <div className="flex justify-center">
                         <div
-                            className="w-20 h-20 rounded-3xl flex items-center justify-center text-4xl"
+                            className="w-20 h-20 rounded-3xl overflow-hidden flex items-center justify-center"
                             style={{ background: "var(--primary-light)", border: "2px solid var(--primary)" }}
                         >
-                            {avatar}
+                            {avatar.startsWith("http") ? (
+                                <img src={avatar} alt="avatar" className="w-full h-full object-contain" />
+                            ) : (
+                                <span className="text-4xl">{avatar}</span>
+                            )}
                         </div>
                     </div>
 
