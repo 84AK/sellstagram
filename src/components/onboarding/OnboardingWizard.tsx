@@ -45,6 +45,8 @@ export default function OnboardingWizard({ onComplete }: { onComplete?: () => vo
     const [role, setRole] = useState<Role>(null);
     const [selectedType, setSelectedType] = useState<MarketingType | null>(null);
     const [name, setName] = useState("");
+    const [nameChecking, setNameChecking] = useState(false);
+    const [nameDuplicate, setNameDuplicate] = useState(false);
     const [joinCode, setJoinCode] = useState("");
     const [joinedTeam, setJoinedTeam] = useState<{ name: string; emoji: string; color: string } | null>(null);
     const [joinCodeChecking, setJoinCodeChecking] = useState(false);
@@ -65,6 +67,25 @@ export default function OnboardingWizard({ onComplete }: { onComplete?: () => vo
     const goBack = () => {
         setAnimating(true);
         setTimeout(() => { setStep(s => s - 1); setAnimating(false); }, 200);
+    };
+
+    // 이름 입력 시 500ms 디바운스로 중복 체크
+    const nameCheckTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+    const handleNameChange = (value: string) => {
+        setName(value);
+        setNameDuplicate(false);
+        if (nameCheckTimer.current) clearTimeout(nameCheckTimer.current);
+        if (!value.trim()) return;
+        nameCheckTimer.current = setTimeout(async () => {
+            setNameChecking(true);
+            const { data } = await supabase
+                .from("profiles")
+                .select("id")
+                .eq("name", value.trim())
+                .limit(1);
+            setNameDuplicate((data?.length ?? 0) > 0);
+            setNameChecking(false);
+        }, 500);
     };
 
     const handleJoinCode = async (code: string) => {
@@ -371,10 +392,24 @@ export default function OnboardingWizard({ onComplete }: { onComplete?: () => vo
                                 {/* 이름 */}
                                 <div>
                                     <label className="text-xs font-bold mb-1.5 block" style={{ color: "var(--foreground-soft)" }}>이름</label>
-                                    <input type="text" value={name} onChange={e => setName(e.target.value)}
-                                        placeholder="예: 김지우"
-                                        className="w-full px-4 py-3 rounded-xl text-sm font-semibold outline-none"
-                                        style={{ background: "var(--surface-2)", border: name ? "2px solid var(--primary)" : "2px solid transparent", color: "var(--foreground)" }} />
+                                    <div className="relative">
+                                        <input type="text" value={name} onChange={e => handleNameChange(e.target.value)}
+                                            placeholder="예: 김지우"
+                                            className="w-full px-4 py-3 rounded-xl text-sm font-semibold outline-none"
+                                            style={{
+                                                background: "var(--surface-2)",
+                                                border: nameDuplicate ? "2px solid #EF4444" : name ? "2px solid var(--primary)" : "2px solid transparent",
+                                                color: "var(--foreground)",
+                                            }} />
+                                        {nameChecking && (
+                                            <Loader2 size={14} className="animate-spin absolute right-4 top-1/2 -translate-y-1/2" style={{ color: "var(--foreground-muted)" }} />
+                                        )}
+                                    </div>
+                                    {nameDuplicate && (
+                                        <p className="mt-1.5 text-xs font-bold" style={{ color: "#EF4444" }}>
+                                            이미 사용 중인 이름이에요. 다른 이름을 입력해주세요.
+                                        </p>
+                                    )}
                                 </div>
 
                                 {/* 팀 코드 (선택) */}
@@ -507,6 +542,8 @@ export default function OnboardingWizard({ onComplete }: { onComplete?: () => vo
                                 (step === 2 && role === "student" && !selectedType) ||
                                 (step === 3 && role === "student" && (
                                     !name.trim() ||                                          // 이름 미입력
+                                    nameChecking ||                                          // 이름 중복 확인 중
+                                    nameDuplicate ||                                         // 이름 중복
                                     joinCodeChecking ||                                      // 코드 검증 중
                                     (joinCode.trim().length > 0 && !joinedTeam)             // 코드 입력했는데 유효하지 않음
                                 ))
