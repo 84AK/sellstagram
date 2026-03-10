@@ -32,7 +32,8 @@ export default function OnboardingGate({ children }: { children: React.ReactNode
             return;
         }
 
-        initializedRef.current = false;
+        // 이미 인증 완료된 경우 재체크 불필요 (페이지 이동 시 팝업 재출현 방지)
+        if (initializedRef.current) return;
 
         const checkAuthAndProfile = async () => {
             // 관리자 쿠키 확인 — 관리자는 모든 페이지 자유 접근
@@ -47,18 +48,20 @@ export default function OnboardingGate({ children }: { children: React.ReactNode
             const { data: { session } } = await supabase.auth.getSession();
 
             if (!session) {
-                router.push("/");
+                // 이미 ready 상태라면 세션 일시 불가 상황 — 리다이렉트 하지 않음
+                if (status !== "ready") router.push("/");
                 return;
             }
 
-            const { data: profile } = await supabase
+            const { data: profile, error } = await supabase
                 .from("profiles")
                 .select("id, name, handle, avatar, marketer_type, team, points, rank, role, balance")
                 .eq("id", session.user.id)
                 .single();
 
-            if (!profile) {
-                setStatus("needs-onboarding");
+            if (error || !profile) {
+                // 이미 ready 상태인 사용자를 다시 온보딩으로 보내지 않음
+                setStatus(prev => prev === "ready" ? "ready" : "needs-onboarding");
                 return;
             }
 
@@ -76,7 +79,7 @@ export default function OnboardingGate({ children }: { children: React.ReactNode
             updateProfile({
                 name: profile.name,
                 handle: profile.handle,
-                avatar: profile.avatar, // DiceBear URL or emoji — AvatarDisplay가 자동 처리
+                avatar: profile.avatar,
                 rank: profile.rank,
                 team: profile.team,
                 points: profile.points ?? 0,
@@ -94,7 +97,7 @@ export default function OnboardingGate({ children }: { children: React.ReactNode
             // SIGNED_IN은 토큰 갱신 시에도 발생하므로, 이미 초기화된 경우 무시
             if (event === "SIGNED_IN" && !initializedRef.current) checkAuthAndProfile();
             if (event === "SIGNED_OUT") {
-                // 스토어 유저 정보 초기화
+                initializedRef.current = false;
                 useGameStore.setState({
                     user: { name: "", handle: "", avatar: "", rank: "Beginner", team: "", points: 0, role: "", skillXP: { copywriting: 0, analytics: 0, creative: 0 } },
                     posts: [],

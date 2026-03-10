@@ -157,11 +157,16 @@ export default function OnboardingWizard({ onComplete }: { onComplete?: () => vo
 
         const { data: { session } } = await supabase.auth.getSession();
         if (session?.user) {
-            await supabase.from("profiles").upsert({
+            const { error: upsertError } = await supabase.from("profiles").upsert({
                 id: session.user.id, name: name.trim(), handle,
                 avatar: selectedAvatar, marketer_type: selectedType.id,
                 team: assignedTeam, points: 0, rank: selectedType.badge, role: "student",
             });
+            if (upsertError) {
+                console.error("Profile save error:", upsertError.message);
+                setSaving(false);
+                return; // 저장 실패 시 완료 화면으로 넘어가지 않음
+            }
             localStorage.setItem("sellstagram_user_id", session.user.id);
         }
 
