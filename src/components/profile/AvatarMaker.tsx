@@ -49,6 +49,7 @@ function OptionAvatarPreview({
     selected,
     onClick,
     label,
+    hasProbability,
 }: {
     styleId: string;
     optKey: string;
@@ -57,8 +58,9 @@ function OptionAvatarPreview({
     selected: boolean;
     onClick: () => void;
     label: string;
+    hasProbability?: boolean;
 }) {
-    const url = buildOptionPreviewUrl(styleId, optKey, optValue, defaults, 72);
+    const url = buildOptionPreviewUrl(styleId, optKey, optValue, defaults, hasProbability, 72);
     return (
         <button
             onClick={onClick}
@@ -178,7 +180,8 @@ export default function AvatarMaker({ seed, onSave, onClose }: AvatarMakerProps)
         onSave(url);
     }, [activeStyle, options, seed, onSave]);
 
-    const previewUrl = buildStyleUrl(activeStyle.id, options, seed, 300);
+    const probabilityKeys = activeStyle.options.filter(o => o.hasProbability).map(o => o.key);
+    const previewUrl = buildStyleUrl(activeStyle.id, options, seed, 300, probabilityKeys);
 
     const activeOption: StyleOption | null =
         activeOptKey ? (activeStyle.options.find(o => o.key === activeOptKey) ?? null) : null;
@@ -416,6 +419,7 @@ export default function AvatarMaker({ seed, onSave, onClose }: AvatarMakerProps)
                                                     selected={options[activeOption.key] === v.value}
                                                     onClick={() => handleOptionChange(activeOption.key, v.value)}
                                                     label={v.label}
+                                                    hasProbability={activeOption.hasProbability}
                                                 />
                                             ))}
                                         </div>
