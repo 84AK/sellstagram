@@ -211,7 +211,9 @@ export default function ProfilePage() {
                     <div className="relative">
                         <div className="w-32 h-32 rounded-[2.5rem] bg-gradient-to-tr from-primary via-accent to-secondary p-1 shadow-2xl shadow-primary/20 group">
                             <div className="w-full h-full rounded-[2.3rem] bg-background flex items-center justify-center overflow-hidden">
-                                {user.avatar ? (
+                                {user.avatar?.startsWith("http") ? (
+                                    <img src={user.avatar} alt={user.name} className="w-full h-full object-contain" />
+                                ) : user.avatar ? (
                                     <span className="text-6xl">{user.avatar}</span>
                                 ) : (
                                     <User size={64} className="text-foreground/10 group-hover:scale-110 transition-transform duration-500" />
@@ -306,9 +308,9 @@ export default function ProfilePage() {
 
                     {/* ID 카드 탭 */}
                     {activeTab === "idcard" && (
-                        <div className="lg:col-span-3 flex flex-col lg:flex-row gap-10 items-start">
-                            {/* 카드 */}
-                            <div className="flex flex-col items-center gap-4">
+                        <div className="lg:col-span-3 flex flex-col lg:flex-row gap-12 items-center lg:items-start">
+                            {/* 카드 영역 */}
+                            <div className="flex flex-col items-center gap-5 shrink-0">
                                 <IDCard
                                     name={user.name}
                                     handle={user.handle}
@@ -319,65 +321,59 @@ export default function ProfilePage() {
                                     avatarConfig={user.avatarConfig}
                                     onCustomize={() => setShowAvatarBuilder(true)}
                                 />
-                                <p className="text-xs text-center" style={{ color: "var(--foreground-muted)" }}>
-                                    나만의 마케터 ID 카드 🪪
-                                </p>
                             </div>
 
-                            {/* 아바타 안내 */}
-                            <div className="flex flex-col gap-5 flex-1 max-w-lg">
+                            {/* 우측 안내 */}
+                            <div className="flex flex-col gap-6 flex-1">
                                 <div>
-                                    <h3 className="text-2xl font-black italic tracking-tight" style={{ color: "var(--foreground)" }}>
+                                    <h3 className="text-3xl font-black italic tracking-tight" style={{ color: "var(--foreground)" }}>
                                         나만의 마케터 아이덴티티
                                     </h3>
-                                    <p className="text-sm mt-1" style={{ color: "var(--foreground-muted)" }}>
-                                        XP를 모아 아바타를 꾸미고, 팀 피드와 랭킹에서 나만의 스타일로 표시돼요.
+                                    <p className="text-base mt-2" style={{ color: "var(--foreground-muted)" }}>
+                                        DiceBear 아바타 스타일을 선택하고, XP로 프리미엄 스타일을 해금하세요.
+                                        팀 피드·랭킹에서 나만의 스타일로 표시돼요.
                                     </p>
                                 </div>
 
-                                <div className="grid grid-cols-2 gap-3">
+                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                                     {[
-                                        { label: "헤어 스타일", count: 14, emoji: "💇", desc: "14가지 헤어" },
-                                        { label: "눈 표현", count: 11, emoji: "👁️", desc: "11가지 눈" },
-                                        { label: "의상", count: 18, emoji: "👕", desc: "8종 × 10색상" },
-                                        { label: "액세서리", count: 7, emoji: "👓", desc: "안경·선글라스" },
-                                        { label: "머리색", count: 10, emoji: "🎨", desc: "10가지 색상" },
-                                        { label: "배경색", count: 12, emoji: "🖼️", desc: "12가지 배경" },
-                                    ].map(({ label, emoji, desc }) => (
+                                        { emoji: "🎨", title: "9가지 스타일", desc: "무료 2개 + XP 해금 7개" },
+                                        { emoji: "⚙️", title: "세부 옵션 편집", desc: "헤어·눈·의상·색상 자유 조합" },
+                                        { emoji: "🪪", title: "ID 카드 반영", desc: "저장하면 카드에 즉시 적용" },
+                                    ].map(({ emoji, title, desc }) => (
                                         <div
-                                            key={label}
-                                            className="flex items-center gap-3 p-3 rounded-2xl"
+                                            key={title}
+                                            className="flex flex-col gap-2 p-5 rounded-2xl"
                                             style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
                                         >
-                                            <span style={{ fontSize: 24 }}>{emoji}</span>
-                                            <div>
-                                                <p className="text-xs font-black" style={{ color: "var(--foreground)" }}>{label}</p>
-                                                <p className="text-[10px]" style={{ color: "var(--foreground-muted)" }}>{desc}</p>
-                                            </div>
+                                            <span style={{ fontSize: 28 }}>{emoji}</span>
+                                            <p className="text-sm font-black" style={{ color: "var(--foreground)" }}>{title}</p>
+                                            <p className="text-xs" style={{ color: "var(--foreground-muted)" }}>{desc}</p>
                                         </div>
                                     ))}
                                 </div>
 
                                 <button
                                     onClick={() => setShowAvatarBuilder(true)}
-                                    className="w-full py-4 rounded-2xl flex items-center justify-center gap-2 font-black text-sm transition-all hover:opacity-90 active:scale-[0.98]"
+                                    className="w-full py-5 rounded-2xl flex items-center justify-center gap-2 font-black text-base transition-all hover:opacity-90 active:scale-[0.98]"
                                     style={{ background: "var(--primary)", color: "white" }}
                                 >
-                                    <Palette size={18} />
+                                    <Palette size={20} />
                                     지금 아바타 꾸미기
                                 </button>
 
                                 <div
-                                    className="flex items-start gap-3 p-4 rounded-2xl"
+                                    className="flex items-start gap-4 p-5 rounded-2xl"
                                     style={{ background: "var(--highlight-light)", border: "1px solid rgba(255,194,51,0.3)" }}
                                 >
-                                    <Zap size={16} style={{ color: "var(--highlight)", marginTop: 2 }} />
+                                    <Zap size={20} style={{ color: "var(--highlight)", marginTop: 2, flexShrink: 0 }} />
                                     <div>
-                                        <p className="text-xs font-black" style={{ color: "var(--highlight-dark)" }}>
-                                            XP로 잠금 해제
+                                        <p className="text-sm font-black" style={{ color: "var(--highlight-dark)" }}>
+                                            XP로 프리미엄 스타일 잠금 해제
                                         </p>
-                                        <p className="text-[11px] mt-0.5" style={{ color: "var(--foreground-soft)" }}>
-                                            콘텐츠 업로드, 미션 완료, 상품 구매로 XP를 쌓고 셀러 상점 → 아바타 탭에서 새 아이템을 언락하세요.
+                                        <p className="text-xs mt-1" style={{ color: "var(--foreground-soft)" }}>
+                                            콘텐츠 업로드, 미션 완료, 상품 구매로 XP를 쌓고
+                                            셀러 상점 → 아바타 탭에서 새 스타일을 언락하세요.
                                         </p>
                                     </div>
                                 </div>
@@ -387,10 +383,15 @@ export default function ProfilePage() {
 
                     {/* 스킬 트리 탭 */}
                     {activeTab === "skills" && (
-                        <div className="lg:col-span-3 flex flex-col gap-4">
-                            <div className="flex items-center gap-2 px-1">
-                                <TrendingUp size={20} style={{ color: "var(--primary)" }} />
-                                <h2 className="text-xl font-black italic">마케팅 스킬 트리</h2>
+                        <div className="lg:col-span-3 flex flex-col gap-6">
+                            <div className="flex items-center gap-3 px-1">
+                                <TrendingUp size={24} style={{ color: "var(--primary)" }} />
+                                <div>
+                                    <h2 className="text-2xl font-black italic">마케팅 스킬 트리</h2>
+                                    <p className="text-sm" style={{ color: "var(--foreground-muted)" }}>
+                                        게시물 업로드와 미션으로 스킬 XP를 쌓아보세요
+                                    </p>
+                                </div>
                             </div>
                             <SkillTree skillXP={user.skillXP ?? { copywriting: 0, analytics: 0, creative: 0 }} />
                         </div>
@@ -398,19 +399,29 @@ export default function ProfilePage() {
 
                     {/* 북마크 탭 */}
                     {activeTab === "bookmarks" && (
-                        <div className="lg:col-span-3 flex flex-col gap-4">
+                        <div className="lg:col-span-3 flex flex-col gap-6">
+                            <div className="flex items-center gap-3 px-1">
+                                <Bookmark size={24} style={{ color: "var(--secondary)" }} />
+                                <div>
+                                    <h2 className="text-2xl font-black italic">북마크</h2>
+                                    <p className="text-sm" style={{ color: "var(--foreground-muted)" }}>
+                                        저장한 게시물 모아보기
+                                    </p>
+                                </div>
+                            </div>
                             {loadingBookmarks ? (
-                                <div className="flex justify-center py-16">
-                                    <Loader2 size={24} className="animate-spin" style={{ color: "var(--foreground-muted)" }} />
+                                <div className="flex justify-center py-20">
+                                    <Loader2 size={28} className="animate-spin" style={{ color: "var(--foreground-muted)" }} />
                                 </div>
                             ) : bookmarkedPosts.length === 0 ? (
-                                <div className="flex flex-col items-center justify-center py-20 gap-3">
-                                    <Bookmark size={36} style={{ color: "var(--foreground-muted)" }} />
-                                    <p className="text-sm font-semibold" style={{ color: "var(--foreground-muted)" }}>저장된 게시물이 없어요</p>
-                                    <p className="text-xs" style={{ color: "var(--foreground-muted)" }}>피드에서 북마크 버튼을 눌러 저장해보세요</p>
+                                <div className="flex flex-col items-center justify-center py-24 gap-4"
+                                    style={{ background: "var(--surface)", borderRadius: 24, border: "1px solid var(--border)" }}>
+                                    <Bookmark size={48} style={{ color: "var(--foreground-muted)", opacity: 0.4 }} />
+                                    <p className="text-base font-black" style={{ color: "var(--foreground-muted)" }}>저장된 게시물이 없어요</p>
+                                    <p className="text-sm" style={{ color: "var(--foreground-muted)" }}>피드에서 북마크 버튼을 눌러 저장해보세요</p>
                                 </div>
                             ) : (
-                                <div className="grid grid-cols-3 gap-1.5">
+                                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
                                     {bookmarkedPosts.map(post => (
                                         <div key={post.id} className="aspect-square rounded-2xl overflow-hidden relative group"
                                             style={{ background: "var(--surface-2)" }}>
@@ -432,79 +443,101 @@ export default function ProfilePage() {
                     )}
 
                     {/* Team Workspace Section */}
-                    {activeTab === "team" && <div className="lg:col-span-2 flex flex-col gap-6">
-                        <div className="flex items-center justify-between px-2">
-                            <h2 className="text-xl font-black italic flex items-center gap-2">
-                                <Users size={20} className="text-secondary" />
+                    {activeTab === "team" && <div className="lg:col-span-2 flex flex-col gap-8">
+                        <div className="flex items-center justify-between px-1">
+                            <h2 className="text-2xl font-black italic flex items-center gap-2">
+                                <Users size={22} style={{ color: "var(--secondary)" }} />
                                 팀 워크스페이스
                             </h2>
                             {isTeacher && (
                                 <button
                                     onClick={handleManageTeam}
-                                    className="text-[10px] font-bold text-primary italic hover:underline flex items-center gap-1 transition-opacity hover:opacity-70"
+                                    className="text-xs font-bold flex items-center gap-1 px-4 py-2 rounded-xl transition-all hover:opacity-80"
+                                    style={{ background: "var(--surface-2)", color: "var(--foreground)" }}
                                 >
-                                    대시보드 <ChevronRight size={12} />
+                                    대시보드 <ChevronRight size={14} />
                                 </button>
                             )}
                         </div>
 
-                        <GlassCard className="flex flex-col gap-6 border-secondary/10">
+                        <GlassCard className="flex flex-col gap-8 border-secondary/10 p-8">
                             {/* 팀 정보 헤더 */}
-                            <div className="flex items-center gap-4">
-                                <div className="w-16 h-16 rounded-2xl bg-foreground/5 flex items-center justify-center font-black text-2xl text-secondary border border-secondary/20">
-                                    {user.team[0]}
+                            <div className="flex items-center gap-5">
+                                <div
+                                    className="w-20 h-20 rounded-3xl flex items-center justify-center font-black text-3xl border-2"
+                                    style={{ background: "var(--surface-2)", color: "var(--secondary)", borderColor: "rgba(67,97,238,0.2)" }}
+                                >
+                                    {user.team?.[0] ?? "?"}
                                 </div>
-                                <div className="flex flex-col">
-                                    <span className="text-lg font-black italic">{user.team}</span>
-                                    <span className="text-xs text-foreground/40 flex items-center gap-1">
-                                        <Calendar size={12} />
+                                <div className="flex flex-col gap-1">
+                                    <span className="text-2xl font-black italic">{user.team}</span>
+                                    <span className="text-sm flex items-center gap-1.5" style={{ color: "var(--foreground-muted)" }}>
+                                        <Calendar size={13} />
                                         {teamCreatedAt ? `${teamCreatedAt} 결성됨` : "결성일 불명"}
                                     </span>
                                 </div>
                             </div>
 
                             {/* 팀 멤버 목록 */}
-                            <div className="flex flex-col gap-3">
-                                <h3 className="text-[10px] font-bold text-foreground/30 uppercase tracking-widest ml-1">
-                                    Team Members ({loadingTeam ? "..." : teamMembers.length})
+                            <div className="flex flex-col gap-4">
+                                <h3 className="text-xs font-bold uppercase tracking-widest" style={{ color: "var(--foreground-muted)" }}>
+                                    TEAM MEMBERS ({loadingTeam ? "..." : teamMembers.length})
                                 </h3>
 
                                 {loadingTeam ? (
-                                    <div className="flex items-center justify-center py-8">
-                                        <Loader2 size={20} className="animate-spin text-foreground/30" />
+                                    <div className="flex items-center justify-center py-12">
+                                        <Loader2 size={24} className="animate-spin" style={{ color: "var(--foreground-muted)" }} />
                                     </div>
                                 ) : teamMembers.length === 0 ? (
-                                    <div className="flex flex-col items-center justify-center py-8 gap-2 text-center">
-                                        <Users size={24} className="text-foreground/20" />
-                                        <p className="text-xs font-semibold text-foreground/40">팀 배정 대기 중</p>
-                                        <p className="text-[10px] text-foreground/30">선생님이 팀을 배정하면 팀원이 표시돼요</p>
+                                    <div className="flex flex-col items-center justify-center py-12 gap-3 text-center">
+                                        <Users size={32} style={{ color: "var(--foreground-muted)", opacity: 0.4 }} />
+                                        <p className="text-sm font-semibold" style={{ color: "var(--foreground-muted)" }}>팀 배정 대기 중</p>
+                                        <p className="text-xs" style={{ color: "var(--foreground-muted)" }}>선생님이 팀을 배정하면 팀원이 표시돼요</p>
                                     </div>
                                 ) : (
-                                    <div className="flex flex-col gap-2">
+                                    <div className="flex flex-col gap-3">
                                         {teamMembers.map((member) => {
                                             const isLeader = member.id === leaderId;
                                             return (
                                                 <div
                                                     key={member.id}
-                                                    className="flex items-center justify-between p-3 rounded-xl bg-foreground/5 border border-foreground/5 hover:border-foreground/10 transition-colors"
+                                                    className="flex items-center justify-between p-4 rounded-2xl transition-colors"
+                                                    style={{
+                                                        background: isLeader ? "var(--primary-light)" : "var(--surface-2)",
+                                                        border: isLeader ? "1.5px solid var(--primary)" : "1px solid transparent",
+                                                    }}
                                                 >
-                                                    <div className="flex items-center gap-3">
-                                                        <div className="w-8 h-8 rounded-full bg-foreground/10 flex items-center justify-center text-sm">
-                                                            {member.avatar}
+                                                    <div className="flex items-center gap-4">
+                                                        <div className="w-12 h-12 rounded-2xl overflow-hidden shrink-0 flex items-center justify-center"
+                                                            style={{ background: "var(--surface-3)" }}
+                                                        >
+                                                            {member.avatar?.startsWith("http") ? (
+                                                                <img src={member.avatar} alt={member.name} className="w-full h-full object-contain" />
+                                                            ) : (
+                                                                <span className="text-2xl">{member.avatar || "🦊"}</span>
+                                                            )}
                                                         </div>
-                                                        <div className="flex flex-col">
-                                                            <span className="text-sm font-bold">
+                                                        <div className="flex flex-col gap-0.5">
+                                                            <span className="text-base font-black" style={{ color: "var(--foreground)" }}>
                                                                 {member.name}{member.isMe ? " (나)" : ""}
                                                             </span>
-                                                            <span className="text-[10px] text-foreground/40">{member.rank}</span>
+                                                            <span className="text-xs font-medium" style={{ color: "var(--foreground-muted)" }}>
+                                                                {member.rank}
+                                                            </span>
                                                         </div>
                                                     </div>
-                                                    <div className="flex items-center gap-1.5">
+                                                    <div className="flex items-center gap-2">
                                                         {isLeader && (
-                                                            <Crown size={12} className="text-highlight" />
+                                                            <Crown size={16} style={{ color: "var(--highlight)" }} />
                                                         )}
-                                                        <span className={`text-[9px] font-bold uppercase ${isLeader ? "text-primary" : "text-foreground/40"}`}>
-                                                            {isLeader ? "Leader" : "Member"}
+                                                        <span
+                                                            className="text-xs font-black uppercase px-3 py-1.5 rounded-full"
+                                                            style={{
+                                                                background: isLeader ? "var(--primary)" : "var(--surface-3)",
+                                                                color: isLeader ? "white" : "var(--foreground-muted)",
+                                                            }}
+                                                        >
+                                                            {isLeader ? "LEADER" : "MEMBER"}
                                                         </span>
                                                     </div>
                                                 </div>
@@ -517,9 +550,9 @@ export default function ProfilePage() {
                     </div>}
 
                     {/* Activity Feed */}
-                    {activeTab === "team" && <div className="flex flex-col gap-6">
-                        <h2 className="text-xl font-black italic flex items-center gap-2">
-                            <Activity size={20} className="text-primary" />
+                    {activeTab === "team" && <div className="flex flex-col gap-8">
+                        <h2 className="text-2xl font-black italic flex items-center gap-2 px-1">
+                            <Activity size={22} style={{ color: "var(--primary)" }} />
                             최근 업로드
                         </h2>
                         <div className="flex flex-col gap-3">
