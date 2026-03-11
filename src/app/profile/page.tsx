@@ -58,20 +58,15 @@ export default function ProfilePage() {
     const cardRef = useRef<HTMLDivElement>(null);
 
     const captureCard = async (): Promise<Blob> => {
-        const domtoimage = (await import("dom-to-image-more")).default;
-        const el = cardRef.current!;
-        const blob = await domtoimage.toBlob(el, {
-            scale: 2,
-            useCORS: true,
-            bgcolor: null,
-            filter: (node: Node) => {
-                if (node instanceof Element) {
-                    return node.getAttribute("data-html2canvas-ignore") !== "true";
-                }
-                return true;
-            },
+        const { drawIDCardToBlob } = await import("@/lib/canvas/drawIDCard");
+        return drawIDCardToBlob({
+            name:   user.name,
+            handle: user.handle,
+            team:   user.team,
+            rank:   user.rank,
+            points: user.points,
+            avatar: user.avatar,
         });
-        return blob;
     };
 
     const handleSaveCard = async () => {
