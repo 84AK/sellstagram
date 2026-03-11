@@ -80,7 +80,19 @@ function ListItem({
             }}
         >
             {logo ? (
-                <img src={logo} alt={title} className="w-8 h-8 shrink-0 rounded-lg object-contain" />
+                <img
+                    src={logo}
+                    alt={title}
+                    className="w-8 h-8 shrink-0 rounded-lg object-contain"
+                    onError={(e) => {
+                        const el = e.currentTarget;
+                        el.style.display = "none";
+                        const span = document.createElement("span");
+                        span.className = "text-2xl shrink-0";
+                        span.textContent = emoji;
+                        el.parentElement?.insertBefore(span, el);
+                    }}
+                />
             ) : (
                 <span className="text-2xl shrink-0">{emoji}</span>
             )}
@@ -240,7 +252,19 @@ function AIToolDetail({ tool }: { tool: AIToolGuide }) {
                     style={{ background: tool.logo ? "transparent" : tool.bg }}
                 >
                     {tool.logo ? (
-                        <img src={tool.logo} alt={tool.name} className="w-14 h-14 object-contain rounded-xl" />
+                        <img
+                            src={tool.logo}
+                            alt={tool.name}
+                            className="w-14 h-14 object-contain rounded-xl"
+                            onError={(e) => {
+                                const el = e.currentTarget;
+                                el.style.display = "none";
+                                const span = document.createElement("span");
+                                span.textContent = tool.emoji;
+                                el.parentElement?.appendChild(span);
+                                if (el.parentElement) el.parentElement.style.background = tool.bg;
+                            }}
+                        />
                     ) : (
                         tool.emoji
                     )}
