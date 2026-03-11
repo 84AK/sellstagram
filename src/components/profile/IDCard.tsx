@@ -168,36 +168,42 @@ export default function IDCard({
 
                 {/* 랭크 + XP 배지 */}
                 <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                    <span style={{
-                        display: "inline-flex",
+                    <div style={{
+                        display: "flex",
                         alignItems: "center",
+                        justifyContent: "center",
                         padding: "6px 12px",
                         borderRadius: 9999,
                         fontSize: 11,
                         fontWeight: 900,
+                        lineHeight: 1,
                         textTransform: "uppercase",
                         letterSpacing: "0.05em",
                         background: rc.bg,
                         color: rc.text,
                         border: `1px solid ${rc.text}40`,
+                        boxSizing: "border-box",
                     }}>
                         {rank}
-                    </span>
+                    </div>
                     <div style={{
-                        display: "inline-flex",
+                        display: "flex",
                         alignItems: "center",
+                        justifyContent: "center",
                         gap: 6,
                         padding: "6px 12px",
                         borderRadius: 9999,
                         background: "rgba(255,194,51,0.12)",
                         border: "1px solid rgba(255,194,51,0.25)",
+                        boxSizing: "border-box",
                     }}>
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#FFC233" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#FFC233" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ display: "block", flexShrink: 0 }}>
                             <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
                         </svg>
                         <span style={{
                             fontSize: 12,
                             fontWeight: 900,
+                            lineHeight: 1,
                             color: "#FFC233",
                         }}>
                             {points.toLocaleString()} XP
