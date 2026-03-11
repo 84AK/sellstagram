@@ -62,11 +62,16 @@ export default function ProfilePage() {
         setIsSavingCard(true);
         try {
             const html2canvas = (await import("html2canvas")).default;
-            const canvas = await html2canvas(cardRef.current, {
-                scale: 3,
+            const el = cardRef.current;
+            const canvas = await html2canvas(el, {
+                scale: 2,
                 useCORS: true,
                 backgroundColor: null,
                 logging: false,
+                width: el.offsetWidth,
+                height: el.offsetHeight,
+                windowWidth: el.offsetWidth,
+                windowHeight: el.offsetHeight,
             });
             const link = document.createElement("a");
             link.download = `sellstagram-${user.handle ?? "card"}.png`;
@@ -86,11 +91,16 @@ export default function ProfilePage() {
         setIsSavingCard(true);
         try {
             const html2canvas = (await import("html2canvas")).default;
-            const canvas = await html2canvas(cardRef.current, {
-                scale: 3,
+            const el = cardRef.current;
+            const canvas = await html2canvas(el, {
+                scale: 2,
                 useCORS: true,
                 backgroundColor: null,
                 logging: false,
+                width: el.offsetWidth,
+                height: el.offsetHeight,
+                windowWidth: el.offsetWidth,
+                windowHeight: el.offsetHeight,
             });
             canvas.toBlob(async (blob) => {
                 if (!blob) return;
@@ -373,7 +383,7 @@ export default function ProfilePage() {
                             {/* 카드 영역 */}
                             <div className="flex flex-col items-center gap-5 shrink-0">
                                 {/* 저장되는 카드 영역 (ref) */}
-                                <div ref={cardRef}>
+                                <div ref={cardRef} style={{ display: "inline-block" }}>
                                     <IDCard
                                         name={user.name}
                                         handle={user.handle}
