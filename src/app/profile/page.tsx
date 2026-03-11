@@ -57,26 +57,31 @@ export default function ProfilePage() {
     const [cardSaved, setCardSaved] = useState(false);
     const cardRef = useRef<HTMLDivElement>(null);
 
+    const captureCard = async (): Promise<Blob> => {
+        const domtoimage = (await import("dom-to-image-more")).default;
+        const el = cardRef.current!;
+        const blob = await domtoimage.toBlob(el, {
+            scale: 2,
+            useCORS: true,
+            bgcolor: null,
+            filter: (node: Node) => {
+                if (node instanceof Element) {
+                    return node.getAttribute("data-html2canvas-ignore") !== "true";
+                }
+                return true;
+            },
+        });
+        return blob;
+    };
+
     const handleSaveCard = async () => {
         if (!cardRef.current || isSavingCard) return;
         setIsSavingCard(true);
         try {
-            const html2canvas = (await import("html2canvas")).default;
-            const el = cardRef.current;
-            const canvas = await html2canvas(el, {
-                scale: 2,
-                useCORS: true,
-                backgroundColor: null,
-                logging: false,
-                onclone: (_doc, clonedEl) => {
-                    // 버튼 DOM 자체를 제거해 여백 없애기
-                    clonedEl.querySelectorAll("[data-html2canvas-ignore]")
-                        .forEach(n => n.remove());
-                },
-            });
+            const blob = await captureCard();
             const link = document.createElement("a");
             link.download = `sellstagram-${user.handle ?? "card"}.png`;
-            link.href = canvas.toDataURL("image/png");
+            link.href = URL.createObjectURL(blob);
             link.click();
             setCardSaved(true);
             setTimeout(() => setCardSaved(false), 2500);
@@ -91,31 +96,17 @@ export default function ProfilePage() {
         if (!cardRef.current || isSavingCard) return;
         setIsSavingCard(true);
         try {
-            const html2canvas = (await import("html2canvas")).default;
-            const el = cardRef.current;
-            const canvas = await html2canvas(el, {
-                scale: 2,
-                useCORS: true,
-                backgroundColor: null,
-                logging: false,
-                onclone: (_doc, clonedEl) => {
-                    clonedEl.querySelectorAll("[data-html2canvas-ignore]")
-                        .forEach(n => n.remove());
-                },
-            });
-            canvas.toBlob(async (blob) => {
-                if (!blob) return;
-                const file = new File([blob], `sellstagram-${user.handle ?? "card"}.png`, { type: "image/png" });
-                if (navigator.canShare?.({ files: [file] })) {
-                    await navigator.share({ files: [file], title: "나의 마케터 ID 카드", text: `@${user.handle} · Sellstagram` });
-                } else {
-                    // 공유 미지원 시 다운로드 fallback
-                    const link = document.createElement("a");
-                    link.download = file.name;
-                    link.href = URL.createObjectURL(blob);
-                    link.click();
-                }
-            }, "image/png");
+            const blob = await captureCard();
+            const file = new File([blob], `sellstagram-${user.handle ?? "card"}.png`, { type: "image/png" });
+            if (navigator.canShare?.({ files: [file] })) {
+                await navigator.share({ files: [file], title: "나의 마케터 ID 카드", text: `@${user.handle} · Sellstagram` });
+            } else {
+                // 공유 미지원 시 다운로드 fallback
+                const link = document.createElement("a");
+                link.download = file.name;
+                link.href = URL.createObjectURL(blob);
+                link.click();
+            }
         } catch (err) {
             console.error("카드 공유 실패:", err);
         } finally {
