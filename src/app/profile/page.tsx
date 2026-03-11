@@ -417,7 +417,7 @@ export default function ProfilePage() {
                                         ) : (
                                             <Share2 size={15} />
                                         )}
-                                        인스타 공유
+                                        공유하기
                                     </button>
                                 </div>
                             </div>

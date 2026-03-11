@@ -166,6 +166,7 @@ export default function IDCard({
             {onCustomize && (
                 <button
                     onClick={onCustomize}
+                    data-html2canvas-ignore="true"
                     className="w-full py-4 flex items-center justify-center gap-2 text-sm font-black transition-all hover:opacity-80 active:scale-[0.98]"
                     style={{
                         background: "linear-gradient(90deg, #FF6B35 0%, #e55b28 100%)",
