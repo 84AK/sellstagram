@@ -142,15 +142,31 @@ export default function AIReportModal() {
                             <ReactMarkdown
                                 remarkPlugins={[remarkGfm]}
                                 components={{
-                                    h1: ({ node, ...props }) => <h1 className="text-4xl font-black mb-8 text-primary italic border-l-8 border-primary pl-6 py-2" {...props} />,
-                                    h2: ({ node, ...props }) => <h2 className="text-2xl font-black mb-4 text-foreground/90 mt-12 flex items-center gap-2 before:content-[''] before:w-2 before:h-2 before:bg-secondary before:rounded-full" {...props} />,
-                                    h3: ({ node, ...props }) => <h3 className="text-xl font-bold mb-3 text-foreground/80" {...props} />,
-                                    p: ({ node, ...props }) => <p className="text-lg mb-6 leading-relaxed text-foreground/70 font-medium" {...props} />,
+                                    h1: ({ node, ...props }) => <h1 className="text-4xl font-black mb-8 text-primary italic border-l-8 border-primary pl-6 py-2" style={{ wordBreak: "keep-all" }} {...props} />,
+                                    h2: ({ node, ...props }) => <h2 className="text-2xl font-black mb-4 text-foreground/90 mt-12 flex items-center gap-2 before:content-[''] before:w-2 before:h-2 before:bg-secondary before:rounded-full" style={{ wordBreak: "keep-all" }} {...props} />,
+                                    h3: ({ node, ...props }) => <h3 className="text-xl font-bold mb-3 text-foreground/80" style={{ wordBreak: "keep-all" }} {...props} />,
+                                    p: ({ node, ...props }) => <p className="text-base mb-5 leading-relaxed text-foreground/70 font-medium" style={{ wordBreak: "keep-all" }} {...props} />,
                                     strong: ({ node, ...props }) => <strong className="font-black text-primary bg-primary/10 px-1.5 py-0.5 rounded shadow-sm" {...props} />,
                                     ul: ({ node, ...props }) => <ul className="list-none mb-8 flex flex-col gap-3" {...props} />,
-                                    li: ({ node, ...props }) => <li className="flex items-start gap-3 text-lg text-foreground/80 before:content-['⚡'] before:mt-1" {...props} />,
+                                    li: ({ node, ...props }) => <li className="flex items-start gap-3 text-base text-foreground/80 before:content-['⚡'] before:mt-1 before:shrink-0" style={{ wordBreak: "keep-all" }} {...props} />,
                                     hr: ({ node, ...props }) => <hr className="my-12 border-foreground/5" {...props} />,
-                                    blockquote: ({ node, ...props }) => <blockquote className="my-8 p-6 bg-foreground/5 rounded-3xl border-l-4 border-secondary italic text-lg" {...props} />,
+                                    blockquote: ({ node, ...props }) => <blockquote className="my-8 p-6 bg-foreground/5 rounded-3xl border-l-4 border-secondary italic text-base" style={{ wordBreak: "keep-all" }} {...props} />,
+                                    table: ({ node, ...props }) => (
+                                        <div className="overflow-x-auto my-6 rounded-2xl border" style={{ borderColor: "var(--border)" }}>
+                                            <table className="w-full text-sm border-collapse" {...props} />
+                                        </div>
+                                    ),
+                                    thead: ({ node, ...props }) => <thead style={{ background: "var(--surface-2)" }} {...props} />,
+                                    th: ({ node, ...props }) => (
+                                        <th className="px-4 py-3 text-left text-xs font-black uppercase tracking-wider"
+                                            style={{ color: "var(--foreground)", borderBottom: "2px solid var(--border)", wordBreak: "keep-all", minWidth: "80px" }}
+                                            {...props} />
+                                    ),
+                                    td: ({ node, ...props }) => (
+                                        <td className="px-4 py-3 text-sm leading-relaxed align-top"
+                                            style={{ color: "var(--foreground-muted)", borderBottom: "1px solid var(--border)", wordBreak: "keep-all" }}
+                                            {...props} />
+                                    ),
                                 }}
                             >
                                 {activeInsight.content}

@@ -19,6 +19,7 @@ import {
     Users,
     Zap,
     BarChart2,
+    ShoppingBag,
 } from "lucide-react";
 import { useGameStore } from "@/store/useGameStore";
 import { supabase } from "@/lib/supabase/client";
@@ -59,6 +60,7 @@ export default function UploadModal() {
     const [loadingResult, setLoadingResult] = useState(false);
     const [isAnalyzing, setIsAnalyzing] = useState(false);
     const [isAIStudioOpen, setIsAIStudioOpen] = useState(false);
+    const [productPrice, setProductPrice] = useState("10000");
 
     // 이미지 업로드 관련
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -89,6 +91,7 @@ export default function UploadModal() {
         setSimResult(null);
         setPersonaReactions([]);
         setChallengeMode(false);
+        setProductPrice("10000");
     };
 
     const handleFileSelect = (file: File) => {
@@ -187,7 +190,7 @@ export default function UploadModal() {
                 comments: 0,
                 shares: 0,
                 engagement_rate: "0%",
-                sales: uploadType === "post" ? "₩0" : null,
+                sales: uploadType === "post" ? `₩${parseInt(productPrice) || 10000}` : null,
                 week: currentWeek,
             }).select().single();
 
@@ -221,12 +224,13 @@ export default function UploadModal() {
 
             // 시뮬레이션 + 페르소나 반응 병렬 실행
             const tagList2 = tags.split(",").map(t => t.trim()).filter(Boolean);
+            const parsedPrice = parseInt(productPrice.replace(/,/g, "")) || 10000;
             const sim = simulateMarketingEffect({
                 caption,
                 hashtags: tagList2,
                 visualQuality: selectedFile ? 0.9 : 0.6,
                 baseFollowers: 500,
-            }, 30000);
+            }, parsedPrice);
             setSimResult(sim);
 
             // 시뮬레이션 결과 자동으로 campaign + insight 저장
@@ -518,6 +522,37 @@ export default function UploadModal() {
                                 </div>
                             </div>
                         )}
+
+                        {/* 제품 가격 입력 */}
+                        <div className="flex flex-col gap-2">
+                            <div className="flex items-center justify-between ml-1">
+                                <label className="text-[10px] font-bold text-foreground/40 uppercase tracking-widest">
+                                    Product Price
+                                </label>
+                                <span className="text-[9px] font-bold px-2 py-0.5 rounded-full"
+                                    style={{ background: "rgba(255,194,51,0.15)", color: "#D97706" }}>
+                                    마켓 시뮬레이션 기준 단가
+                                </span>
+                            </div>
+                            <div className="relative">
+                                <ShoppingBag size={14} className="absolute left-4 top-1/2 -translate-y-1/2" style={{ color: "#D97706" }} />
+                                <input
+                                    type="number"
+                                    min={0}
+                                    step={1000}
+                                    placeholder="10000"
+                                    value={productPrice}
+                                    onChange={(e) => setProductPrice(e.target.value)}
+                                    className="w-full bg-foreground/5 border border-foreground/10 rounded-2xl py-3 pl-10 pr-16 text-sm focus:outline-none focus:ring-2 transition-all font-bold"
+                                    style={{ focusRingColor: "rgba(255,194,51,0.3)" } as React.CSSProperties}
+                                />
+                                <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[11px] font-black"
+                                    style={{ color: "var(--foreground-muted)" }}>원</span>
+                            </div>
+                            <p className="text-[10px] ml-1" style={{ color: "var(--foreground-muted)" }}>
+                                구매 1건당 이 금액이 잔고에 반영됩니다 · 미입력 시 ₩10,000 적용
+                            </p>
+                        </div>
                     </div>
 
                     {/* 오늘의 챌린지 참여 토글 */}

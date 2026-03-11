@@ -129,6 +129,7 @@ alter publication supabase_realtime add table public.posts;
 alter publication supabase_realtime add table public.game_state;
 alter publication supabase_realtime add table public.missions;
 alter publication supabase_realtime add table public.comments;
+alter publication supabase_realtime add table public.simulation_results;
 
 -- =====================================================
 -- Row Level Security (RLS) 정책
@@ -194,6 +195,32 @@ $$;
 create trigger comments_count_trigger
 after insert or delete on public.comments
 for each row execute function public.update_post_comment_count();
+
+-- =====================================================
+-- simulation_results: 마켓 시뮬레이션 결과 저장
+-- =====================================================
+create table if not exists public.simulation_results (
+    id uuid primary key default gen_random_uuid(),
+    user_id uuid references public.profiles(id) on delete set null,
+    user_name text,
+    user_handle text,
+    post_id uuid,
+    post_caption text,
+    post_image text,
+    session_started_at timestamptz,
+    duration_minutes integer default 10,
+    total_likes integer default 0,
+    total_comments integer default 0,
+    total_shares integer default 0,
+    total_purchases integer default 0,
+    total_revenue integer default 0,
+    events jsonb,
+    created_at timestamptz default now()
+);
+
+alter table public.simulation_results enable row level security;
+create policy "sim_results_read" on public.simulation_results for select using (true);
+create policy "sim_results_insert" on public.simulation_results for insert with check (true);
 
 -- =====================================================
 -- app_settings: 수업 상태 관리 (선생님이 수업 시작/종료 제어)

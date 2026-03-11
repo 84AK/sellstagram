@@ -73,6 +73,12 @@ export default function AdminDashboard() {
     const [pinSaving, setPinSaving] = useState(false);
     const [pinResult, setPinResult] = useState<{ ok: boolean; msg: string } | null>(null);
 
+    // 초기 잔액 설정 상태
+    const [initialBalance, setInitialBalance] = useState(1000000);
+    const [balanceInput, setBalanceInput] = useState("1000000");
+    const [isSavingBalance, setIsSavingBalance] = useState(false);
+    const [balanceSaved, setBalanceSaved] = useState(false);
+
     // 회차 열람 관리 상태
     const [unlockedWeeks, setUnlockedWeeks] = useState<number[]>([]);
     const [togglingWeek, setTogglingWeek] = useState<number | null>(null);
@@ -103,7 +109,7 @@ export default function AdminDashboard() {
                 supabase.from("posts").select("id,user_name,user_handle,caption,description,likes,type,created_at").order("created_at", { ascending: false }).limit(50),
                 supabase.from("comments").select("id", { count: "exact", head: true }),
                 supabase.from("purchases").select("id", { count: "exact", head: true }),
-                supabase.from("game_state").select("teacher_pin").eq("id", 1).single(),
+                supabase.from("game_state").select("teacher_pin, initial_balance").eq("id", 1).single(),
                 supabase.from("app_settings").select("unlocked_weeks").eq("id", 1).single(),
             ]);
             setProfiles(profileData ?? []);
@@ -111,6 +117,10 @@ export default function AdminDashboard() {
             setCommentCount(commentCnt ?? 0);
             setPurchaseCount(purchaseCnt ?? 0);
             setCurrentPin(gameState?.teacher_pin ?? "");
+            if (gameState?.initial_balance != null) {
+                setInitialBalance(gameState.initial_balance);
+                setBalanceInput(String(gameState.initial_balance));
+            }
             if (Array.isArray(appSettings?.unlocked_weeks)) {
                 setUnlockedWeeks(appSettings.unlocked_weeks);
             }
@@ -163,6 +173,18 @@ export default function AdminDashboard() {
         const ok = await adminUpdateProfile(userId, "is_leader", newIsLeader);
         if (ok) setProfiles(prev => prev.map(p => p.id === userId ? { ...p, is_leader: newIsLeader } : p));
         setUpdatingLeader(null);
+    };
+
+    const handleSaveBalance = async () => {
+        const parsed = parseInt(balanceInput.replace(/,/g, ""), 10);
+        if (isNaN(parsed) || parsed < 0) return;
+        setIsSavingBalance(true);
+        await supabase.from("game_state").update({ initial_balance: parsed }).eq("id", 1);
+        await supabase.from("profiles").update({ balance: parsed }).neq("id", "00000000-0000-0000-0000-000000000000");
+        setInitialBalance(parsed);
+        setIsSavingBalance(false);
+        setBalanceSaved(true);
+        setTimeout(() => setBalanceSaved(false), 2500);
     };
 
     const handleSavePin = async () => {
@@ -527,6 +549,55 @@ export default function AdminDashboard() {
                 {/* ── 설정 탭 ── */}
                 {activeTab === "settings" && (
                     <div className="flex flex-col gap-6 max-w-2xl">
+                        {/* 학생 초기 잔액 설정 */}
+                        <div className="flex flex-col gap-4 p-5 rounded-2xl"
+                            style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                    <Settings size={16} style={{ color: "var(--primary)" }} />
+                                    <h3 className="text-sm font-black" style={{ color: "var(--foreground)" }}>
+                                        학생 초기 잔액 설정
+                                    </h3>
+                                </div>
+                                {balanceSaved && (
+                                    <span className="text-xs font-bold px-2.5 py-1 rounded-full"
+                                        style={{ background: "rgba(6,214,160,0.1)", color: "var(--accent)" }}>
+                                        ✓ 저장됨
+                                    </span>
+                                )}
+                            </div>
+                            <p className="text-xs" style={{ color: "var(--foreground-muted)" }}>
+                                현재 설정: ₩{initialBalance.toLocaleString()} · 저장 시 전체 학생 잔액이 이 금액으로 리셋됩니다.
+                            </p>
+                            <div className="flex gap-2">
+                                <div className="flex-1 relative">
+                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-bold"
+                                        style={{ color: "var(--foreground-muted)" }}>₩</span>
+                                    <input
+                                        type="number"
+                                        value={balanceInput}
+                                        onChange={(e) => setBalanceInput(e.target.value)}
+                                        min={0}
+                                        step={100000}
+                                        className="w-full pl-7 pr-4 py-3 rounded-xl text-sm font-bold outline-none"
+                                        style={{
+                                            background: "var(--surface-2)",
+                                            border: "1px solid var(--border)",
+                                            color: "var(--foreground)",
+                                        }}
+                                    />
+                                </div>
+                                <button
+                                    onClick={handleSaveBalance}
+                                    disabled={isSavingBalance}
+                                    className="px-5 py-3 rounded-xl font-bold text-sm text-white transition-all hover:opacity-90 disabled:opacity-60"
+                                    style={{ background: "var(--primary)" }}
+                                >
+                                    {isSavingBalance ? "저장 중..." : "전체 적용"}
+                                </button>
+                            </div>
+                        </div>
+
                         <div className="flex flex-col gap-4 p-5 rounded-2xl"
                             style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
                             <div className="flex items-center gap-2">

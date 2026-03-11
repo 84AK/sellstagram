@@ -16,6 +16,8 @@ export default function OnboardingGate({ children }: { children: React.ReactNode
     const [status, setStatus] = useState<Status>("loading");
     // 초기 인증 체크 완료 여부를 추적 — 토큰 갱신 시 SIGNED_IN 재실행 방지
     const initializedRef = useRef(false);
+    // 잔액 실시간 구독 채널 ref
+    const balanceChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
     const router = useRouter();
     const pathname = usePathname();
     const { updateProfile } = useGameStore();
@@ -87,6 +89,30 @@ export default function OnboardingGate({ children }: { children: React.ReactNode
             });
             useGameStore.setState({ balance });
 
+            // 잔액 실시간 동기화: 관리자가 profiles.balance를 변경하면 즉시 반영
+            // 기존 채널이 있으면 먼저 제거
+            if (balanceChannelRef.current) {
+                supabase.removeChannel(balanceChannelRef.current);
+            }
+            balanceChannelRef.current = supabase
+                .channel(`profile-balance-${session.user.id}`)
+                .on(
+                    "postgres_changes",
+                    {
+                        event: "UPDATE",
+                        schema: "public",
+                        table: "profiles",
+                        filter: `id=eq.${session.user.id}`,
+                    },
+                    (payload) => {
+                        const newBalance = (payload.new as { balance?: number }).balance;
+                        if (newBalance !== undefined) {
+                            useGameStore.setState({ balance: newBalance });
+                        }
+                    }
+                )
+                .subscribe();
+
             initializedRef.current = true;
             setStatus("ready");
         };
@@ -98,6 +124,10 @@ export default function OnboardingGate({ children }: { children: React.ReactNode
             if (event === "SIGNED_IN" && !initializedRef.current) checkAuthAndProfile();
             if (event === "SIGNED_OUT") {
                 initializedRef.current = false;
+                if (balanceChannelRef.current) {
+                    supabase.removeChannel(balanceChannelRef.current);
+                    balanceChannelRef.current = null;
+                }
                 useGameStore.setState({
                     user: { name: "", handle: "", avatar: "", rank: "Beginner", team: "", points: 0, role: "", skillXP: { copywriting: 0, analytics: 0, creative: 0 } },
                     posts: [],
@@ -109,7 +139,13 @@ export default function OnboardingGate({ children }: { children: React.ReactNode
             }
         });
 
-        return () => subscription.unsubscribe();
+        return () => {
+            subscription.unsubscribe();
+            if (balanceChannelRef.current) {
+                supabase.removeChannel(balanceChannelRef.current);
+                balanceChannelRef.current = null;
+            }
+        };
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [isPublicPath]);
 

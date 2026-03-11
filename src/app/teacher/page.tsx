@@ -68,7 +68,23 @@ interface StudentProfile {
     points: number;
 }
 
-type Tab = "class" | "feed" | "mission" | "shop" | "reward" | "weekly" | "teams";
+type Tab = "class" | "feed" | "mission" | "shop" | "reward" | "weekly" | "teams" | "simulation";
+
+interface SimResult {
+    id: string;
+    user_name: string;
+    user_handle: string;
+    post_caption: string | null;
+    post_image: string | null;
+    total_likes: number;
+    total_comments: number;
+    total_shares: number;
+    total_purchases: number;
+    total_revenue: number;
+    duration_minutes: number;
+    session_started_at: string;
+    created_at: string;
+}
 
 /* ─────────────────── PIN 화면 ─────────────────── */
 function PinScreen({ onAuth }: { onAuth: () => void }) {
@@ -202,10 +218,6 @@ function Dashboard({ onLogout }: { onLogout: () => void }) {
     const [simDuration, setSimDuration] = useState(10);
     const [simStartedAt, setSimStartedAt] = useState<string | null>(null);
     const [showResetConfirm, setShowResetConfirm] = useState(false);
-    const [initialBalance, setInitialBalance] = useState(1000000);
-    const [balanceInput, setBalanceInput] = useState("1000000");
-    const [isSavingBalance, setIsSavingBalance] = useState(false);
-    const [balanceSaved, setBalanceSaved] = useState(false);
     const [highlightedPost, setHighlightedPost] = useState<string | null>(null);
     const [teamStats, setTeamStats] = useState<TeamStat[]>([]);
     const [isLoadingTeams, setIsLoadingTeams] = useState(true);
@@ -224,6 +236,13 @@ function Dashboard({ onLogout }: { onLogout: () => void }) {
     // 피드 모니터링용 Supabase 게시물
     const [dbPosts, setDbPosts] = useState<DbPost[]>([]);
     const [isLoadingPosts, setIsLoadingPosts] = useState(true);
+
+    // 시뮬레이션 결과 모니터링
+    const [simResults, setSimResults] = useState<SimResult[]>([]);
+    const [isLoadingSimResults, setIsLoadingSimResults] = useState(false);
+    const [newResultAlert, setNewResultAlert] = useState<string | null>(null);
+    // handle → team 매핑 (팀별 집계용)
+    const [handleToTeam, setHandleToTeam] = useState<Record<string, string>>({});
 
     // Supabase: 팀 현황 로드 (profiles + posts)
     const loadTeamStats = async () => {
@@ -346,21 +365,6 @@ function Dashboard({ onLogout }: { onLogout: () => void }) {
         setShowResetConfirm(false);
     };
 
-    // 초기 잔액 저장 + 전체 학생 잔액 일괄 업데이트
-    const handleSaveBalance = async () => {
-        const parsed = parseInt(balanceInput.replace(/,/g, ""), 10);
-        if (isNaN(parsed) || parsed < 0) return;
-        setIsSavingBalance(true);
-        // game_state에 initial_balance 저장
-        await supabase.from("game_state").update({ initial_balance: parsed }).eq("id", 1);
-        // 모든 학생 profiles의 balance를 새 금액으로 리셋
-        await supabase.from("profiles").update({ balance: parsed }).neq("id", "00000000-0000-0000-0000-000000000000");
-        setInitialBalance(parsed);
-        setIsSavingBalance(false);
-        setBalanceSaved(true);
-        setTimeout(() => setBalanceSaved(false), 2500);
-    };
-
     // 수업 상태 토글 (Supabase 저장)
     const handleClassToggle = async () => {
         setClassActiveLoading(true);
@@ -414,15 +418,6 @@ function Dashboard({ onLogout }: { onLogout: () => void }) {
                 }
             });
 
-        // 초기 잔액 로드
-        supabase.from("game_state").select("initial_balance").eq("id", 1).single()
-            .then(({ data }) => {
-                if (data?.initial_balance != null) {
-                    setInitialBalance(data.initial_balance);
-                    setBalanceInput(String(data.initial_balance));
-                }
-            });
-
         // 피드 모니터링: Supabase에서 전체 게시물 로드
         const loadDbPosts = async () => {
             setIsLoadingPosts(true);
@@ -443,7 +438,49 @@ function Dashboard({ onLogout }: { onLogout: () => void }) {
             })
             .subscribe();
 
-        return () => { supabase.removeChannel(ch); };
+        // ── 시뮬레이션 결과 모니터링 ──
+        // handle → team 매핑 로드
+        supabase.from("profiles").select("handle, team").then(({ data }) => {
+            if (data) {
+                const map: Record<string, string> = {};
+                data.forEach((p: { handle: string; team: string | null }) => {
+                    if (p.handle) map[p.handle] = p.team ?? "미배정";
+                });
+                setHandleToTeam(map);
+            }
+        });
+
+        // 기존 시뮬레이션 결과 로드
+        setIsLoadingSimResults(true);
+        supabase.from("simulation_results")
+            .select("*")
+            .order("created_at", { ascending: false })
+            .limit(50)
+            .then(({ data }) => {
+                setSimResults(data ?? []);
+                setIsLoadingSimResults(false);
+            });
+
+        // 새 시뮬레이션 결과 실시간 구독
+        const simCh = supabase.channel("teacher-sim-results")
+            .on(
+                "postgres_changes",
+                { event: "INSERT", schema: "public", table: "simulation_results" },
+                (payload) => {
+                    const newResult = payload.new as SimResult;
+                    setSimResults(prev => [newResult, ...prev]);
+                    setNewResultAlert(
+                        `${newResult.user_name}님이 결과 저장! 매출 ₩${newResult.total_revenue.toLocaleString()}`
+                    );
+                    setTimeout(() => setNewResultAlert(null), 4000);
+                }
+            )
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(ch);
+            supabase.removeChannel(simCh);
+        };
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
@@ -455,6 +492,15 @@ function Dashboard({ onLogout }: { onLogout: () => void }) {
     const activeMissions = missions.filter((m) => m.isActive).length;
     const completedMissions = missions.filter((m) => m.isCompleted).length;
 
+    // 팀별 시뮬레이션 매출 집계
+    const teamSimRevenue = simResults.reduce((acc, r) => {
+        const team = handleToTeam[r.user_handle] ?? "미배정";
+        acc[team] = (acc[team] ?? 0) + r.total_revenue;
+        return acc;
+    }, {} as Record<string, number>);
+    const teamSimRanking = Object.entries(teamSimRevenue)
+        .sort(([, a], [, b]) => b - a);
+
     const tabs: { id: Tab; label: string; emoji: string }[] = [
         { id: "class", label: "수업 현황", emoji: "🎓" },
         { id: "teams", label: "팀 관리", emoji: "👥" },
@@ -463,10 +509,20 @@ function Dashboard({ onLogout }: { onLogout: () => void }) {
         { id: "mission", label: "미션 관리", emoji: "🏆" },
         { id: "shop", label: "상품 관리", emoji: "🛍️" },
         { id: "reward", label: "리워드 관리", emoji: "🎁" },
+        { id: "simulation", label: "시뮬레이션 결과", emoji: "📈" },
     ];
 
     return (
         <div className="min-h-screen" style={{ background: "var(--background)" }}>
+
+            {/* ── 시뮬레이션 결과 토스트 알림 ── */}
+            {newResultAlert && (
+                <div className="fixed top-5 right-5 z-[200] flex items-center gap-3 px-4 py-3 rounded-2xl shadow-2xl animate-in slide-in-from-top-2 duration-300"
+                    style={{ background: "var(--secondary)", color: "white", maxWidth: "320px" }}>
+                    <TrendingUp size={16} className="shrink-0" />
+                    <p className="text-sm font-bold">{newResultAlert}</p>
+                </div>
+            )}
 
             {/* ── 상단 헤더 ── */}
             <header
@@ -662,54 +718,6 @@ function Dashboard({ onLogout }: { onLogout: () => void }) {
                 {/* ══════════ TAB 1: 수업 현황 ══════════ */}
                 {activeTab === "class" && (
                     <div className="flex flex-col gap-4">
-
-                        {/* 초기 잔액 설정 */}
-                        <div className="rounded-2xl p-5"
-                            style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
-                            <div className="flex items-center justify-between mb-3">
-                                <div>
-                                    <h3 className="text-base font-black" style={{ color: "var(--foreground)" }}>
-                                        학생 초기 잔액 설정
-                                    </h3>
-                                    <p className="text-xs mt-0.5" style={{ color: "var(--foreground-muted)" }}>
-                                        현재 설정: ₩{initialBalance.toLocaleString()} · 저장 시 전체 학생 잔액이 이 금액으로 리셋됩니다
-                                    </p>
-                                </div>
-                                {balanceSaved && (
-                                    <span className="text-xs font-bold px-2.5 py-1 rounded-full"
-                                        style={{ background: "var(--accent-light)", color: "var(--accent)" }}>
-                                        ✓ 저장됨
-                                    </span>
-                                )}
-                            </div>
-                            <div className="flex gap-2">
-                                <div className="flex-1 relative">
-                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-bold"
-                                        style={{ color: "var(--foreground-muted)" }}>₩</span>
-                                    <input
-                                        type="number"
-                                        value={balanceInput}
-                                        onChange={(e) => setBalanceInput(e.target.value)}
-                                        min={0}
-                                        step={100000}
-                                        className="w-full pl-7 pr-4 py-2.5 rounded-xl text-sm font-bold outline-none"
-                                        style={{
-                                            background: "var(--surface-2)",
-                                            border: "1px solid var(--border)",
-                                            color: "var(--foreground)",
-                                        }}
-                                    />
-                                </div>
-                                <button
-                                    onClick={handleSaveBalance}
-                                    disabled={isSavingBalance}
-                                    className="px-5 py-2.5 rounded-xl font-bold text-sm text-white transition-all hover:opacity-90 disabled:opacity-60"
-                                    style={{ background: "var(--secondary)" }}
-                                >
-                                    {isSavingBalance ? "저장 중..." : "전체 적용"}
-                                </button>
-                            </div>
-                        </div>
 
                         {/* 마켓 시뮬레이션 컨트롤 */}
                         <div className="rounded-2xl p-5"
@@ -1440,6 +1448,156 @@ function Dashboard({ onLogout }: { onLogout: () => void }) {
                 {/* ══════════ TAB 5: 리워드 관리 ══════════ */}
                 {activeTab === "reward" && (
                     <RewardManageTab />
+                )}
+
+                {/* ══════════ TAB: 시뮬레이션 결과 모니터링 ══════════ */}
+                {activeTab === "simulation" && (
+                    <div className="flex flex-col gap-4">
+
+                        {/* 헤더 요약 */}
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <p className="text-sm font-bold" style={{ color: "var(--foreground)" }}>
+                                    총 {simResults.length}개 결과
+                                </p>
+                                <p className="text-xs mt-0.5" style={{ color: "var(--foreground-muted)" }}>
+                                    학생이 "결과 저장" 클릭 시 실시간으로 표시됩니다
+                                </p>
+                            </div>
+                            {isLoadingSimResults && (
+                                <Loader2 size={16} className="animate-spin" style={{ color: "var(--foreground-muted)" }} />
+                            )}
+                        </div>
+
+                        {/* 팀별 매출 리더보드 */}
+                        {teamSimRanking.length > 0 && (
+                            <div className="rounded-2xl p-5"
+                                style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
+                                <div className="flex items-center gap-2 mb-4">
+                                    <Trophy size={15} style={{ color: "var(--highlight)" }} />
+                                    <h3 className="text-sm font-black" style={{ color: "var(--foreground)" }}>
+                                        팀별 총 매출 순위
+                                    </h3>
+                                </div>
+                                <div className="flex flex-col gap-2.5">
+                                    {teamSimRanking.map(([team, revenue], idx) => {
+                                        const meta = TEAM_META[team] ?? { emoji: "👥", color: "#9CA3AF" };
+                                        const maxRev = teamSimRanking[0]?.[1] ?? 1;
+                                        const pct = Math.round((revenue / maxRev) * 100);
+                                        return (
+                                            <div key={team} className="flex items-center gap-3">
+                                                <span className="w-5 text-xs font-black text-center"
+                                                    style={{ color: idx === 0 ? "#D97706" : "var(--foreground-muted)" }}>
+                                                    {idx + 1}
+                                                </span>
+                                                <span className="text-base w-6 text-center">{meta.emoji}</span>
+                                                <span className="text-sm font-bold w-12" style={{ color: "var(--foreground)" }}>
+                                                    {team}
+                                                </span>
+                                                <div className="flex-1 h-2 rounded-full overflow-hidden"
+                                                    style={{ background: "var(--surface-2)" }}>
+                                                    <div className="h-full rounded-full transition-all duration-700"
+                                                        style={{ width: `${pct}%`, background: meta.color }} />
+                                                </div>
+                                                <span className="text-xs font-black w-24 text-right"
+                                                    style={{ color: meta.color }}>
+                                                    ₩{revenue.toLocaleString()}
+                                                </span>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* 개별 결과 카드 (최신순) */}
+                        {simResults.length === 0 && !isLoadingSimResults ? (
+                            <div className="flex flex-col items-center justify-center py-16 gap-3 rounded-2xl"
+                                style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
+                                <TrendingUp size={32} style={{ color: "var(--foreground-muted)", opacity: 0.3 }} />
+                                <p className="text-sm font-bold" style={{ color: "var(--foreground-muted)" }}>
+                                    아직 저장된 결과가 없습니다
+                                </p>
+                                <p className="text-xs" style={{ color: "var(--foreground-muted)" }}>
+                                    학생들이 시뮬레이션을 완료하면 여기에 표시됩니다
+                                </p>
+                            </div>
+                        ) : (
+                            <div className="flex flex-col gap-3">
+                                {simResults.map((r) => {
+                                    const team = handleToTeam[r.user_handle] ?? "미배정";
+                                    const meta = TEAM_META[team] ?? { emoji: "👥", color: "#9CA3AF" };
+                                    const timeAgo = (() => {
+                                        const diff = Date.now() - new Date(r.created_at).getTime();
+                                        const m = Math.floor(diff / 60000);
+                                        if (m < 1) return "방금 전";
+                                        if (m < 60) return `${m}분 전`;
+                                        return `${Math.floor(m / 60)}시간 전`;
+                                    })();
+                                    return (
+                                        <div key={r.id} className="rounded-2xl overflow-hidden"
+                                            style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
+                                            {/* 카드 헤더 */}
+                                            <div className="flex items-center justify-between px-4 py-3"
+                                                style={{ borderBottom: "1px solid var(--border)" }}>
+                                                <div className="flex items-center gap-2.5">
+                                                    <span className="text-xl">{meta.emoji}</span>
+                                                    <div>
+                                                        <p className="text-sm font-black" style={{ color: "var(--foreground)" }}>
+                                                            {r.user_name}
+                                                        </p>
+                                                        <p className="text-[10px]" style={{ color: "var(--foreground-muted)" }}>
+                                                            @{r.user_handle} · {team}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                                <div className="flex items-center gap-2">
+                                                    {r.total_revenue > 0 && (
+                                                        <span className="text-xs font-black px-2.5 py-1 rounded-full"
+                                                            style={{ background: "rgba(255,194,51,0.15)", color: "#D97706" }}>
+                                                            ₩{r.total_revenue.toLocaleString()}
+                                                        </span>
+                                                    )}
+                                                    <span className="text-[10px]" style={{ color: "var(--foreground-muted)" }}>
+                                                        {timeAgo}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                            {/* 게시물 캡션 */}
+                                            {r.post_caption && (
+                                                <div className="px-4 py-2">
+                                                    <p className="text-xs italic line-clamp-2"
+                                                        style={{ color: "var(--foreground-muted)" }}>
+                                                        "{r.post_caption}"
+                                                    </p>
+                                                </div>
+                                            )}
+                                            {/* 결과 지표 */}
+                                            <div className="grid grid-cols-4 divide-x px-0 py-3"
+                                                style={{ borderTop: "1px solid var(--border)", "--divide-x-color": "var(--border)" } as React.CSSProperties}>
+                                                {[
+                                                    { emoji: "❤️", label: "좋아요", value: r.total_likes },
+                                                    { emoji: "💬", label: "댓글", value: r.total_comments },
+                                                    { emoji: "🔗", label: "공유", value: r.total_shares },
+                                                    { emoji: "🛍️", label: "구매", value: r.total_purchases },
+                                                ].map(({ emoji, label, value }) => (
+                                                    <div key={label} className="flex flex-col items-center gap-0.5 py-1">
+                                                        <span className="text-base">{emoji}</span>
+                                                        <span className="text-sm font-black" style={{ color: "var(--foreground)" }}>
+                                                            {value}
+                                                        </span>
+                                                        <span className="text-[9px]" style={{ color: "var(--foreground-muted)" }}>
+                                                            {label}
+                                                        </span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        )}
+                    </div>
                 )}
 
 
