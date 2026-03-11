@@ -29,9 +29,13 @@ export default function OnboardingGate({ children }: { children: React.ReactNode
 
     useEffect(() => {
         // 공개 페이지는 인증 체크 불필요
+        // 단, 공개 페이지를 떠날 때(cleanup) initializedRef를 리셋해
+        // 보호 페이지로 돌아오면 프로필을 다시 로드하도록 함
         if (isPublicPath) {
             setStatus("ready");
-            return;
+            return () => {
+                initializedRef.current = false;
+            };
         }
 
         // 이미 인증 완료된 경우 재체크 불필요 (페이지 이동 시 팝업 재출현 방지)

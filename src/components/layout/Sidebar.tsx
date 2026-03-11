@@ -331,19 +331,22 @@ export default function Sidebar() {
                             <PlayCircle size={18} className="shrink-0" />
                             <span>수업 시뮬레이션</span>
                         </Link>
-                        {isAdmin && (
-                            <Link
-                                href="/admin/dashboard"
-                                className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all"
-                                style={{
-                                    background: pathname === "/admin/dashboard" ? "rgba(124,58,237,0.18)" : "transparent",
-                                    color: pathname === "/admin/dashboard" ? "#7C3AED" : "var(--foreground-soft)",
-                                }}
-                            >
-                                <Shield size={18} className="shrink-0" style={{ color: "#7C3AED" }} />
-                                <span>관리자 대시보드</span>
-                            </Link>
-                        )}
+                        {/* 관리자 대시보드 — admin 쿠키 있으면 바로, 없으면 로그인 페이지로 */}
+                        <Link
+                            href={isAdmin ? "/admin/dashboard" : "/admin"}
+                            className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all"
+                            style={{
+                                background: pathname.startsWith("/admin") ? "rgba(124,58,237,0.18)" : "transparent",
+                                color: pathname.startsWith("/admin") ? "#7C3AED" : "var(--foreground-soft)",
+                            }}
+                        >
+                            <Shield size={18} className="shrink-0" style={{ color: pathname.startsWith("/admin") ? "#7C3AED" : undefined }} />
+                            <span>관리자 대시보드</span>
+                            {isAdmin && (
+                                <span className="ml-auto text-[9px] font-bold px-1.5 py-0.5 rounded-full text-white"
+                                    style={{ background: "#7C3AED" }}>ON</span>
+                            )}
+                        </Link>
                     </div>
                 )}
 
@@ -361,6 +364,20 @@ export default function Sidebar() {
                         콘텐츠 업로드
                     </button>
                 </div>
+
+                {/* 세션 오류 탈출구 — 유저 정보도 없고 admin도 아닐 때 */}
+                {adminChecked && !isAdmin && !user.name && (
+                    <div className="px-4 pb-3">
+                        <button
+                            onClick={handleLogout}
+                            className="w-full py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all"
+                            style={{ background: "var(--surface-2)", color: "var(--foreground-muted)", border: "1px solid var(--border)" }}
+                        >
+                            <LogOut size={13} />
+                            세션 초기화 / 재로그인
+                        </button>
+                    </div>
+                )}
 
                 {/* 사용자 정보 + XP 바 — 로그인 시에만 표시 */}
                 {(isAdmin || user.name) && (
