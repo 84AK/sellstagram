@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import GlassCard from "@/components/common/GlassCard";
 import EditProfileModal from "@/components/profile/EditProfileModal";
@@ -23,6 +23,9 @@ import {
     Image as ImageIcon,
     TrendingUp,
     Palette,
+    Download,
+    Share2,
+    Check,
 } from "lucide-react";
 import { useGameStore } from "@/store/useGameStore";
 import { supabase, isSupabaseConfigured, DbProfile } from "@/lib/supabase/client";
@@ -50,6 +53,64 @@ export default function ProfilePage() {
 
     const [showEditModal, setShowEditModal] = useState(false);
     const [showAvatarBuilder, setShowAvatarBuilder] = useState(false);
+    const [isSavingCard, setIsSavingCard] = useState(false);
+    const [cardSaved, setCardSaved] = useState(false);
+    const cardRef = useRef<HTMLDivElement>(null);
+
+    const handleSaveCard = async () => {
+        if (!cardRef.current || isSavingCard) return;
+        setIsSavingCard(true);
+        try {
+            const html2canvas = (await import("html2canvas")).default;
+            const canvas = await html2canvas(cardRef.current, {
+                scale: 3,
+                useCORS: true,
+                backgroundColor: null,
+                logging: false,
+            });
+            const link = document.createElement("a");
+            link.download = `sellstagram-${user.handle ?? "card"}.png`;
+            link.href = canvas.toDataURL("image/png");
+            link.click();
+            setCardSaved(true);
+            setTimeout(() => setCardSaved(false), 2500);
+        } catch (err) {
+            console.error("카드 저장 실패:", err);
+        } finally {
+            setIsSavingCard(false);
+        }
+    };
+
+    const handleShareCard = async () => {
+        if (!cardRef.current || isSavingCard) return;
+        setIsSavingCard(true);
+        try {
+            const html2canvas = (await import("html2canvas")).default;
+            const canvas = await html2canvas(cardRef.current, {
+                scale: 3,
+                useCORS: true,
+                backgroundColor: null,
+                logging: false,
+            });
+            canvas.toBlob(async (blob) => {
+                if (!blob) return;
+                const file = new File([blob], `sellstagram-${user.handle ?? "card"}.png`, { type: "image/png" });
+                if (navigator.canShare?.({ files: [file] })) {
+                    await navigator.share({ files: [file], title: "나의 마케터 ID 카드", text: `@${user.handle} · Sellstagram` });
+                } else {
+                    // 공유 미지원 시 다운로드 fallback
+                    const link = document.createElement("a");
+                    link.download = file.name;
+                    link.href = URL.createObjectURL(blob);
+                    link.click();
+                }
+            }, "image/png");
+        } catch (err) {
+            console.error("카드 공유 실패:", err);
+        } finally {
+            setIsSavingCard(false);
+        }
+    };
     const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
     const [teamCreatedAt, setTeamCreatedAt] = useState<string | null>(null);
     const [loadingTeam, setLoadingTeam] = useState(true);
@@ -311,16 +372,54 @@ export default function ProfilePage() {
                         <div className="lg:col-span-3 flex flex-col lg:flex-row gap-12 items-center lg:items-start">
                             {/* 카드 영역 */}
                             <div className="flex flex-col items-center gap-5 shrink-0">
-                                <IDCard
-                                    name={user.name}
-                                    handle={user.handle}
-                                    team={user.team}
-                                    rank={user.rank}
-                                    points={user.points}
-                                    avatar={user.avatar}
-                                    avatarConfig={user.avatarConfig}
-                                    onCustomize={() => setShowAvatarBuilder(true)}
-                                />
+                                {/* 저장되는 카드 영역 (ref) */}
+                                <div ref={cardRef}>
+                                    <IDCard
+                                        name={user.name}
+                                        handle={user.handle}
+                                        team={user.team}
+                                        rank={user.rank}
+                                        points={user.points}
+                                        avatar={user.avatar}
+                                        avatarConfig={user.avatarConfig}
+                                        onCustomize={() => setShowAvatarBuilder(true)}
+                                    />
+                                </div>
+                                {/* 저장 / 공유 버튼 */}
+                                <div className="flex gap-2 w-full" style={{ maxWidth: 320 }}>
+                                    <button
+                                        onClick={handleSaveCard}
+                                        disabled={isSavingCard}
+                                        className="flex-1 flex items-center justify-center gap-2 py-3 rounded-2xl text-sm font-black transition-all hover:opacity-90 active:scale-95 disabled:opacity-50"
+                                        style={{
+                                            background: cardSaved ? "rgba(6,214,160,0.15)" : "var(--surface)",
+                                            color: cardSaved ? "var(--accent)" : "var(--foreground)",
+                                            border: cardSaved ? "1.5px solid var(--accent)" : "1px solid var(--border)",
+                                        }}
+                                    >
+                                        {isSavingCard ? (
+                                            <Loader2 size={15} className="animate-spin" />
+                                        ) : cardSaved ? (
+                                            <Check size={15} />
+                                        ) : (
+                                            <Download size={15} />
+                                        )}
+                                        {cardSaved ? "저장됨!" : "이미지 저장"}
+                                    </button>
+                                    <button
+                                        onClick={handleShareCard}
+                                        disabled={isSavingCard}
+                                        className="flex-1 flex items-center justify-center gap-2 py-3 rounded-2xl text-sm font-black text-white transition-all hover:opacity-90 active:scale-95 disabled:opacity-50"
+                                        style={{ background: "linear-gradient(135deg, #E1306C, #F77737)" }}
+                                    >
+                                        {isSavingCard ? (
+                                            <Loader2 size={15} className="animate-spin" />
+                                        ) : (
+                                            <Share2 size={15} />
+                                        )}
+                                        인스타 공유
+                                    </button>
+                                </div>
                             </div>
 
                             {/* 우측 안내 */}
