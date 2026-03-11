@@ -20,6 +20,8 @@ import {
     Trophy,
     Users,
     BarChart2,
+    ExternalLink,
+    PenLine,
 } from "lucide-react";
 import {
     CURRICULUM,
@@ -305,6 +307,36 @@ export default function SessionPage() {
                     </div>
                 )}
             </div>
+
+            {/* ── 수업 결과 기록 버튼 (항상 표시) ── */}
+            <a
+                href="https://84ak.github.io/activity_log/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-between p-5 rounded-2xl transition-all hover:scale-[1.01] active:scale-[0.99]"
+                style={{
+                    background: `linear-gradient(135deg, ${themeStyle.color}14, ${themeStyle.color}08)`,
+                    border: `1.5px solid ${themeStyle.color}40`,
+                }}
+            >
+                <div className="flex items-center gap-4">
+                    <div
+                        className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0"
+                        style={{ background: themeStyle.bg }}
+                    >
+                        <PenLine size={20} style={{ color: themeStyle.color }} />
+                    </div>
+                    <div>
+                        <p className="text-base font-black" style={{ color: themeStyle.color }}>
+                            {viewWeek}회차 활동 기록하기
+                        </p>
+                        <p className="text-xs mt-0.5" style={{ color: "var(--foreground-soft)" }}>
+                            오늘 만든 이미지·프롬프트 결과를 저장해요
+                        </p>
+                    </div>
+                </div>
+                <ExternalLink size={16} style={{ color: themeStyle.color, opacity: 0.7 }} />
+            </a>
 
             {/* ── 잠금 오버레이 ── */}
             {isLocked && (
