@@ -14,7 +14,7 @@ create table if not exists public.profiles (
     is_leader boolean default false,
     points integer default 0,
     rank text default 'Beginner',
-    balance integer default 1000000,
+    balance integer default 100000,
     created_at timestamptz default now()
 );
 
@@ -72,7 +72,7 @@ create table if not exists public.game_state (
     week integer default 1,
     is_session_active boolean default false,
     teacher_pin text default '1234',
-    initial_balance integer default 1000000,
+    initial_balance integer default 100000,
     updated_at timestamptz default now()
 );
 

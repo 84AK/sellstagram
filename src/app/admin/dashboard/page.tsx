@@ -74,8 +74,8 @@ export default function AdminDashboard() {
     const [pinResult, setPinResult] = useState<{ ok: boolean; msg: string } | null>(null);
 
     // 초기 잔액 설정 상태
-    const [initialBalance, setInitialBalance] = useState(1000000);
-    const [balanceInput, setBalanceInput] = useState("1000000");
+    const [initialBalance, setInitialBalance] = useState(100000);
+    const [balanceInput, setBalanceInput] = useState("100000");
     const [isSavingBalance, setIsSavingBalance] = useState(false);
     const [balanceSaved, setBalanceSaved] = useState(false);
 
