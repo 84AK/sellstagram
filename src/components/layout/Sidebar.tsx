@@ -103,7 +103,7 @@ const navItems = [
 export default function Sidebar() {
     const pathname = usePathname();
     const router = useRouter();
-    const { setUploadModalOpen, user, week } = useGameStore();
+    const { setUploadModalOpen, user, week, setWeek } = useGameStore();
     const [isAdmin, setIsAdmin] = useState(false);
     const [adminChecked, setAdminChecked] = useState(false);
 
@@ -112,6 +112,32 @@ export default function Sidebar() {
             .then(r => r.json())
             .then(({ isAdmin }) => { setIsAdmin(isAdmin); setAdminChecked(true); })
             .catch(() => setAdminChecked(true));
+    }, []);
+
+    useEffect(() => {
+        // game_state.week 초기 로드
+        supabase
+            .from("game_state")
+            .select("week")
+            .eq("id", 1)
+            .single()
+            .then(({ data }) => { if (data?.week) setWeek(data.week); });
+
+        // 실시간 구독 — 교사가 주차를 변경하면 즉시 반영
+        const channel = supabase
+            .channel("sidebar-week")
+            .on(
+                "postgres_changes",
+                { event: "UPDATE", schema: "public", table: "game_state", filter: "id=eq.1" },
+                (payload) => {
+                    const newWeek = (payload.new as { week?: number }).week;
+                    if (newWeek !== undefined) setWeek(newWeek);
+                }
+            )
+            .subscribe();
+
+        return () => { supabase.removeChannel(channel); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     const handleAdminLogout = async () => {
