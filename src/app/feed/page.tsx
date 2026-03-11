@@ -61,6 +61,7 @@ export default function FeedPage() {
     const { setUploadModalOpen, setGuideModalOpen, posts, week, user, addPost, setWeek } = useGameStore();
     const [feedFilter, setFeedFilter] = useState<"latest" | "hot">("latest");
     const [classActive, setClassActive] = useState(false);
+    const [activeMission, setActiveMission] = useState<{ title: string; description: string } | null>(null);
 
     const sortedPosts = feedFilter === "hot"
         ? [...posts].sort((a, b) => {
@@ -100,6 +101,14 @@ export default function FeedPage() {
         supabase.from("app_settings").select("class_active").eq("id", 1).single()
             .then(({ data }) => { if (data) setClassActive(data.class_active); });
 
+        // 활성 미션 초기 로드
+        const loadActiveMission = () => {
+            supabase.from("missions").select("title, description").eq("is_active", true)
+                .order("created_at", { ascending: true }).limit(1).single()
+                .then(({ data }) => setActiveMission(data ?? null));
+        };
+        loadActiveMission();
+
         const postChannel = supabase
             .channel("posts-feed")
             .on("postgres_changes", { event: "INSERT", schema: "public", table: "posts" }, (payload) => {
@@ -125,10 +134,19 @@ export default function FeedPage() {
             })
             .subscribe();
 
+        // 미션 변경 실시간 구독
+        const missionChannel = supabase
+            .channel("feed-missions")
+            .on("postgres_changes", { event: "*", schema: "public", table: "missions" }, () => {
+                loadActiveMission();
+            })
+            .subscribe();
+
         return () => {
             supabase.removeChannel(postChannel);
             supabase.removeChannel(gameChannel);
             supabase.removeChannel(classChannel);
+            supabase.removeChannel(missionChannel);
         };
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
@@ -202,8 +220,8 @@ export default function FeedPage() {
                 {/* 스토리 바 */}
                 <StoryBar />
 
-                {/* 이번 주 미션 히어로 카드 — 수업 진행 중일 때만 표시 */}
-                {classActive && <div
+                {/* 이번 주 미션 히어로 카드 — 수업 진행 중 + 활성 미션 있을 때만 표시 */}
+                {classActive && activeMission && <div
                     className="relative overflow-hidden rounded-2xl p-5"
                     style={{
                         background: "linear-gradient(135deg, #FF6B35 0%, #FF9A72 50%, #FFC233 100%)",
@@ -218,15 +236,13 @@ export default function FeedPage() {
                             <span className="text-[10px] font-bold bg-white/20 text-white px-2.5 py-1 rounded-full uppercase tracking-wider">
                                 📚 {week}회차 미션
                             </span>
-                            <span className="text-[10px] font-bold text-white/70">D-3 마감</span>
                         </div>
 
                         <h2 className="text-xl font-black text-white mb-1.5 font-outfit leading-tight">
-                            친환경 스마트워치
-                            <br />출시 캠페인
+                            {activeMission.title}
                         </h2>
                         <p className="text-sm text-white/80 mb-5 max-w-xs leading-relaxed">
-                            Z세대를 타겟으로 지속가능한 마케팅 전략을 세우고 첫 번째 콘텐츠를 업로드하세요.
+                            {activeMission.description}
                         </p>
 
                         <div className="flex gap-2">

@@ -327,11 +327,21 @@ function Dashboard({ onLogout }: { onLogout: () => void }) {
         setIsSavingMission(false);
     };
 
-    // 미션 삭제
+    // 미션 삭제 (admin API 경유 — RLS 우회)
     const handleDeleteMission = async (missionId: string) => {
         setDeletingId(missionId);
-        await supabase.from("missions").delete().eq("id", missionId);
-        deleteMission(missionId);
+        const res = await fetch("/api/missions/delete", {
+            method: "DELETE",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ id: missionId }),
+        });
+        if (res.ok) {
+            deleteMission(missionId);
+        } else {
+            const { error } = await res.json();
+            console.error("미션 삭제 실패:", error);
+            alert("미션 삭제에 실패했습니다: " + error);
+        }
         setDeletingId(null);
     };
 
