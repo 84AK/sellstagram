@@ -212,6 +212,16 @@ export default function UploadModal() {
             // 포인트 지급: 게시물 +10 XP, 미션 모드 +20 XP, 챌린지 참여 추가 보너스
             const xp = (isMissionMode ? 20 : 10) + (challengeMode ? todayChallenge.bonusXP : 0);
             addPoints(xp);
+            // Supabase profiles.points 동기화
+            supabase.auth.getSession().then(({ data: { session } }) => {
+                if (session?.user) {
+                    supabase.from("profiles").select("points").eq("id", session.user.id).single()
+                        .then(({ data: prof }) => {
+                            const cur = prof?.points ?? 0;
+                            supabase.from("profiles").update({ points: cur + xp }).eq("id", session.user.id);
+                        });
+                }
+            });
 
             // 스킬 XP 적립
             addSkillXP("copywriting", isMissionMode ? 20 : 15);
