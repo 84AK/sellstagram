@@ -64,28 +64,40 @@ export default function MissionList() {
     const [missions, setMissions] = useState<Mission[]>([]);
     const [loading, setLoading] = useState(true);
 
-    useEffect(() => {
+    const fetchMissions = () => {
         supabase
             .from("missions")
             .select("*")
             .eq("is_active", true)
             .order("created_at", { ascending: true })
             .then(({ data }) => {
-                if (data) {
-                    setMissions(data.map((m) => ({
-                        id: m.id,
-                        title: m.title,
-                        description: m.description,
-                        type: (m.mission_type ?? "revenue") as Mission["type"],
-                        targetRevenue: m.target_revenue ?? 0,
-                        targetCount: m.target_count ?? undefined,
-                        reward: m.reward ?? 0,
-                        isCompleted: false,
-                        isActive: m.is_active,
-                    })));
-                }
+                setMissions(data ? data.map((m) => ({
+                    id: m.id,
+                    title: m.title,
+                    description: m.description,
+                    type: (m.mission_type ?? "revenue") as Mission["type"],
+                    targetRevenue: m.target_revenue ?? 0,
+                    targetCount: m.target_count ?? undefined,
+                    reward: m.reward ?? 0,
+                    isCompleted: false,
+                    isActive: m.is_active,
+                })) : []);
                 setLoading(false);
             });
+    };
+
+    useEffect(() => {
+        fetchMissions();
+
+        const ch = supabase
+            .channel("missions-list")
+            .on("postgres_changes", { event: "*", schema: "public", table: "missions" }, () => {
+                fetchMissions();
+            })
+            .subscribe();
+
+        return () => { supabase.removeChannel(ch); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     if (loading) {

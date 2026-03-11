@@ -202,8 +202,8 @@ export default function FeedPage() {
                 {/* 스토리 바 */}
                 <StoryBar />
 
-                {/* 이번 주 미션 히어로 카드 */}
-                <div
+                {/* 이번 주 미션 히어로 카드 — 수업 진행 중일 때만 표시 */}
+                {classActive && <div
                     className="relative overflow-hidden rounded-2xl p-5"
                     style={{
                         background: "linear-gradient(135deg, #FF6B35 0%, #FF9A72 50%, #FFC233 100%)",
@@ -245,7 +245,7 @@ export default function FeedPage() {
                             </button>
                         </div>
                     </div>
-                </div>
+                </div>}
 
                 {/* 개인 현황 빠른 요약 */}
                 <div className="grid grid-cols-2 gap-3">

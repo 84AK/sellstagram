@@ -44,18 +44,25 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    // 매출이 있고 userId가 있으면 profiles.balance 증가
+    // 매출이 있고 userId가 있으면 profiles.balance + points 증가
     if (userId && total_revenue > 0) {
         const { data: profile } = await admin
             .from("profiles")
-            .select("balance")
+            .select("balance, points")
             .eq("id", userId)
             .single();
 
         const currentBalance = profile?.balance ?? 0;
+        const currentPoints = profile?.points ?? 0;
+        // 매출 ₩1,000 당 1pt 지급 (최소 10pt)
+        const earnedPoints = Math.max(10, Math.floor(total_revenue / 1000));
+
         await admin
             .from("profiles")
-            .update({ balance: currentBalance + total_revenue })
+            .update({
+                balance: currentBalance + total_revenue,
+                points: currentPoints + earnedPoints,
+            })
             .eq("id", userId);
     }
 
