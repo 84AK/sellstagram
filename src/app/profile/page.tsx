@@ -68,10 +68,11 @@ export default function ProfilePage() {
                 useCORS: true,
                 backgroundColor: null,
                 logging: false,
-                width: el.offsetWidth,
-                height: el.offsetHeight,
-                windowWidth: el.offsetWidth,
-                windowHeight: el.offsetHeight,
+                onclone: (_doc, clonedEl) => {
+                    // 버튼 DOM 자체를 제거해 여백 없애기
+                    clonedEl.querySelectorAll("[data-html2canvas-ignore]")
+                        .forEach(n => n.remove());
+                },
             });
             const link = document.createElement("a");
             link.download = `sellstagram-${user.handle ?? "card"}.png`;
@@ -97,10 +98,10 @@ export default function ProfilePage() {
                 useCORS: true,
                 backgroundColor: null,
                 logging: false,
-                width: el.offsetWidth,
-                height: el.offsetHeight,
-                windowWidth: el.offsetWidth,
-                windowHeight: el.offsetHeight,
+                onclone: (_doc, clonedEl) => {
+                    clonedEl.querySelectorAll("[data-html2canvas-ignore]")
+                        .forEach(n => n.remove());
+                },
             });
             canvas.toBlob(async (blob) => {
                 if (!blob) return;
