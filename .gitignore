@@ -39,3 +39,8 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# bkit / PDCA 자동 생성 파일
+docs/.bkit-memory.json
+docs/.pdca-status.json
+docs/.pdca-snapshots/
