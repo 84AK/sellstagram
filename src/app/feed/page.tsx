@@ -338,7 +338,7 @@ export default function FeedPage() {
                     <span>© 2026 SELLSTAGRAM</span>
                     <span style={{ color: "var(--border)" }}>·</span>
                     <Link
-                        href="https://arclabs.co.kr"
+                        href="https://litt.ly/aklabs"
                         target="_blank"
                         rel="noopener noreferrer"
                         className="hover:opacity-70 transition-opacity"
