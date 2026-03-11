@@ -179,12 +179,20 @@ export default function AdminDashboard() {
         const parsed = parseInt(balanceInput.replace(/,/g, ""), 10);
         if (isNaN(parsed) || parsed < 0) return;
         setIsSavingBalance(true);
-        await supabase.from("game_state").update({ initial_balance: parsed }).eq("id", 1);
-        await supabase.from("profiles").update({ balance: parsed }).neq("id", "00000000-0000-0000-0000-000000000000");
-        setInitialBalance(parsed);
+        const res = await fetch("/api/admin/reset-balance", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ balance: parsed }),
+        });
+        if (res.ok) {
+            setInitialBalance(parsed);
+            setBalanceSaved(true);
+            setTimeout(() => setBalanceSaved(false), 2500);
+        } else {
+            const { error } = await res.json();
+            alert("잔액 설정 실패: " + error);
+        }
         setIsSavingBalance(false);
-        setBalanceSaved(true);
-        setTimeout(() => setBalanceSaved(false), 2500);
     };
 
     const handleSavePin = async () => {
