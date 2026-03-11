@@ -308,11 +308,18 @@ export default function AdminDashboard() {
                         <p className="text-[10px]" style={{ color: "var(--foreground-muted)" }}>Sellstagram Admin</p>
                     </div>
                 </div>
-                <button onClick={handleLogout}
-                    className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-colors hover:bg-red-50"
-                    style={{ color: "var(--foreground-muted)" }}>
-                    <LogOut size={14} /> 로그아웃
-                </button>
+                <div className="flex items-center gap-2">
+                    <button onClick={() => router.push("/feed")}
+                        className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-colors hover:bg-blue-50"
+                        style={{ color: "var(--secondary)" }}>
+                        ← 앱으로
+                    </button>
+                    <button onClick={handleLogout}
+                        className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-colors hover:bg-red-50"
+                        style={{ color: "var(--foreground-muted)" }}>
+                        <LogOut size={14} /> 로그아웃
+                    </button>
+                </div>
             </header>
 
             <div className="max-w-5xl mx-auto p-5 flex flex-col gap-6 pb-20">

@@ -122,6 +122,13 @@ export default function AdminLoginPage() {
                 <p className="text-center text-xs" style={{ color: "var(--foreground-soft)" }}>
                     관리자 계정은 운영자만 사용할 수 있습니다.
                 </p>
+                <button
+                    onClick={() => router.push("/feed")}
+                    className="text-center text-xs font-semibold hover:underline"
+                    style={{ color: "var(--foreground-muted)" }}
+                >
+                    ← 학생 앱으로 돌아가기
+                </button>
             </div>
         </div>
     );

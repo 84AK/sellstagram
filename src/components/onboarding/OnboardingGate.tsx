@@ -38,15 +38,8 @@ export default function OnboardingGate({ children }: { children: React.ReactNode
         if (initializedRef.current) return;
 
         const checkAuthAndProfile = async () => {
-            // 관리자 쿠키 확인 — 관리자는 모든 페이지 자유 접근
-            const adminRes = await fetch("/api/auth/admin-check");
-            const { isAdmin } = await adminRes.json();
-            if (isAdmin) {
-                initializedRef.current = true;
-                setStatus("ready");
-                return;
-            }
-
+            // /admin 경로는 PUBLIC_PATHS로 이미 처리되므로
+            // 여기서는 Supabase 세션만 확인 (admin 쿠키 체크 불필요)
             const { data: { session } } = await supabase.auth.getSession();
 
             if (!session) {
