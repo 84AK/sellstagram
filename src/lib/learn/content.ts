@@ -217,6 +217,7 @@ export interface AIToolGuide {
     id: string;
     name: string;
     emoji: string;
+    logo?: string;          // 실제 서비스 로고 이미지 URL (없으면 emoji 표시)
     tagline: string;
     color: string;
     bg: string;
@@ -232,6 +233,7 @@ export const AI_TOOL_GUIDES: AIToolGuide[] = [
         id: "chatgpt",
         name: "ChatGPT",
         emoji: "🤖",
+        logo: "https://upload.wikimedia.org/wikipedia/commons/0/04/ChatGPT_logo.svg",
         tagline: "카피라이팅·기획·리서치의 만능 도구",
         color: "#10A37F",
         bg: "#E6F7F3",
@@ -250,6 +252,7 @@ export const AI_TOOL_GUIDES: AIToolGuide[] = [
         id: "claude",
         name: "Claude",
         emoji: "🌀",
+        logo: "https://claude.ai/apple-touch-icon.png",
         tagline: "긴 글·전략·분석에 특화된 AI",
         color: "#4361EE",
         bg: "#EEF1FD",
@@ -268,6 +271,7 @@ export const AI_TOOL_GUIDES: AIToolGuide[] = [
         id: "canva",
         name: "Canva AI",
         emoji: "🎨",
+        logo: "https://upload.wikimedia.org/wikipedia/commons/0/08/Canva_icon_2021.svg",
         tagline: "이미지·카드뉴스·로고 디자인 뚝딱",
         color: "#7C3AED",
         bg: "#F3EEFF",
@@ -286,6 +290,7 @@ export const AI_TOOL_GUIDES: AIToolGuide[] = [
         id: "gemini",
         name: "Google Gemini",
         emoji: "✨",
+        logo: "https://upload.wikimedia.org/wikipedia/commons/8/8a/Google_Gemini_logo.svg",
         tagline: "이미지 분석·실시간 정보 검색 특화",
         color: "#FF6B35",
         bg: "#FFF0EB",
@@ -301,17 +306,17 @@ export const AI_TOOL_GUIDES: AIToolGuide[] = [
         link: "https://gemini.google.com",
     },
     {
-        id: "runway",
-        name: "Runway / Sora",
+        id: "ai-video",
+        name: "AI 영상 생성",
         emoji: "🎬",
-        tagline: "AI 영상 생성 (쇼츠·릴스용)",
+        tagline: "쇼츠·릴스용 AI 비디오 콘텐츠 제작",
         color: "#EF4444",
         bg: "#FEF2F2",
         difficulty: "고급",
         useCases: ["AI 영상 생성", "제품 영상 광고", "배경 교체", "영상 편집 자동화", "숏폼 콘텐츠"],
         steps: [
-            { step: "runwayml.com 접속", desc: "무료 플랜으로 제한적으로 사용 가능해요" },
-            { step: "텍스트로 영상 생성", desc: "'Text to Video' → 원하는 장면을 설명해요" },
+            { step: "AI 영상 도구 선택", desc: "대부분 유료이므로 무료 체험 기간을 활용하거나 학교 계정으로 확인해보세요" },
+            { step: "텍스트로 영상 생성", desc: "'Text to Video' 기능 → 원하는 장면을 구체적으로 설명해요" },
             { step: "이미지에서 영상 만들기", desc: "'Image to Video' → Canva로 만든 이미지를 움직이는 영상으로 변환!" },
             { step: "짧게 클립 만들기", desc: "4~8초 클립을 여러 개 만들어 이어붙여요" },
         ],

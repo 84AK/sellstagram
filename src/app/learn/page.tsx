@@ -44,6 +44,7 @@ const DIFFICULTY_STYLE: Record<Difficulty, { color: string; bg: string }> = {
 /* ── 목록 아이템 (왼쪽 패널 공통) ── */
 function ListItem({
     emoji,
+    logo,
     title,
     subtitle,
     difficulty,
@@ -53,6 +54,7 @@ function ListItem({
     onClick,
 }: {
     emoji: string;
+    logo?: string;
     title: string;
     subtitle: string;
     difficulty: Difficulty;
@@ -77,7 +79,11 @@ function ListItem({
                 if (!isSelected) (e.currentTarget as HTMLElement).style.background = "transparent";
             }}
         >
-            <span className="text-2xl shrink-0">{emoji}</span>
+            {logo ? (
+                <img src={logo} alt={title} className="w-8 h-8 shrink-0 rounded-lg object-contain" />
+            ) : (
+                <span className="text-2xl shrink-0">{emoji}</span>
+            )}
             <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-1.5 flex-wrap">
                     <span className="text-sm font-bold truncate" style={{ color: "var(--foreground)" }}>
@@ -231,9 +237,13 @@ function AIToolDetail({ tool }: { tool: AIToolGuide }) {
             <div className="flex items-center gap-4">
                 <div
                     className="w-16 h-16 rounded-2xl flex items-center justify-center text-4xl shrink-0"
-                    style={{ background: tool.bg }}
+                    style={{ background: tool.logo ? "transparent" : tool.bg }}
                 >
-                    {tool.emoji}
+                    {tool.logo ? (
+                        <img src={tool.logo} alt={tool.name} className="w-14 h-14 object-contain rounded-xl" />
+                    ) : (
+                        tool.emoji
+                    )}
                 </div>
                 <div>
                     <h2 className="text-xl font-black" style={{ color: "var(--foreground)" }}>
@@ -533,6 +543,7 @@ export default function LearnPage() {
                             <ListItem
                                 key={tool.id}
                                 emoji={tool.emoji}
+                                logo={tool.logo}
                                 title={tool.name}
                                 subtitle={tool.tagline}
                                 difficulty={tool.difficulty}
@@ -625,6 +636,7 @@ export default function LearnPage() {
                         <ListItem
                             key={tool.id}
                             emoji={tool.emoji}
+                            logo={tool.logo}
                             title={tool.name}
                             subtitle={tool.tagline}
                             difficulty={tool.difficulty}
