@@ -71,16 +71,27 @@ export default function FeedCard({ id, user, content, stats, timeAgo, sellingPri
     const [isAnalyzing, setIsAnalyzing] = useState(false);
     const [simResult, setSimResult] = useState<SimResult | null>(null);
     const [showSimResult, setShowSimResult] = useState(false);
+    // AI 반응 제외한 실제 사람 댓글 수
+    const [humanCommentCount, setHumanCommentCount] = useState(0);
 
     const { addInsight, startCampaign, setAIReportModal, addSkillXP, user: currentUser } = useGameStore();
     const router = useRouter();
     const isMyPost = user.handle === currentUser.handle;
 
-    // 인게이지먼트 실시간 계산 (좋아요+댓글+공유 / 기준팔로워 500명)
+    // 마운트 시 human comment count만 별도 로드 (AI 반응 제외)
+    useEffect(() => {
+        supabase
+            .from("comments")
+            .select("*", { count: "exact", head: true })
+            .eq("post_id", id)
+            .eq("is_ai_reaction", false)
+            .then(({ count }) => setHumanCommentCount(count ?? 0));
+    }, [id]);
+
+    // 인게이지먼트 실시간 계산 (좋아요+실제댓글+공유 / 기준팔로워 500명)
     const BASE_FOLLOWERS = 500;
-    const commentCount = parseInt(stats.comments || "0") || 0;
     const shareCount = parseInt(stats.shares || "0") || 0;
-    const totalEngagements = localLikes + commentCount + shareCount;
+    const totalEngagements = localLikes + humanCommentCount + shareCount;
     const engagementRate = ((totalEngagements / BASE_FOLLOWERS) * 100).toFixed(1);
 
     // 좋아요/북마크 복원
@@ -221,6 +232,7 @@ export default function FeedCard({ id, user, content, stats, timeAgo, sellingPri
             text,
             is_ai_reaction: false,
         });
+        setHumanCommentCount(prev => prev + 1);
         setSubmitting(false);
     };
 
@@ -240,7 +252,7 @@ export default function FeedCard({ id, user, content, stats, timeAgo, sellingPri
                 text: shareMessage || `게시물을 공유했습니다.`,
             });
             const newShareCount = shareCount + 1;
-            const newEngagement = (((localLikes + commentCount + newShareCount) / BASE_FOLLOWERS) * 100).toFixed(1) + "%";
+            const newEngagement = (((localLikes + humanCommentCount + newShareCount) / BASE_FOLLOWERS) * 100).toFixed(1) + "%";
             await supabase.from("posts").update({ shares: newShareCount, engagement_rate: newEngagement }).eq("id", id);
             setSharedTo(prev => new Set([...prev, selectedShareUser.id]));
             setMsgSent(true);
@@ -372,7 +384,7 @@ export default function FeedCard({ id, user, content, stats, timeAgo, sellingPri
                             localStorage.setItem("liked_posts", JSON.stringify(
                                 newLiked ? [...likedIds, id] : likedIds.filter(x => x !== id)
                             ));
-                            const newEngagement = (((newCount + commentCount + shareCount) / BASE_FOLLOWERS) * 100).toFixed(1) + "%";
+                            const newEngagement = (((newCount + humanCommentCount + shareCount) / BASE_FOLLOWERS) * 100).toFixed(1) + "%";
                             await supabase.from("posts").update({ likes: newCount, engagement_rate: newEngagement }).eq("id", id);
                         }}
                         className="p-2 transition-all duration-200 active:scale-90"
