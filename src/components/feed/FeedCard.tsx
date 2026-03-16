@@ -88,8 +88,13 @@ export default function FeedCard({ id, user, content, stats, timeAgo, sellingPri
     const [showSimResult, setShowSimResult] = useState(false);
     // AI 반응 제외한 실제 사람 댓글 수
     const [humanCommentCount, setHumanCommentCount] = useState(0);
-    // 이미지 캐러셀
-    const allImages = images && images.length > 0 ? images : (content.image ? [content.image] : []);
+    // 이미지 캐러셀 — image_url(첫 번째) + images(나머지)를 합쳐 전체 슬라이드 구성
+    const allImages = (() => {
+        const first = content.image ? [content.image] : [];
+        const rest = images && images.length > 0 ? images : [];
+        const combined = [...first, ...rest];
+        return combined.length > 0 ? combined : [];
+    })();
     const [imgIdx, setImgIdx] = useState(0);
     // 캡션 더보기
     const CAPTION_LIMIT = 80;
@@ -1024,7 +1029,7 @@ export default function FeedCard({ id, user, content, stats, timeAgo, sellingPri
                                 <label className="text-[11px] font-bold uppercase tracking-widest" style={{ color: "var(--foreground-muted)" }}>
                                     이미지 ({editImages.length}장)
                                 </label>
-                                <div className="flex gap-2 overflow-x-auto pb-1">
+                                <div className="flex gap-3 overflow-x-auto pb-2 pt-1 px-1">
                                     {editImages.map((img, idx) => (
                                         <div key={idx} className="relative shrink-0 group">
                                             <div className="w-20 h-20 rounded-xl overflow-hidden"
@@ -1037,12 +1042,12 @@ export default function FeedCard({ id, user, content, stats, timeAgo, sellingPri
                                                 style={{ background: idx === 0 ? "var(--secondary)" : "rgba(0,0,0,0.5)" }}>
                                                 {idx + 1}
                                             </span>
-                                            {/* 삭제 버튼 */}
+                                            {/* 삭제 버튼 — 이미지 우상단 안쪽에 배치 (클리핑 방지) */}
                                             {editImages.length > 1 && (
                                                 <button
                                                     onClick={() => setEditImages(prev => prev.filter((_, i) => i !== idx))}
-                                                    className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity"
-                                                    style={{ background: "#EF4444" }}
+                                                    className="absolute top-1 right-1 w-5 h-5 rounded-full flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity"
+                                                    style={{ background: "#EF4444", boxShadow: "0 1px 4px rgba(0,0,0,0.3)" }}
                                                 >
                                                     <X size={10} />
                                                 </button>
