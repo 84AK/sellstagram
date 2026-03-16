@@ -332,6 +332,7 @@ export default function UploadModal() {
     };
 
     const handleUpload = async () => {
+        if (uploadType === "video") return; // 영상 업로드 준비 중
         if (!caption.trim()) return;
         setIsUploading(true);
 
@@ -651,10 +652,14 @@ export default function UploadModal() {
                         Photo Post
                     </button>
                     <button
-                        onClick={() => setUploadType("video")}
-                        className={`flex-1 py-2 text-[10px] font-bold uppercase tracking-widest rounded-lg transition-all ${uploadType === "video" ? "bg-background shadow-sm text-primary" : "text-foreground/40 hover:text-foreground/60"}`}
+                        disabled
+                        className="flex-1 py-2 text-[10px] font-bold uppercase tracking-widest rounded-lg transition-all text-foreground/25 cursor-not-allowed flex items-center justify-center gap-1.5"
+                        title="곧 업데이트 예정이에요!"
                     >
                         Video Reels
+                        <span className="text-[8px] font-black px-1.5 py-0.5 rounded-full" style={{ background: "var(--secondary-light)", color: "var(--secondary)" }}>
+                            준비 중
+                        </span>
                     </button>
                 </div>
 
