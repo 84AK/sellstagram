@@ -91,6 +91,11 @@ function strHash(s: string): number {
     return Math.abs(h);
 }
 
+export interface AiComment {
+    text: string;
+    style: "positive" | "curious" | "skeptical" | "purchase";
+}
+
 // ─── 이벤트 생성 진입점 ────────────────────────────────────────
 export function generateSimEvents(
     postId: string,
@@ -98,20 +103,31 @@ export function generateSimEvents(
     productPrice: number,
     durationMinutes: number,
     simStartedAt: string,        // ISO string — seed 생성에 사용
+    options?: {
+        conversionBoost?: number;   // AI 분석 결과 구매 전환 배율 (default 1.0)
+        aiComments?: AiComment[];   // AI가 생성한 맞춤 댓글 풀
+    }
 ): SimEvent[] {
     const seed = strHash(simStartedAt + postId);
     const rand = seededRand(seed);
     const durationMs = durationMinutes * 60 * 1000;
 
+    const conversionBoost = options?.conversionBoost ?? 1.0;
+    const aiComments = options?.aiComments ?? [];
+
     // 인게이지먼트율로 배율 결정 (0.5x ~ 4x)
     const engRate = parseFloat(engagementRateStr?.replace("%", "")) || 5;
-    const mult = Math.max(0.5, Math.min(4, engRate / 5));
+    const engMult = Math.max(0.5, Math.min(4, engRate / 5));
+
+    // AI 분석 배율 적용 — 구매는 conversionBoost, 좋아요/댓글은 부분 반영
+    const totalMult = engMult;
+    const purchaseMult = engMult * conversionBoost;
 
     // 이벤트 수 계산
-    const numLikes     = Math.round((12 + durationMinutes * 5)   * mult);
-    const numComments  = Math.round((2  + durationMinutes * 0.8) * mult);
-    const numShares    = Math.round((1  + durationMinutes * 0.4) * mult);
-    const numPurchases = Math.floor((0.3 + durationMinutes * 0.2) * mult);
+    const numLikes     = Math.round((12 + durationMinutes * 5)   * totalMult);
+    const numComments  = Math.round((2  + durationMinutes * 0.8) * totalMult);
+    const numShares    = Math.round((1  + durationMinutes * 0.4) * totalMult);
+    const numPurchases = Math.floor((0.3 + durationMinutes * 0.2) * purchaseMult);
 
     const events: SimEvent[] = [];
     let uid = 0;
@@ -119,7 +135,6 @@ export function generateSimEvents(
     // 랜덤 시각 생성 (5%~95% of duration, 자연스러운 분포)
     const randomTime = () => {
         const t = rand();
-        // 약간의 클러스터링: 중간에 더 많이 몰림
         const biased = 0.5 + (t - 0.5) * 0.7;
         return Math.min(durationMs * 0.95, Math.max(durationMs * 0.03,
             biased * durationMs + (rand() - 0.5) * durationMs * 0.2
@@ -127,6 +142,24 @@ export function generateSimEvents(
     };
 
     const pick = <T,>(arr: T[]) => arr[Math.floor(rand() * arr.length)];
+
+    // AI 댓글 풀에서 style 별로 분류
+    const aiPool = {
+        positive: aiComments.filter(c => c.style === "positive").map(c => c.text),
+        curious:  aiComments.filter(c => c.style === "curious").map(c => c.text),
+        skeptical: aiComments.filter(c => c.style === "skeptical").map(c => c.text),
+        purchase: aiComments.filter(c => c.style === "purchase").map(c => c.text),
+    };
+
+    // 댓글 선택: AI 생성본 우선, 없으면 기본 템플릿 fallback
+    const pickComment = (style: "positive" | "curious" | "skeptical") => {
+        const pool = aiPool[style].length > 0 ? aiPool[style] : COMMENTS[style];
+        return pick(pool);
+    };
+    const pickPurchaseComment = () => {
+        const pool = aiPool.purchase.length > 0 ? aiPool.purchase : COMMENTS.purchase;
+        return pick(pool);
+    };
 
     // Likes
     for (let i = 0; i < numLikes; i++) {
@@ -139,14 +172,15 @@ export function generateSimEvents(
         });
     }
 
-    // Comments
+    // Comments — AI 댓글로 더 사실적인 반응
     for (let i = 0; i < numComments; i++) {
-        const style = rand() < 0.6 ? "positive" : rand() < 0.8 ? "curious" : "skeptical";
+        const r = rand();
+        const style = r < 0.6 ? "positive" : r < 0.8 ? "curious" : "skeptical";
         events.push({
             id: `comment-${uid++}`,
             type: "comment",
             persona: pick(PERSONAS),
-            comment: pick(COMMENTS[style]),
+            comment: pickComment(style),
             realMs: randomTime(),
             simHour: 0,
         });
@@ -163,7 +197,7 @@ export function generateSimEvents(
         });
     }
 
-    // Purchases — 시간 후반부에 더 많이 발생
+    // Purchases — conversionBoost 반영, 시간 후반부에 더 많이 발생
     for (let i = 0; i < numPurchases; i++) {
         const baseTime = randomTime();
         const purchaseTime = baseTime * 0.4 + durationMs * 0.4 * rand() + durationMs * 0.1;
@@ -171,7 +205,7 @@ export function generateSimEvents(
             id: `purchase-${uid++}`,
             type: "purchase",
             persona: pick(PERSONAS),
-            comment: pick(COMMENTS.purchase),
+            comment: pickPurchaseComment(),
             amount: productPrice,
             realMs: Math.min(durationMs * 0.95, purchaseTime),
             simHour: 0,

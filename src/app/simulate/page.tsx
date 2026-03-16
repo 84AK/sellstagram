@@ -16,10 +16,12 @@ import {
     Play,
     Pause,
     List,
+    Loader2,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase/client";
 import { useGameStore } from "@/store/useGameStore";
-import { generateSimEvents, SimEvent } from "@/lib/simulation/events";
+import { generateSimEvents, SimEvent, AiComment } from "@/lib/simulation/events";
+import type { SimAnalysisResult } from "@/app/api/simulate/analyze-post/route";
 
 interface SimState {
     active: boolean;
@@ -33,6 +35,8 @@ interface SimPost {
     imageUrl: string;
     engagementRate: string;
     productPrice: number;
+    tags: string[];
+    landingImages: string[];
 }
 
 const EVENT_META = {
@@ -297,6 +301,9 @@ interface DbPost {
     image_url: string | null;
     engagement_rate: string | null;
     sales: string | null;
+    tags: string[] | null;
+    landing_images: string[] | null;
+    selling_price: number | null;
 }
 
 // ─── 메인 페이지 ─────────────────────────────────────────────
@@ -312,6 +319,8 @@ export default function SimulatePage() {
     const [isSaving, setIsSaving] = useState(false);
     const [saved, setSaved] = useState(false);
     const [dbPosts, setDbPosts] = useState<DbPost[]>([]);
+    const [aiAnalysis, setAiAnalysis] = useState<SimAnalysisResult | null>(null);
+    const [isAnalyzing, setIsAnalyzing] = useState(false);
     const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
     const eventFeedRef = useRef<HTMLDivElement>(null);
     const lastVisibleCountRef = useRef(0);
@@ -321,7 +330,7 @@ export default function SimulatePage() {
         if (!user.handle) return;
         supabase
             .from("posts")
-            .select("id, caption, image_url, engagement_rate, sales")
+            .select("id, caption, image_url, engagement_rate, sales, tags, landing_images, selling_price")
             .eq("user_handle", user.handle)
             .order("created_at", { ascending: false })
             .limit(20)
@@ -342,9 +351,12 @@ export default function SimulatePage() {
         caption: selectedDbPost.caption ?? "",
         imageUrl: selectedDbPost.image_url ?? "",
         engagementRate: selectedDbPost.engagement_rate ?? "5%",
-        productPrice: selectedDbPost.sales
-            ? parseFloat(String(selectedDbPost.sales).replace(/[^0-9.]/g, "")) || 10000
-            : 10000,
+        productPrice: selectedDbPost.selling_price
+            ?? (selectedDbPost.sales
+                ? parseFloat(String(selectedDbPost.sales).replace(/[^0-9.]/g, "")) || 10000
+                : 10000),
+        tags: selectedDbPost.tags ?? [],
+        landingImages: selectedDbPost.landing_images ?? [],
     } : null;
 
     const durationMs = simState.durationMinutes * 60 * 1000;
@@ -385,7 +397,39 @@ export default function SimulatePage() {
         return () => { supabase.removeChannel(ch); };
     }, []);
 
-    // 이벤트 생성
+    // AI 분석 — 시뮬 활성화 + 게시물 선택 시 1회 호출
+    useEffect(() => {
+        if (!simState.active || !simPost) { setAiAnalysis(null); return; }
+
+        let cancelled = false;
+        const runAnalysis = async () => {
+            setIsAnalyzing(true);
+            try {
+                const res = await fetch("/api/simulate/analyze-post", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        caption: simPost.caption,
+                        tags: simPost.tags,
+                        price: simPost.productPrice,
+                        landingImages: simPost.landingImages,
+                    }),
+                });
+                const json = await res.json();
+                if (!cancelled && json.ok) setAiAnalysis(json.analysis);
+            } catch {
+                // AI 분석 실패해도 시뮬레이션은 기본값으로 진행
+            } finally {
+                if (!cancelled) setIsAnalyzing(false);
+            }
+        };
+
+        runAnalysis();
+        return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [simState.active, selectedPostId]);
+
+    // 이벤트 생성 — AI 분석 결과 반영
     useEffect(() => {
         if (!simState.active || !simState.startedAt || !simPost) {
             setAllEvents([]); setVisibleEvents([]); setFinished(false); return;
@@ -393,6 +437,10 @@ export default function SimulatePage() {
         const events = generateSimEvents(
             simPost.id, simPost.engagementRate, simPost.productPrice,
             simState.durationMinutes, simState.startedAt,
+            {
+                conversionBoost: aiAnalysis?.conversionBoost ?? 1.0,
+                aiComments: (aiAnalysis?.aiComments as AiComment[]) ?? [],
+            }
         );
         setAllEvents(events);
         setVisibleEvents([]);
@@ -400,7 +448,7 @@ export default function SimulatePage() {
         lastVisibleCountRef.current = 0;
         setSaved(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [simState.active, simState.startedAt, simState.durationMinutes, selectedPostId]);
+    }, [simState.active, simState.startedAt, simState.durationMinutes, selectedPostId, aiAnalysis]);
 
     // 타이머
     useEffect(() => {
@@ -598,7 +646,7 @@ export default function SimulatePage() {
                     )}
                     <div className="p-4">
                         <p className="text-sm font-semibold line-clamp-2" style={{ color: "var(--foreground)" }}>{simPost.caption}</p>
-                        <div className="flex items-center gap-3 mt-2">
+                        <div className="flex items-center gap-3 mt-2 flex-wrap">
                             <span className="text-[11px] font-bold px-2 py-0.5 rounded-full"
                                 style={{ background: "var(--primary-light)", color: "var(--primary)" }}>
                                 인게이지먼트 {simPost.engagementRate}
@@ -607,8 +655,65 @@ export default function SimulatePage() {
                                 style={{ background: "rgba(255,194,51,0.15)", color: "#D97706" }}>
                                 ₩{simPost.productPrice.toLocaleString()}
                             </span>
+                            {simPost.landingImages.length > 0 && (
+                                <span className="text-[11px] font-bold px-2 py-0.5 rounded-full"
+                                    style={{ background: "rgba(67,97,238,0.12)", color: "#4361EE" }}>
+                                    🖼️ 랜딩 {simPost.landingImages.length}장
+                                </span>
+                            )}
                         </div>
                     </div>
+                </div>
+            )}
+
+            {/* AI 분석 결과 배너 */}
+            {simPost && (
+                <div className="rounded-2xl p-4"
+                    style={{
+                        background: isAnalyzing
+                            ? "var(--surface)"
+                            : aiAnalysis
+                                ? `rgba(6,214,160,0.08)`
+                                : "var(--surface)",
+                        border: isAnalyzing
+                            ? "1.5px dashed var(--border)"
+                            : aiAnalysis
+                                ? "1.5px solid rgba(6,214,160,0.4)"
+                                : "1.5px dashed var(--border)",
+                    }}>
+                    {isAnalyzing ? (
+                        <div className="flex items-center gap-2">
+                            <Loader2 size={14} className="animate-spin" style={{ color: "var(--foreground-muted)" }} />
+                            <span className="text-xs font-semibold" style={{ color: "var(--foreground-muted)" }}>
+                                AI가 게시물과 랜딩 페이지를 분석 중...
+                            </span>
+                        </div>
+                    ) : aiAnalysis ? (
+                        <div className="flex flex-col gap-2">
+                            <div className="flex items-center justify-between">
+                                <span className="text-[10px] font-black uppercase tracking-wider" style={{ color: "#06D6A0" }}>
+                                    ✨ AI 분석 완료
+                                </span>
+                                <div className="flex items-center gap-1.5">
+                                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full"
+                                        style={{ background: "rgba(6,214,160,0.15)", color: "#06D6A0" }}>
+                                        전환 배율 ×{aiAnalysis.conversionBoost.toFixed(1)}
+                                    </span>
+                                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full"
+                                        style={{ background: "rgba(67,97,238,0.12)", color: "#4361EE" }}>
+                                        랜딩 {aiAnalysis.landingScore}/10
+                                    </span>
+                                </div>
+                            </div>
+                            <p className="text-xs" style={{ color: "var(--foreground-soft)" }}>
+                                💡 {aiAnalysis.purchaseReason}
+                            </p>
+                        </div>
+                    ) : (
+                        <p className="text-xs" style={{ color: "var(--foreground-muted)" }}>
+                            AI 분석 대기 중...
+                        </p>
+                    )}
                 </div>
             )}
 

@@ -114,6 +114,48 @@ export async function askGemini(prompt: string): Promise<string> {
     }
 }
 
+// ─── 비전(이미지+텍스트) 호출 함수 ───────────────────────────────────
+// 시뮬레이션 분석 1회 전용 — 이미지 URL을 base64로 변환 후 Gemini 멀티모달 전송
+export async function askGeminiVision(prompt: string, imageUrls: string[]): Promise<string> {
+    const apiKey = await resolveApiKey();
+
+    if (!apiKey) {
+        throw new GeminiError("invalid_key", "AI 연결에 문제가 생겼어요. 선생님께 알려주세요. 🔑");
+    }
+
+    try {
+        const genAI = new GoogleGenerativeAI(apiKey);
+        const model = genAI.getGenerativeModel({ model: "gemini-flash-latest" });
+
+        // 이미지 최대 3장 (토큰 절약), base64 변환
+        const safeUrls = imageUrls.slice(0, 3);
+        const imageParts = await Promise.all(
+            safeUrls.map(async (url) => {
+                try {
+                    const res = await fetch(url);
+                    const buffer = await res.arrayBuffer();
+                    const base64 = Buffer.from(buffer).toString("base64");
+                    const mimeType = (res.headers.get("content-type") ?? "image/jpeg").split(";")[0];
+                    return { inlineData: { data: base64, mimeType } };
+                } catch {
+                    return null;
+                }
+            })
+        );
+
+        const validParts = imageParts.filter(Boolean) as { inlineData: { data: string; mimeType: string } }[];
+
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const parts: any[] = validParts.length > 0 ? [...validParts, prompt] : [prompt];
+        const result = await model.generateContent(parts);
+        return result.response.text();
+    } catch (error) {
+        const geminiError = classifyGeminiError(error);
+        console.error(`[Gemini Vision ${geminiError.type}]`, error);
+        throw geminiError;
+    }
+}
+
 // 하위 호환성 유지
 export const geminiModel = null;
 export const geminiFlash = null;

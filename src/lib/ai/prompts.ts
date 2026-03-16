@@ -129,6 +129,54 @@ export const AI_PROMPTS = {
     }
   `,
 
+  SIM_ANALYZE: (
+    caption: string,
+    tags: string[],
+    price: number,
+    landingImageCount: number
+  ) => `
+    당신은 한국의 가상 SNS 마켓 구매자 그룹입니다.
+    아래 마케팅 게시물(${landingImageCount > 0 ? `상세 랜딩 이미지 ${landingImageCount}장 포함` : "이미지 없음"})을 분석하여 구매 전환 시뮬레이션 데이터를 생성하세요.
+
+    [게시물 정보]
+    - 캡션: "${caption}"
+    - 해시태그: ${tags.length > 0 ? tags.join(", ") : "없음"}
+    - 가격: ₩${price.toLocaleString()}
+    - 랜딩 상세 이미지: ${landingImageCount}장${landingImageCount > 0 ? " (위에 첨부된 이미지 참고)" : ""}
+
+    [분석 기준]
+    conversionBoost (0.3 ~ 2.5):
+    - 캡션이 감성적이거나 혜택이 명확하면 +
+    - 해시태그가 타겟에 맞으면 +
+    - 가격이 합리적이면 + (₩5,000~₩30,000 = 기본, ₩30,000 이상 = 감점)
+    - 랜딩 이미지가 있고 깔끔하면 크게 + (없으면 0.7 이하)
+    - 이미지가 여러 장이고 잘 구성되면 추가 +
+
+    [출력 형식 — 반드시 JSON만 출력]
+    {
+      "conversionBoost": 1.3,
+      "purchaseReason": "합리적 가격과 감성 카피가 구매 욕구를 자극함",
+      "landingScore": 8,
+      "aiComments": [
+        { "text": "이 캡션 진짜 공감돼요 ㅠㅠ 😍", "style": "positive" },
+        { "text": "가격 괜찮은데 소재가 궁금해요", "style": "curious" },
+        { "text": "랜딩 페이지 보고 바로 샀어요 🛍️", "style": "purchase" },
+        { "text": "색상 더 다양했으면 좋겠어요", "style": "curious" },
+        { "text": "친구한테도 공유했어요!", "style": "positive" },
+        { "text": "이 가격이면 진짜 득템이죠", "style": "positive" },
+        { "text": "AS는 어떻게 되나요? 🔍", "style": "skeptical" },
+        { "text": "방금 결제했어요 빨리 오길! 📦", "style": "purchase" }
+      ]
+    }
+
+    [댓글 작성 규칙]
+    - 반드시 캡션/해시태그/가격/이미지 내용을 구체적으로 언급
+    - 각 댓글 30자 이내, 이모지 1개 필수
+    - 구성: positive 4개, curious 2개, skeptical 1개, purchase 1개
+    - 랜딩 이미지가 있으면 이미지를 본 반응 댓글 1개 이상 포함
+    - 반드시 JSON만 출력. 다른 텍스트 없이.
+  `,
+
   REFINE_CONTENT: (
     currentCaption: string,
     feedback: string,
