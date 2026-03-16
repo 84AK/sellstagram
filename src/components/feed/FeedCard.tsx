@@ -98,6 +98,7 @@ export default function FeedCard({ id, user, content, stats, timeAgo, sellingPri
     const [showEditModal, setShowEditModal] = useState(false);
     const [editCaption, setEditCaption] = useState(content.caption);
     const [editTags, setEditTags] = useState(content.tags.join(", "));
+    const [editImages, setEditImages] = useState<string[]>(allImages);
     const [editSaving, setEditSaving] = useState(false);
     const [deleted, setDeleted] = useState(false);
 
@@ -320,9 +321,17 @@ export default function FeedCard({ id, user, content, stats, timeAgo, sellingPri
         if (editSaving) return;
         setEditSaving(true);
         const tagList = editTags.split(",").map(t => t.trim()).filter(Boolean);
-        await supabase.from("posts").update({ caption: editCaption, tags: tagList }).eq("id", id);
+        const firstImg = editImages[0] ?? "";
+        await supabase.from("posts").update({
+            caption: editCaption,
+            tags: tagList,
+            images: editImages,
+            image_url: firstImg,
+        }).eq("id", id);
         content.caption = editCaption;
         content.tags = tagList;
+        content.image = firstImg;
+        setImgIdx(0);
         setEditSaving(false);
         setShowEditModal(false);
         setShowMenu(false);
@@ -438,7 +447,7 @@ export default function FeedCard({ id, user, content, stats, timeAgo, sellingPri
                                                 <Megaphone size={15} />
                                                 {adBudget ? `광고 중 (₩${adBudget.toLocaleString()})` : "광고 집행하기"}
                                             </button>
-                                            <button onClick={() => { setShowEditModal(true); setShowMenu(false); }}
+                                            <button onClick={() => { setEditImages(allImages); setShowEditModal(true); setShowMenu(false); }}
                                                 className="w-full flex items-center gap-2.5 px-4 py-3 text-sm font-bold transition-colors hover:bg-foreground/5 text-left"
                                                 style={{ color: "var(--secondary)" }}>
                                                 <Pencil size={15} /> 수정하기
@@ -1008,6 +1017,74 @@ export default function FeedCard({ id, user, content, stats, timeAgo, sellingPri
                     </div>
                     {/* 본문 */}
                     <div className="p-5 flex flex-col gap-4">
+
+                        {/* 이미지 편집 */}
+                        {editImages.length > 0 && (
+                            <div className="flex flex-col gap-2">
+                                <label className="text-[11px] font-bold uppercase tracking-widest" style={{ color: "var(--foreground-muted)" }}>
+                                    이미지 ({editImages.length}장)
+                                </label>
+                                <div className="flex gap-2 overflow-x-auto pb-1">
+                                    {editImages.map((img, idx) => (
+                                        <div key={idx} className="relative shrink-0 group">
+                                            <div className="w-20 h-20 rounded-xl overflow-hidden"
+                                                style={{ border: idx === 0 ? "2px solid var(--secondary)" : "1.5px solid var(--border)" }}>
+                                                <img src={img} alt={`이미지 ${idx + 1}`}
+                                                    className="w-full h-full object-cover" />
+                                            </div>
+                                            {/* 순서 번호 */}
+                                            <span className="absolute top-1 left-1 w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-black text-white"
+                                                style={{ background: idx === 0 ? "var(--secondary)" : "rgba(0,0,0,0.5)" }}>
+                                                {idx + 1}
+                                            </span>
+                                            {/* 삭제 버튼 */}
+                                            {editImages.length > 1 && (
+                                                <button
+                                                    onClick={() => setEditImages(prev => prev.filter((_, i) => i !== idx))}
+                                                    className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity"
+                                                    style={{ background: "#EF4444" }}
+                                                >
+                                                    <X size={10} />
+                                                </button>
+                                            )}
+                                            {/* 순서 이동 버튼 */}
+                                            <div className="absolute bottom-1 left-0 right-0 flex justify-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                {idx > 0 && (
+                                                    <button
+                                                        onClick={() => setEditImages(prev => {
+                                                            const a = [...prev];
+                                                            [a[idx - 1], a[idx]] = [a[idx], a[idx - 1]];
+                                                            return a;
+                                                        })}
+                                                        className="w-5 h-5 rounded-full flex items-center justify-center text-white"
+                                                        style={{ background: "rgba(0,0,0,0.6)" }}
+                                                    >
+                                                        <ChevronLeft size={10} />
+                                                    </button>
+                                                )}
+                                                {idx < editImages.length - 1 && (
+                                                    <button
+                                                        onClick={() => setEditImages(prev => {
+                                                            const a = [...prev];
+                                                            [a[idx], a[idx + 1]] = [a[idx + 1], a[idx]];
+                                                            return a;
+                                                        })}
+                                                        className="w-5 h-5 rounded-full flex items-center justify-center text-white"
+                                                        style={{ background: "rgba(0,0,0,0.6)" }}
+                                                    >
+                                                        <ChevronRight size={10} />
+                                                    </button>
+                                                )}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                                <p className="text-[10px]" style={{ color: "var(--foreground-muted)" }}>
+                                    썸네일 위에 커서를 올리면 삭제(×) 및 순서 이동(‹ ›) 버튼이 나타납니다. 첫 번째 이미지가 대표 이미지예요.
+                                </p>
+                            </div>
+                        )}
+
                         <div className="flex flex-col gap-1.5">
                             <label className="text-[11px] font-bold uppercase tracking-widest" style={{ color: "var(--foreground-muted)" }}>캡션</label>
                             <textarea
