@@ -1785,12 +1785,10 @@ function ShopManageTab() {
         });
     };
 
-    // SELECT
+    // SELECT — API 라우트 경유 (all=true: 비활성 포함)
     useEffect(() => {
-        supabase.from("products")
-            .select("id,name,description,price,cost,category,xp_bonus,is_active,image_url,sort_order,detail_images")
-            .order("sort_order", { ascending: true, nullsFirst: false })
-            .order("created_at")
+        fetch("/api/products?all=true")
+            .then(r => r.json())
             .then(({ data }) => { setProducts(data ?? []); setLoading(false); });
     }, []);
 

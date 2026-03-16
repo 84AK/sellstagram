@@ -101,11 +101,12 @@ export default function ShopPage() {
     // 상품 + 내 구매 목록 로드
     useEffect(() => {
         const load = async () => {
-            const [{ data: prods }, { data: { session } }] = await Promise.all([
-                supabase.from("products").select("id,name,description,price,cost,category,stock,image_url,xp_bonus,is_active,detail_images").eq("is_active", true).order("created_at"),
+            // API 라우트를 통해 products 조회 (RLS SELECT 정책 없어도 동작)
+            const [prodsRes, { data: { session } }] = await Promise.all([
+                fetch("/api/products").then(r => r.json()),
                 supabase.auth.getSession(),
             ]);
-            setProducts(prods ?? []);
+            setProducts(prodsRes.data ?? []);
 
             if (session?.user?.id) {
                 const { data: bought } = await supabase

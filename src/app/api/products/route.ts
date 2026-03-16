@@ -34,6 +34,30 @@ async function isAuthorized(request: NextRequest): Promise<boolean> {
     return false;
 }
 
+// GET /api/products — 상품 목록 조회 (누구나 가능, admin 클라이언트로 RLS 우회)
+export async function GET(request: NextRequest) {
+    const { searchParams } = new URL(request.url);
+    const all = searchParams.get("all") === "true"; // 관리자: 비활성 포함
+
+    const admin = createAdminClient();
+    let query = admin
+        .from("products")
+        .select("id,name,description,price,cost,category,xp_bonus,is_active,image_url,sort_order,detail_images,stock")
+        .order("sort_order", { ascending: true, nullsFirst: false })
+        .order("created_at");
+
+    if (!all) {
+        query = query.eq("is_active", true);
+    }
+
+    const { data, error } = await query;
+    if (error) {
+        return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+
+    return NextResponse.json({ data: data ?? [] });
+}
+
 // POST /api/products — 상품 생성
 export async function POST(request: NextRequest) {
     if (!(await isAuthorized(request))) {
