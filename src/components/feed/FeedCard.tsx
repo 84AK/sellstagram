@@ -90,12 +90,13 @@ export default function FeedCard({ id, user, content, stats, timeAgo, sellingPri
     // AI 반응 제외한 실제 사람 댓글 수
     const [humanCommentCount, setHumanCommentCount] = useState(0);
     // 이미지 캐러셀 — image_url(첫 번째) + images(나머지)를 합쳐 전체 슬라이드 구성
-    const allImages = (() => {
+    const initImages = (() => {
         const first = content.image ? [content.image] : [];
         const rest = images && images.length > 0 ? images : [];
         const combined = [...first, ...rest];
         return combined.length > 0 ? combined : [];
     })();
+    const [allImages, setAllImages] = useState<string[]>(initImages);
     const [imgIdx, setImgIdx] = useState(0);
     // 캡션 더보기
     const CAPTION_LIMIT = 80;
@@ -434,6 +435,7 @@ export default function FeedCard({ id, user, content, stats, timeAgo, sellingPri
         content.caption = editCaption;
         content.tags = tagList;
         content.image = firstImg;
+        setAllImages(editImages);
         setImgIdx(0);
         setEditSaving(false);
         setShowEditModal(false);
