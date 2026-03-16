@@ -1628,6 +1628,7 @@ interface DbProduct {
     is_active: boolean;
     image_url: string | null;
     sort_order: number | null;
+    detail_images: string[] | null;
 }
 
 type ProductForm = {
@@ -1638,33 +1639,102 @@ type ProductForm = {
     category: string;
     xp_bonus: number;
     image_url: string;
+    detail_images: string[];
 };
 
 const EMPTY_PRODUCT_FORM: ProductForm = {
-    name: "", description: "", price: 50000, cost: 20000, category: "General", xp_bonus: 10, image_url: "",
+    name: "", description: "", price: 50000, cost: 20000, category: "General", xp_bonus: 10, image_url: "", detail_images: [],
 };
+
+async function uploadProductImageToStorage(file: File): Promise<string | null> {
+    const ext = file.name.split(".").pop() ?? "jpg";
+    const path = `products/${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
+    const { error } = await supabase.storage.from("posts").upload(path, file, { cacheControl: "3600" });
+    if (error) return null;
+    const { data: { publicUrl } } = supabase.storage.from("posts").getPublicUrl(path);
+    return publicUrl;
+}
 
 const PRODUCT_INPUT_STYLE = { background: "var(--surface-2)", border: "2px solid transparent", color: "var(--foreground)" };
 
-function ProductFormFields({ f, onChange }: {
+function ProductFormFields({ f, onChange, onDetailImagesChange }: {
     f: ProductForm;
     onChange: (key: keyof ProductForm, value: string | number) => void;
+    onDetailImagesChange: (imgs: string[]) => void;
 }) {
+    const [uploading, setUploading] = useState(false);
+
+    const handleDetailImageUpload = async (files: FileList | null) => {
+        if (!files || files.length === 0) return;
+        setUploading(true);
+        const uploaded: string[] = [];
+        for (const file of Array.from(files)) {
+            const url = await uploadProductImageToStorage(file);
+            if (url) uploaded.push(url);
+        }
+        onDetailImagesChange([...f.detail_images, ...uploaded]);
+        setUploading(false);
+    };
+
     return (
         <>
             <input placeholder="상품명 *" value={f.name} onChange={e => onChange("name", e.target.value)}
                 className="w-full px-3 py-2.5 rounded-xl text-sm outline-none" style={PRODUCT_INPUT_STYLE} />
-            <textarea placeholder="상품 설명" value={f.description} onChange={e => onChange("description", e.target.value)}
-                rows={2} className="w-full px-3 py-2.5 rounded-xl text-sm outline-none resize-none" style={PRODUCT_INPUT_STYLE} />
-            <div className="flex items-center gap-2">
-                <ImageIcon size={14} style={{ color: "var(--foreground-muted)", flexShrink: 0 }} />
-                <input placeholder="이미지 URL (선택)" value={f.image_url} onChange={e => onChange("image_url", e.target.value)}
-                    className="flex-1 px-3 py-2.5 rounded-xl text-sm outline-none" style={PRODUCT_INPUT_STYLE} />
+            <textarea placeholder="상품 설명 (학생에게 보여질 상세 설명)" value={f.description} onChange={e => onChange("description", e.target.value)}
+                rows={3} className="w-full px-3 py-2.5 rounded-xl text-sm outline-none resize-none" style={PRODUCT_INPUT_STYLE} />
+
+            {/* 대표 이미지 URL */}
+            <div>
+                <label className="text-[10px] font-bold mb-1.5 block" style={{ color: "var(--foreground-muted)" }}>대표 이미지 URL (선택)</label>
+                <div className="flex items-center gap-2">
+                    <ImageIcon size={14} style={{ color: "var(--foreground-muted)", flexShrink: 0 }} />
+                    <input placeholder="https://..." value={f.image_url} onChange={e => onChange("image_url", e.target.value)}
+                        className="flex-1 px-3 py-2.5 rounded-xl text-sm outline-none" style={PRODUCT_INPUT_STYLE} />
+                </div>
+                {f.image_url && (
+                    <img src={f.image_url} alt="미리보기" className="w-full h-24 object-cover rounded-xl mt-2"
+                        onError={e => { (e.currentTarget as HTMLImageElement).style.display = "none"; }} />
+                )}
             </div>
-            {f.image_url && (
-                <img src={f.image_url} alt="미리보기" className="w-full h-28 object-cover rounded-xl"
-                    onError={e => { (e.currentTarget as HTMLImageElement).style.display = "none"; }} />
-            )}
+
+            {/* 상세 이미지 업로드 */}
+            <div>
+                <div className="flex items-center justify-between mb-1.5">
+                    <label className="text-[10px] font-bold" style={{ color: "var(--foreground-muted)" }}>
+                        상세 이미지 ({f.detail_images.length}장) — 학생 콘텐츠 제작 시 랜딩페이지에 자동 추가
+                    </label>
+                    <label className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold cursor-pointer transition-all ${uploading ? "opacity-50 pointer-events-none" : "hover:opacity-80"}`}
+                        style={{ background: "var(--secondary)", color: "white" }}>
+                        {uploading ? <Loader2 size={11} className="animate-spin" /> : <Plus size={11} />}
+                        {uploading ? "업로드 중..." : "이미지 추가"}
+                        <input type="file" multiple accept="image/*" className="hidden"
+                            onChange={e => handleDetailImageUpload(e.target.files)} />
+                    </label>
+                </div>
+                {f.detail_images.length > 0 ? (
+                    <div className="flex gap-2 flex-wrap">
+                        {f.detail_images.map((url, idx) => (
+                            <div key={idx} className="relative group">
+                                <img src={url} alt={`상세 ${idx + 1}`}
+                                    className="w-16 h-16 object-cover rounded-lg"
+                                    style={{ border: "1.5px solid var(--border)" }} />
+                                <button
+                                    onClick={() => onDetailImagesChange(f.detail_images.filter((_, i) => i !== idx))}
+                                    className="absolute top-0.5 right-0.5 w-4 h-4 rounded-full flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity"
+                                    style={{ background: "#EF4444" }}>
+                                    <X size={9} />
+                                </button>
+                            </div>
+                        ))}
+                    </div>
+                ) : (
+                    <div className="flex items-center justify-center h-14 rounded-xl border-dashed border-2 text-xs"
+                        style={{ borderColor: "var(--border)", color: "var(--foreground-muted)" }}>
+                        상세 이미지를 업로드하면 학생들이 피드 제작 시 활용할 수 있어요
+                    </div>
+                )}
+            </div>
+
             <div className="grid grid-cols-2 gap-2">
                 <div>
                     <label className="text-[10px] font-bold mb-1 block" style={{ color: "var(--foreground-muted)" }}>판매가 (₩)</label>
@@ -1702,7 +1772,7 @@ function ShopManageTab() {
 
     useEffect(() => {
         supabase.from("products")
-            .select("id,name,description,price,cost,category,xp_bonus,is_active,image_url,sort_order")
+            .select("id,name,description,price,cost,category,xp_bonus,is_active,image_url,sort_order,detail_images")
             .order("sort_order", { ascending: true, nullsFirst: false })
             .order("created_at")
             .then(({ data }) => { setProducts(data ?? []); setLoading(false); });
@@ -1715,6 +1785,7 @@ function ShopManageTab() {
         const { data } = await supabase.from("products").insert({
             ...form,
             image_url: form.image_url || null,
+            detail_images: form.detail_images,
             stock: 100,
             is_active: true,
             sort_order: maxOrder + 1,
@@ -1746,6 +1817,7 @@ function ShopManageTab() {
             category: p.category,
             xp_bonus: p.xp_bonus,
             image_url: p.image_url ?? "",
+            detail_images: p.detail_images ?? [],
         });
     };
 
@@ -1754,9 +1826,10 @@ function ShopManageTab() {
         await supabase.from("products").update({
             ...editForm,
             image_url: editForm.image_url || null,
+            detail_images: editForm.detail_images,
         }).eq("id", id);
         setProducts(prev => prev.map(p => p.id === id
-            ? { ...p, ...editForm, image_url: editForm.image_url || null }
+            ? { ...p, ...editForm, image_url: editForm.image_url || null, detail_images: editForm.detail_images }
             : p
         ));
         setEditingId(null);
@@ -1796,6 +1869,7 @@ function ShopManageTab() {
                     <ProductFormFields
                         f={form}
                         onChange={(key, val) => setForm(prev => ({ ...prev, [key]: val }))}
+                        onDetailImagesChange={(imgs) => setForm(prev => ({ ...prev, detail_images: imgs }))}
                     />
                     <div className="flex gap-2">
                         <button onClick={() => setShowForm(false)} className="flex-1 py-2.5 rounded-xl text-sm font-bold"
@@ -1884,6 +1958,7 @@ function ShopManageTab() {
                                     <ProductFormFields
                                         f={editForm}
                                         onChange={(key, val) => setEditForm(prev => ({ ...prev, [key]: val }))}
+                                        onDetailImagesChange={(imgs) => setEditForm(prev => ({ ...prev, detail_images: imgs }))}
                                     />
                                     <div className="flex gap-2">
                                         <button onClick={() => setEditingId(null)} className="flex-1 py-2.5 rounded-xl text-sm font-bold"

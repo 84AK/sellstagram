@@ -95,6 +95,7 @@ interface GameState {
     isAIReportModalOpen: boolean;
     activeInsight: AIInsight | null;
     uploadContext: "general" | "mission";
+    uploadPreFillProduct: { id: string; name: string; detailImages: string[]; price: number; } | null;
     isAIStudioOpen: boolean;
     aiStudioDraftCaption: string;
     aiStudioDraftTags: string;
@@ -118,6 +119,7 @@ interface GameState {
     setAvatarConfig: (config: AvatarConfig) => void;
     clearMissionCompletionQueue: () => void;
     setUploadModalOpen: (open: boolean, context?: "general" | "mission") => void;
+    setUploadPreFillProduct: (product: { id: string; name: string; detailImages: string[]; price: number; } | null) => void;
     setGuideModalOpen: (open: boolean) => void;
     setAIReportModal: (open: boolean, insight?: AIInsight | null) => void;
     setAIStudioOpen: (open: boolean) => void;
@@ -190,6 +192,7 @@ export const useGameStore = create<GameState>((set) => ({
     isAIReportModalOpen: false,
     activeInsight: null,
     uploadContext: "general",
+    uploadPreFillProduct: null,
     isAIStudioOpen: false,
     aiStudioDraftCaption: "",
     aiStudioDraftTags: "",
@@ -283,8 +286,10 @@ export const useGameStore = create<GameState>((set) => ({
 
     setUploadModalOpen: (open, context = "general") => set({
         isUploadModalOpen: open,
-        uploadContext: context
+        uploadContext: context,
+        ...(open === false ? { uploadPreFillProduct: null } : {}),
     }),
+    setUploadPreFillProduct: (product) => set({ uploadPreFillProduct: product }),
     setGuideModalOpen: (open) => set({ isGuideModalOpen: open }),
     setAIReportModal: (open, insight = null) => set({
         isAIReportModalOpen: open,

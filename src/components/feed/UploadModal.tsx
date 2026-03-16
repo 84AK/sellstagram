@@ -47,6 +47,8 @@ export default function UploadModal() {
         isUploadModalOpen,
         setUploadModalOpen,
         uploadContext,
+        uploadPreFillProduct,
+        setUploadPreFillProduct,
         addPost,
         addInsight,
         setAIReportModal,
@@ -94,6 +96,8 @@ export default function UploadModal() {
     const [landingFiles, setLandingFiles] = useState<File[]>([]);
     const [landingPreviews, setLandingPreviews] = useState<string[]>([]);
     const landingInputRef = useRef<HTMLInputElement>(null);
+    // 상품 상세 이미지 프리필 (이미 업로드된 URL)
+    const [preFillLandingUrls, setPreFillLandingUrls] = useState<string[]>([]);
 
     const handleLandingFilesChange = (files: FileList | null) => {
         if (!files) return;
@@ -143,6 +147,14 @@ export default function UploadModal() {
             setOwnedProducts(products);
             setProductsLoaded(true);
             if (products.length === 0) setShowProductPrompt(true);
+
+            // 상품 프리필 — 상점에서 "콘텐츠 만들기" 버튼으로 왔을 때
+            if (uploadPreFillProduct) {
+                const match = products.find(p => p.id === uploadPreFillProduct.id);
+                if (match) setSelectedProduct(match);
+                setProductPrice(String(uploadPreFillProduct.price));
+                setPreFillLandingUrls(uploadPreFillProduct.detailImages);
+            }
         })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [isUploadModalOpen]);
@@ -162,6 +174,8 @@ export default function UploadModal() {
         setSelectedProduct(null);
         setShowProductPrompt(false);
         setProductsLoaded(false);
+        setPreFillLandingUrls([]);
+        setUploadPreFillProduct(null);
     };
 
     const handleFilesSelect = (incoming: FileList | File[] | null) => {
@@ -352,8 +366,8 @@ export default function UploadModal() {
                 }
             }
 
-            // 랜딩 페이지 상세 이미지 업로드
-            const landingImageUrls: string[] = [];
+            // 랜딩 페이지 상세 이미지 업로드 (새로 추가한 파일 + 상품 프리필 URL 합산)
+            const landingImageUrls: string[] = [...preFillLandingUrls];
             for (const file of landingFiles) {
                 const url = await uploadImageToStorage(file);
                 if (url) landingImageUrls.push(url);
@@ -930,7 +944,33 @@ export default function UploadModal() {
                                 </span>
                             </div>
 
-                            {/* 이미지 미리보기 그리드 */}
+                            {/* 상품 프리필 이미지 (자동 추가됨) */}
+                            {preFillLandingUrls.length > 0 && (
+                                <div className="flex flex-col gap-1.5">
+                                    <div className="flex items-center gap-1.5 px-1">
+                                        <span className="text-[10px] font-black" style={{ color: "var(--secondary)" }}>✅ 상품 상세 이미지 자동 추가됨</span>
+                                        <span className="text-[9px] font-bold px-2 py-0.5 rounded-full"
+                                            style={{ background: "rgba(67,97,238,0.1)", color: "var(--secondary)" }}>
+                                            {preFillLandingUrls.length}장
+                                        </span>
+                                    </div>
+                                    <div className="grid grid-cols-5 gap-1.5">
+                                        {preFillLandingUrls.map((url, i) => (
+                                            <div key={i} className="relative aspect-square rounded-xl overflow-hidden group/img">
+                                                <img src={url} alt="" className="w-full h-full object-cover" />
+                                                <button
+                                                    onClick={() => setPreFillLandingUrls(prev => prev.filter((_, j) => j !== i))}
+                                                    className="absolute inset-0 bg-black/50 opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center justify-center"
+                                                >
+                                                    <Trash2 size={14} className="text-white" />
+                                                </button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* 직접 업로드한 이미지 미리보기 그리드 */}
                             {landingPreviews.length > 0 && (
                                 <div className="grid grid-cols-5 gap-1.5">
                                     {landingPreviews.map((url, i) => (
@@ -956,7 +996,7 @@ export default function UploadModal() {
                                 </div>
                             )}
 
-                            {/* 업로드 버튼 (이미지 없을 때) */}
+                            {/* 업로드 버튼 (직접 추가할 이미지 없을 때) */}
                             {landingPreviews.length === 0 && (
                                 <button
                                     onClick={() => landingInputRef.current?.click()}
@@ -966,10 +1006,10 @@ export default function UploadModal() {
                                     <Upload size={18} style={{ color: "var(--foreground-muted)" }} />
                                     <div className="text-left">
                                         <p className="text-[12px] font-semibold" style={{ color: "var(--foreground-soft)" }}>
-                                            상품 상세 이미지 업로드
+                                            추가 상세 이미지 업로드 (선택)
                                         </p>
                                         <p className="text-[10px]" style={{ color: "var(--foreground-muted)" }}>
-                                            구매 페이지에 표시될 상세 이미지를 올려주세요
+                                            {preFillLandingUrls.length > 0 ? "상품 이미지에 추가할 이미지를 올려보세요" : "구매 페이지에 표시될 상세 이미지를 올려주세요"}
                                         </p>
                                     </div>
                                 </button>

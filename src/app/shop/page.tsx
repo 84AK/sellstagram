@@ -18,6 +18,10 @@ import {
     Palette,
     Lock,
     Gift,
+    X,
+    ChevronLeft,
+    ChevronRight,
+    Info,
 } from "lucide-react";
 import { useGameStore } from "@/store/useGameStore";
 import { supabase } from "@/lib/supabase/client";
@@ -40,11 +44,12 @@ interface Product {
     image_url: string | null;
     xp_bonus: number;
     is_active: boolean;
+    detail_images: string[] | null;
 }
 
 
 export default function ShopPage() {
-    const { balance, addFunds, addPoints, user, setUploadModalOpen } = useGameStore();
+    const { balance, addFunds, addPoints, user, setUploadModalOpen, setUploadPreFillProduct } = useGameStore();
     const [products, setProducts] = useState<Product[]>([]);
     // product_id → { quantity: 보유수량, sold_quantity: 판매된수량 }
     const [ownedInventory, setOwnedInventory] = useState<Map<string, { quantity: number; sold_quantity: number }>>(new Map());
@@ -54,6 +59,8 @@ export default function ShopPage() {
     const [selectedCategory, setSelectedCategory] = useState("All");
     const [searchQuery, setSearchQuery] = useState("");
     const [toast, setToast] = useState<{ name: string; xp: number } | null>(null);
+    const [detailProduct, setDetailProduct] = useState<Product | null>(null);
+    const [detailImgIdx, setDetailImgIdx] = useState(0);
 
     // 최상위 탭: 셀러샵 vs 리워드 마켓
     const [outerTab, setOuterTab] = useState<"shop" | "rewards">("shop");
@@ -95,7 +102,7 @@ export default function ShopPage() {
     useEffect(() => {
         const load = async () => {
             const [{ data: prods }, { data: { session } }] = await Promise.all([
-                supabase.from("products").select("*").eq("is_active", true).order("created_at"),
+                supabase.from("products").select("id,name,description,price,cost,category,stock,image_url,xp_bonus,is_active,detail_images").eq("is_active", true).order("created_at"),
                 supabase.auth.getSession(),
             ]);
             setProducts(prods ?? []);
@@ -505,8 +512,9 @@ export default function ShopPage() {
                         return (
                             <GlassCard key={product.id} className="relative group p-0 overflow-hidden flex flex-col border-none transition-all duration-300 hover:scale-[1.02]">
                                 {/* 상품 이미지 */}
-                                <div className="aspect-[4/3] w-full relative flex items-center justify-center overflow-hidden"
-                                    style={{ background: "var(--surface-2)" }}>
+                                <div className="aspect-[4/3] w-full relative flex items-center justify-center overflow-hidden cursor-pointer"
+                                    style={{ background: "var(--surface-2)" }}
+                                    onClick={() => { setDetailProduct(product); setDetailImgIdx(0); }}>
                                     {product.image_url ? (
                                         <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
                                     ) : (
@@ -540,12 +548,25 @@ export default function ShopPage() {
                                 {/* 상품 정보 */}
                                 <div className="p-5 flex-1 flex flex-col gap-4">
                                     <div>
-                                        <h3 className="text-lg font-black tracking-tight" style={{ color: "var(--foreground)" }}>
-                                            {product.name}
-                                        </h3>
+                                        <div className="flex items-start justify-between gap-2">
+                                            <h3 className="text-lg font-black tracking-tight" style={{ color: "var(--foreground)" }}>
+                                                {product.name}
+                                            </h3>
+                                            <button
+                                                onClick={() => { setDetailProduct(product); setDetailImgIdx(0); }}
+                                                className="shrink-0 flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-[11px] font-bold transition-all hover:opacity-80"
+                                                style={{ background: "var(--surface-2)", color: "var(--foreground-soft)" }}>
+                                                <Info size={11} /> 상세 보기
+                                            </button>
+                                        </div>
                                         <p className="text-xs mt-1 line-clamp-2 leading-relaxed" style={{ color: "var(--foreground-muted)" }}>
                                             {product.description}
                                         </p>
+                                        {(product.detail_images?.length ?? 0) > 0 && (
+                                            <p className="text-[10px] mt-1 font-bold" style={{ color: "var(--secondary)" }}>
+                                                📸 상세 이미지 {product.detail_images!.length}장 · 콘텐츠 제작 시 랜딩에 자동 추가
+                                            </p>
+                                        )}
                                     </div>
 
                                     {/* 가격 정보 */}
@@ -608,7 +629,15 @@ export default function ShopPage() {
                                         </button>
                                         {isOwned && remaining > 0 && (
                                             <button
-                                                onClick={() => setUploadModalOpen(true, "mission")}
+                                                onClick={() => {
+                                                    setUploadPreFillProduct({
+                                                        id: product.id,
+                                                        name: product.name,
+                                                        detailImages: product.detail_images ?? [],
+                                                        price: product.price,
+                                                    });
+                                                    setUploadModalOpen(true, "mission");
+                                                }}
                                                 className="w-full py-3 rounded-xl flex items-center justify-center gap-2 font-bold text-sm transition-all hover:opacity-90 active:scale-[0.98]"
                                                 style={{ background: "var(--accent)", color: "white" }}
                                             >
@@ -644,6 +673,213 @@ export default function ShopPage() {
 
             </> /* end shop tab */}
         </div>}
+
+        {/* ══════════════════════════════════════════
+            상품 상세 모달
+        ══════════════════════════════════════════ */}
+        {detailProduct && (() => {
+            const dp = detailProduct;
+            const allDetailImgs = [
+                ...(dp.image_url ? [dp.image_url] : []),
+                ...(dp.detail_images ?? []),
+            ];
+            const inv = ownedInventory.get(dp.id);
+            const remaining = inv ? inv.quantity - inv.sold_quantity : 0;
+            const qty = purchaseQtys[dp.id] ?? 5;
+            const totalCost = dp.price * qty;
+            const canAfford = balance >= totalCost;
+            const isBuying = purchasing === dp.id;
+            const margin = dp.price - dp.cost;
+            const marginRate = dp.cost > 0 ? Math.round((margin / dp.cost) * 100) : 0;
+
+            return (
+                <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center"
+                    style={{ background: "rgba(0,0,0,0.55)" }}
+                    onClick={(e) => { if (e.target === e.currentTarget) setDetailProduct(null); }}>
+                    <div className="w-full max-w-lg rounded-t-3xl md:rounded-3xl overflow-hidden flex flex-col"
+                        style={{ background: "var(--surface)", maxHeight: "90vh" }}>
+
+                        {/* 헤더 */}
+                        <div className="flex items-center justify-between px-5 py-4 shrink-0"
+                            style={{ borderBottom: "1px solid var(--border)" }}>
+                            <div>
+                                <p className="text-[10px] font-bold uppercase tracking-widest mb-0.5"
+                                    style={{ color: "var(--foreground-muted)" }}>{dp.category}</p>
+                                <h2 className="text-lg font-black" style={{ color: "var(--foreground)" }}>{dp.name}</h2>
+                            </div>
+                            <button onClick={() => setDetailProduct(null)}
+                                className="p-2 rounded-xl" style={{ background: "var(--surface-2)" }}>
+                                <X size={18} style={{ color: "var(--foreground-muted)" }} />
+                            </button>
+                        </div>
+
+                        {/* 스크롤 본문 */}
+                        <div className="flex-1 overflow-y-auto">
+
+                            {/* 이미지 캐러셀 */}
+                            {allDetailImgs.length > 0 && (
+                                <div className="relative w-full aspect-[4/3] bg-black/5">
+                                    <img
+                                        src={allDetailImgs[detailImgIdx]}
+                                        alt={`상품 이미지 ${detailImgIdx + 1}`}
+                                        className="w-full h-full object-contain"
+                                    />
+                                    {allDetailImgs.length > 1 && (
+                                        <>
+                                            <button
+                                                onClick={() => setDetailImgIdx(i => Math.max(0, i - 1))}
+                                                disabled={detailImgIdx === 0}
+                                                className="absolute left-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full flex items-center justify-center disabled:opacity-30 transition-opacity"
+                                                style={{ background: "rgba(0,0,0,0.45)", color: "white" }}>
+                                                <ChevronLeft size={18} />
+                                            </button>
+                                            <button
+                                                onClick={() => setDetailImgIdx(i => Math.min(allDetailImgs.length - 1, i + 1))}
+                                                disabled={detailImgIdx === allDetailImgs.length - 1}
+                                                className="absolute right-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full flex items-center justify-center disabled:opacity-30 transition-opacity"
+                                                style={{ background: "rgba(0,0,0,0.45)", color: "white" }}>
+                                                <ChevronRight size={18} />
+                                            </button>
+                                            <div className="absolute bottom-3 left-0 right-0 flex justify-center gap-1.5">
+                                                {allDetailImgs.map((_, i) => (
+                                                    <button key={i} onClick={() => setDetailImgIdx(i)}
+                                                        className="w-1.5 h-1.5 rounded-full transition-all"
+                                                        style={{ background: i === detailImgIdx ? "white" : "rgba(255,255,255,0.45)" }} />
+                                                ))}
+                                            </div>
+                                            <span className="absolute top-3 right-3 text-[11px] font-bold px-2 py-1 rounded-full"
+                                                style={{ background: "rgba(0,0,0,0.5)", color: "white" }}>
+                                                {detailImgIdx + 1}/{allDetailImgs.length}
+                                            </span>
+                                        </>
+                                    )}
+                                </div>
+                            )}
+
+                            {/* 썸네일 줄 */}
+                            {allDetailImgs.length > 1 && (
+                                <div className="flex gap-2 px-5 py-3 overflow-x-auto">
+                                    {allDetailImgs.map((img, i) => (
+                                        <button key={i} onClick={() => setDetailImgIdx(i)}
+                                            className="shrink-0 w-14 h-14 rounded-xl overflow-hidden transition-all"
+                                            style={{ border: i === detailImgIdx ? "2px solid var(--primary)" : "2px solid transparent" }}>
+                                            <img src={img} alt="" className="w-full h-full object-cover" />
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
+
+                            {/* 상품 설명 */}
+                            <div className="px-5 py-4 flex flex-col gap-4">
+                                {/* 가격 */}
+                                <div className="flex items-end justify-between">
+                                    <div>
+                                        <p className="text-[10px] font-bold uppercase tracking-widest mb-0.5"
+                                            style={{ color: "var(--foreground-muted)" }}>판매가</p>
+                                        <p className="text-3xl font-black" style={{ color: "var(--primary)" }}>
+                                            ₩{dp.price.toLocaleString()}
+                                        </p>
+                                    </div>
+                                    <div className="flex flex-col items-end gap-1">
+                                        <span className="text-xs font-bold px-2.5 py-1 rounded-full"
+                                            style={{ background: "var(--accent-light)", color: "var(--accent)" }}>
+                                            마진율 +{marginRate}%
+                                        </span>
+                                        {dp.xp_bonus > 0 && (
+                                            <span className="text-xs font-bold px-2.5 py-1 rounded-full flex items-center gap-1"
+                                                style={{ background: "rgba(255,194,51,0.15)", color: "#D97706" }}>
+                                                <Zap size={11} /> 구매 시 +{dp.xp_bonus} XP
+                                            </span>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {/* 설명 */}
+                                {dp.description && (
+                                    <div className="p-4 rounded-2xl" style={{ background: "var(--surface-2)" }}>
+                                        <p className="text-[11px] font-bold uppercase tracking-widest mb-2"
+                                            style={{ color: "var(--foreground-muted)" }}>상품 설명</p>
+                                        <p className="text-sm leading-relaxed whitespace-pre-wrap"
+                                            style={{ color: "var(--foreground-soft)" }}>{dp.description}</p>
+                                    </div>
+                                )}
+
+                                {/* 콘텐츠 제작 안내 */}
+                                {(dp.detail_images?.length ?? 0) > 0 && (
+                                    <div className="flex items-start gap-3 p-3.5 rounded-2xl"
+                                        style={{ background: "rgba(67,97,238,0.07)", border: "1px solid rgba(67,97,238,0.15)" }}>
+                                        <Sparkles size={15} style={{ color: "var(--secondary)", flexShrink: 0, marginTop: 1 }} />
+                                        <p className="text-[12px] leading-relaxed" style={{ color: "var(--secondary)" }}>
+                                            상품 구매 후 <strong>콘텐츠 만들기</strong>를 누르면 이 상세 이미지 {dp.detail_images!.length}장이
+                                            피드 랜딩페이지에 자동으로 추가돼요!
+                                        </p>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* 하단 버튼 영역 */}
+                        <div className="px-5 py-4 flex flex-col gap-2 shrink-0"
+                            style={{ borderTop: "1px solid var(--border)" }}>
+                            {/* 수량 선택 */}
+                            <div className="flex items-center gap-2">
+                                <span className="text-[11px] font-bold" style={{ color: "var(--foreground-muted)" }}>구매 수량</span>
+                                <div className="flex gap-1.5 flex-1">
+                                    {[5, 10, 20, 50].map(n => (
+                                        <button key={n}
+                                            onClick={() => setPurchaseQtys(prev => ({ ...prev, [dp.id]: n }))}
+                                            className="flex-1 py-1.5 rounded-xl text-xs font-black transition-all"
+                                            style={{
+                                                background: qty === n ? "var(--secondary)" : "var(--surface-2)",
+                                                color: qty === n ? "white" : "var(--foreground-soft)",
+                                            }}>
+                                            {n}개
+                                        </button>
+                                    ))}
+                                </div>
+                                <span className="text-xs font-black" style={{ color: "var(--primary)" }}>
+                                    ₩{totalCost.toLocaleString()}
+                                </span>
+                            </div>
+                            {/* 버튼 */}
+                            <div className="flex gap-2">
+                                <button
+                                    disabled={!canAfford || isBuying}
+                                    onClick={() => handlePurchase(dp)}
+                                    className="flex-1 py-3 rounded-xl flex items-center justify-center gap-2 font-bold text-sm transition-all active:scale-[0.98] disabled:cursor-not-allowed"
+                                    style={{
+                                        background: canAfford ? "var(--foreground)" : "var(--surface-2)",
+                                        color: canAfford ? "var(--background)" : "var(--foreground-muted)",
+                                    }}>
+                                    {isBuying ? <><Loader2 size={15} className="animate-spin" /> 구매 중...</>
+                                        : canAfford ? <>{inv ? "추가 구매" : "구매 등록"} {qty}개</>
+                                        : <><AlertCircle size={15} /> 잔액 부족</>}
+                                </button>
+                                {inv && remaining > 0 && (
+                                    <button
+                                        onClick={() => {
+                                            setUploadPreFillProduct({
+                                                id: dp.id,
+                                                name: dp.name,
+                                                detailImages: dp.detail_images ?? [],
+                                                price: dp.price,
+                                            });
+                                            setUploadModalOpen(true, "mission");
+                                            setDetailProduct(null);
+                                        }}
+                                        className="flex-1 py-3 rounded-xl flex items-center justify-center gap-2 font-bold text-sm transition-all hover:opacity-90 active:scale-[0.98]"
+                                        style={{ background: "var(--accent)", color: "white" }}>
+                                        <Zap size={15} />
+                                        콘텐츠 만들기
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        })()}
+
         </div>
     );
 }
