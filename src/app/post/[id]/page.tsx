@@ -69,6 +69,7 @@ export default function PostDetailPage() {
     const [buyDone, setBuyDone] = useState(false);
     const [buyError, setBuyError] = useState("");
     const [localSoldCount, setLocalSoldCount] = useState(0);
+    const [showBuyModal, setShowBuyModal] = useState(false);
 
     /* ── 데이터 로드 ── */
     useEffect(() => {
@@ -170,6 +171,30 @@ export default function PostDetailPage() {
         setTimeout(() => setLinkCopied(false), 2500);
     };
 
+    /* ── 판매자 잔액 실시간 구독 (판매자 본인에게만 적용) ── */
+    useEffect(() => {
+        if (!post?.seller_user_id) return;
+        let ch: ReturnType<typeof supabase.channel> | null = null;
+        supabase.auth.getSession().then(({ data: { session: sess } }) => {
+            if (!sess?.user || sess.user.id !== post.seller_user_id) return;
+            ch = supabase
+                .channel(`profile-balance-${post.seller_user_id}`)
+                .on("postgres_changes", {
+                    event: "UPDATE", schema: "public", table: "profiles",
+                    filter: `id=eq.${post.seller_user_id}`,
+                }, (payload) => {
+                    const newBal = (payload.new as { balance?: number }).balance;
+                    if (typeof newBal === "number") {
+                        // Zustand balance를 DB 값으로 동기화
+                        addFunds(newBal - balance);
+                    }
+                })
+                .subscribe();
+        });
+        return () => { if (ch) supabase.removeChannel(ch); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [post?.seller_user_id]);
+
     /* ── 구매 ── */
     const handleBuy = async () => {
         if (!post?.selling_price || buying || buyDone) return;
@@ -196,19 +221,23 @@ export default function PostDetailPage() {
             await supabase.from("profiles").update({ balance: newBuyerBal }).eq("id", buyerId);
 
             // 2. 판매자 잔액 증가
-            if (sellerId && sellerId !== buyerId) {
+            if (sellerId) {
                 const { data: sellerProf } = await supabase.from("profiles").select("balance").eq("id", sellerId).single();
                 const newSellerBal = (sellerProf?.balance ?? 0) + price;
                 await supabase.from("profiles").update({ balance: newSellerBal }).eq("id", sellerId);
+                // 판매자가 현재 사용자이면 Zustand도 업데이트
+                if (sellerId === buyerId) {
+                    addFunds(price); // 차감한 것 복구 후 판매금 추가는 아니므로 net 0, 구매 차감이 이미 됐으므로 추가만
+                }
             }
 
-            // 3. 거래 기록
+            // 3. 거래 기록 (virtual_sales 테이블 없어도 진행)
             await supabase.from("virtual_sales").insert({
                 post_id: id,
                 seller_id: sellerId ?? null,
                 buyer_id: buyerId,
                 amount: price,
-            });
+            }).then(() => {/* 무시 */});
 
             // 4. sold_count 증가
             const newSoldCount = localSoldCount + 1;
@@ -216,6 +245,7 @@ export default function PostDetailPage() {
             await supabase.from("posts").update({ sold_count: newSoldCount }).eq("id", id);
 
             setBuyDone(true);
+            setShowBuyModal(true);
         } catch {
             setBuyError("구매 처리 중 오류가 발생했어요. 다시 시도해주세요.");
             addFunds(post.selling_price); // 롤백
@@ -451,34 +481,75 @@ export default function PostDetailPage() {
                             </div>
                         </div>
 
-                        {/* ── 고정 하단 구매 버튼 ── */}
-                        {!isMyPost && (
-                            <div className="fixed bottom-0 left-0 right-0 z-20 px-4 py-4 max-w-2xl mx-auto"
-                                style={{ background: "var(--surface)", borderTop: "1px solid var(--border)" }}>
-                                {buyError && (
-                                    <p className="text-[12px] font-bold text-center mb-2" style={{ color: "var(--primary)" }}>{buyError}</p>
-                                )}
-                                {buyDone ? (
-                                    <div className="w-full py-4 rounded-2xl flex items-center justify-center gap-2 font-black text-sm text-white"
-                                        style={{ background: "var(--accent)" }}>
-                                        <Check size={18} /> 구매 완료! 잔액에서 차감되었어요
+                                        {/* ── 구매 완료 모달 ── */}
+                        {showBuyModal && (
+                            <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center p-4 bg-black/60 backdrop-blur-sm"
+                                onClick={() => setShowBuyModal(false)}>
+                                <div className="w-full max-w-sm rounded-3xl overflow-hidden shadow-2xl"
+                                    style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
+                                    onClick={e => e.stopPropagation()}>
+                                    <div className="px-6 pt-8 pb-6 flex flex-col items-center gap-4 text-center">
+                                        <div className="w-16 h-16 rounded-full flex items-center justify-center"
+                                            style={{ background: "linear-gradient(135deg, var(--accent), #04B893)" }}>
+                                            <Check size={32} className="text-white" strokeWidth={3} />
+                                        </div>
+                                        <div>
+                                            <p className="text-xl font-black mb-1" style={{ color: "var(--foreground)" }}>구매 완료!</p>
+                                            <p className="text-[14px]" style={{ color: "var(--foreground-soft)" }}>
+                                                <span className="font-black" style={{ color: "var(--primary)" }}>₩{post.selling_price!.toLocaleString()}</span>이 구매 처리되었어요.
+                                            </p>
+                                            <p className="text-[12px] mt-1" style={{ color: "var(--foreground-muted)" }}>
+                                                판매자 <span className="font-semibold">@{post.user_handle}</span>의 잔액에 즉시 입금됩니다.
+                                            </p>
+                                        </div>
+                                        <div className="w-full rounded-2xl px-4 py-3 flex items-center justify-between"
+                                            style={{ background: "var(--surface-2)", border: "1px solid var(--border)" }}>
+                                            <span className="text-[12px] font-bold" style={{ color: "var(--foreground-muted)" }}>내 잔액</span>
+                                            <span className="text-[14px] font-black" style={{ color: "var(--secondary)" }}>₩{balance.toLocaleString()}</span>
+                                        </div>
+                                        <button
+                                            onClick={() => setShowBuyModal(false)}
+                                            className="w-full py-3.5 rounded-2xl font-black text-white text-[15px] transition-all hover:opacity-90"
+                                            style={{ background: "var(--secondary)" }}
+                                        >
+                                            확인
+                                        </button>
                                     </div>
-                                ) : (
-                                    <button
-                                        onClick={handleBuy}
-                                        disabled={buying || balance < (post.selling_price ?? 0)}
-                                        className="w-full py-4 rounded-2xl flex items-center justify-center gap-2 font-black text-sm text-white transition-all hover:opacity-90 active:scale-[0.98] disabled:opacity-40"
-                                        style={{ background: "linear-gradient(135deg, var(--primary), #FF9A72)", boxShadow: "0 4px 20px rgba(255,107,53,0.35)" }}
-                                    >
-                                        {buying ? <Loader2 size={18} className="animate-spin" /> : <ShoppingBag size={18} />}
-                                        {buying ? "처리 중..." : `구매하기 · ₩${post.selling_price!.toLocaleString()}`}
-                                    </button>
-                                )}
-                                <p className="text-[11px] text-center mt-1.5" style={{ color: "var(--foreground-muted)" }}>
-                                    내 잔액: ₩{balance.toLocaleString()} · 구매 시 즉시 판매자에게 전달
-                                </p>
+                                </div>
                             </div>
                         )}
+
+                        {/* ── 고정 하단 구매 버튼 ── */}
+                        <div className="fixed bottom-0 left-0 right-0 z-20 px-4 py-4 max-w-2xl mx-auto"
+                            style={{ background: "var(--surface)", borderTop: "1px solid var(--border)" }}>
+                            {buyError && (
+                                <p className="text-[12px] font-bold text-center mb-2" style={{ color: "var(--primary)" }}>{buyError}</p>
+                            )}
+                            {isMyPost ? (
+                                <div className="w-full py-4 rounded-2xl flex items-center justify-center gap-2 font-black text-sm"
+                                    style={{ background: "var(--surface-2)", border: "1px solid var(--border)", color: "var(--foreground-muted)" }}>
+                                    <ShoppingBag size={18} /> 내 게시물 · 판매 중
+                                </div>
+                            ) : buyDone ? (
+                                <div className="w-full py-4 rounded-2xl flex items-center justify-center gap-2 font-black text-sm text-white"
+                                    style={{ background: "var(--accent)" }}>
+                                    <Check size={18} /> 구매 완료!
+                                </div>
+                            ) : (
+                                <button
+                                    onClick={handleBuy}
+                                    disabled={buying || balance < (post.selling_price ?? 0)}
+                                    className="w-full py-4 rounded-2xl flex items-center justify-center gap-2 font-black text-sm text-white transition-all hover:opacity-90 active:scale-[0.98] disabled:opacity-40"
+                                    style={{ background: "linear-gradient(135deg, var(--primary), #FF9A72)", boxShadow: "0 4px 20px rgba(255,107,53,0.35)" }}
+                                >
+                                    {buying ? <Loader2 size={18} className="animate-spin" /> : <ShoppingBag size={18} />}
+                                    {buying ? "처리 중..." : `구매하기 · ₩${post.selling_price!.toLocaleString()}`}
+                                </button>
+                            )}
+                            <p className="text-[11px] text-center mt-1.5" style={{ color: "var(--foreground-muted)" }}>
+                                {isMyPost ? `누적 판매 ${localSoldCount}건` : `내 잔액: ₩${balance.toLocaleString()} · 구매 시 즉시 판매자에게 전달`}
+                            </p>
+                        </div>
                     </div>
 
                 ) : (
