@@ -750,14 +750,6 @@ export default function FeedCard({ id, user, content, stats, timeAgo, sellingPri
                 </div>
             )}
 
-            {/* ─── 내 게시물 — 결과 없을 때 안내 ─── */}
-            {isMyPost && !simResult && (
-                <div className="mx-4 mb-3 flex items-center justify-center gap-2 py-2.5 rounded-xl"
-                    style={{ background: "var(--surface-2)", color: "var(--foreground-muted)" }}>
-                    <ShoppingBag size={14} />
-                    <span className="text-[12px] font-semibold">마켓 시뮬레이션 결과가 여기에 표시돼요</span>
-                </div>
-            )}
 
             {/* ─── 공유 모달 (인스타그램 스타일) ─── */}
             {showShareModal && (
