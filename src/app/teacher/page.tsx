@@ -1771,7 +1771,21 @@ function ShopManageTab() {
     const [editForm, setEditForm] = useState<ProductForm>(EMPTY_PRODUCT_FORM);
     const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-    // SELECT는 RLS 없이도 읽힐 수 있지만, 목록이 없으면 admin 클라이언트로 재시도
+    // Supabase 세션 토큰을 Authorization 헤더에 포함하는 fetch 헬퍼
+    const authFetch = async (url: string, options: RequestInit = {}) => {
+        const { data: { session } } = await supabase.auth.getSession();
+        const token = session?.access_token;
+        return fetch(url, {
+            ...options,
+            headers: {
+                "Content-Type": "application/json",
+                ...(token ? { "Authorization": `Bearer ${token}` } : {}),
+                ...(options.headers as Record<string, string> ?? {}),
+            },
+        });
+    };
+
+    // SELECT
     useEffect(() => {
         supabase.from("products")
             .select("id,name,description,price,cost,category,xp_bonus,is_active,image_url,sort_order,detail_images")
@@ -1786,9 +1800,8 @@ function ShopManageTab() {
         setSaving(true);
         setErrorMsg(null);
         const maxOrder = products.reduce((max, p) => Math.max(max, p.sort_order ?? 0), 0);
-        const res = await fetch("/api/products", {
+        const res = await authFetch("/api/products", {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
                 ...form,
                 image_url: form.image_url || null,
@@ -1811,13 +1824,11 @@ function ShopManageTab() {
     // TOGGLE — API 라우트 경유 (RLS 우회)
     const handleToggle = async (id: string, current: boolean) => {
         setProducts(prev => prev.map(p => p.id === id ? { ...p, is_active: !current } : p));
-        const res = await fetch(`/api/products/${id}`, {
+        const res = await authFetch(`/api/products/${id}`, {
             method: "PATCH",
-            headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ is_active: !current }),
         });
         if (!res.ok) {
-            // 실패 시 롤백
             setProducts(prev => prev.map(p => p.id === id ? { ...p, is_active: current } : p));
         }
     };
@@ -1826,11 +1837,10 @@ function ShopManageTab() {
     const handleDelete = async (id: string) => {
         if (!confirm("이 상품을 삭제할까요?")) return;
         setProducts(prev => prev.filter(p => p.id !== id));
-        const res = await fetch(`/api/products/${id}`, { method: "DELETE" });
+        const res = await authFetch(`/api/products/${id}`, { method: "DELETE" });
         if (!res.ok) {
             const json = await res.json();
             setErrorMsg(json.error ?? "상품 삭제에 실패했습니다.");
-            // 실패 시 재로드
             supabase.from("products")
                 .select("id,name,description,price,cost,category,xp_bonus,is_active,image_url,sort_order,detail_images")
                 .order("sort_order", { ascending: true, nullsFirst: false })
@@ -1857,9 +1867,8 @@ function ShopManageTab() {
     const handleEditSave = async (id: string) => {
         setSaving(true);
         setErrorMsg(null);
-        const res = await fetch(`/api/products/${id}`, {
+        const res = await authFetch(`/api/products/${id}`, {
             method: "PATCH",
-            headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
                 ...editForm,
                 image_url: editForm.image_url || null,
@@ -1890,16 +1899,8 @@ function ShopManageTab() {
         next[target] = a;
         setProducts(next);
         await Promise.all([
-            fetch(`/api/products/${a.id}`, {
-                method: "PATCH",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ sort_order: target }),
-            }),
-            fetch(`/api/products/${b.id}`, {
-                method: "PATCH",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ sort_order: index }),
-            }),
+            authFetch(`/api/products/${a.id}`, { method: "PATCH", body: JSON.stringify({ sort_order: target }) }),
+            authFetch(`/api/products/${b.id}`, { method: "PATCH", body: JSON.stringify({ sort_order: index }) }),
         ]);
     };
 
