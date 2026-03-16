@@ -104,6 +104,8 @@ export default function FeedCard({ id, user, content, stats, timeAgo, sellingPri
     const [editCaption, setEditCaption] = useState(content.caption);
     const [editTags, setEditTags] = useState(content.tags.join(", "));
     const [editImages, setEditImages] = useState<string[]>(allImages);
+    const [editLandingImages, setEditLandingImages] = useState<string[]>(landingImages ?? []);
+    const [landingUploading, setLandingUploading] = useState(false);
     const [editSaving, setEditSaving] = useState(false);
     const [deleted, setDeleted] = useState(false);
 
@@ -322,6 +324,31 @@ export default function FeedCard({ id, user, content, stats, timeAgo, sellingPri
         }
     };
 
+    const uploadLandingImage = async (file: File): Promise<string | null> => {
+        const { data: { session } } = await supabase.auth.getSession();
+        const userId = session?.user?.id || "anon";
+        const ext = file.name.split(".").pop() ?? "jpg";
+        const path = `${userId}/landing_${Date.now()}.${ext}`;
+        const { error } = await supabase.storage.from("posts").upload(path, file, { cacheControl: "3600" });
+        if (error) { console.error("Landing image upload error:", error.message); return null; }
+        const { data: { publicUrl } } = supabase.storage.from("posts").getPublicUrl(path);
+        return publicUrl;
+    };
+
+    const handleLandingImageSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const files = Array.from(e.target.files ?? []);
+        if (!files.length) return;
+        setLandingUploading(true);
+        const urls: string[] = [];
+        for (const file of files) {
+            const url = await uploadLandingImage(file);
+            if (url) urls.push(url);
+        }
+        setEditLandingImages(prev => [...prev, ...urls]);
+        setLandingUploading(false);
+        e.target.value = "";
+    };
+
     const handleEditSave = async () => {
         if (editSaving) return;
         setEditSaving(true);
@@ -332,6 +359,7 @@ export default function FeedCard({ id, user, content, stats, timeAgo, sellingPri
             tags: tagList,
             images: editImages,
             image_url: firstImg,
+            landing_images: editLandingImages,
         }).eq("id", id);
         content.caption = editCaption;
         content.tags = tagList;
@@ -1081,6 +1109,50 @@ export default function FeedCard({ id, user, content, stats, timeAgo, sellingPri
                                 </p>
                             </div>
                         )}
+
+                        {/* 랜딩페이지 상세 이미지 */}
+                        <div className="flex flex-col gap-2">
+                            <label className="text-[11px] font-bold uppercase tracking-widest" style={{ color: "var(--foreground-muted)" }}>
+                                랜딩페이지 상세 이미지 ({editLandingImages.length}장)
+                            </label>
+                            <div className="flex gap-3 overflow-x-auto pb-2 pt-1 px-1 items-center">
+                                {editLandingImages.map((img, idx) => (
+                                    <div key={idx} className="relative shrink-0 group">
+                                        <div className="w-20 h-20 rounded-xl overflow-hidden"
+                                            style={{ border: "1.5px solid var(--border)" }}>
+                                            <img src={img} alt={`랜딩 ${idx + 1}`} className="w-full h-full object-cover" />
+                                        </div>
+                                        <span className="absolute top-1 left-1 w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-black text-white"
+                                            style={{ background: "rgba(0,0,0,0.5)" }}>
+                                            {idx + 1}
+                                        </span>
+                                        <button
+                                            onClick={() => setEditLandingImages(prev => prev.filter((_, i) => i !== idx))}
+                                            className="absolute top-1 right-1 w-5 h-5 rounded-full flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity"
+                                            style={{ background: "#EF4444", boxShadow: "0 1px 4px rgba(0,0,0,0.3)" }}
+                                        >
+                                            <X size={10} />
+                                        </button>
+                                    </div>
+                                ))}
+                                {/* 이미지 추가 버튼 */}
+                                <label className="shrink-0 w-20 h-20 rounded-xl flex flex-col items-center justify-center gap-1 cursor-pointer transition-colors"
+                                    style={{ border: "1.5px dashed var(--border)", background: "var(--surface-2)" }}>
+                                    {landingUploading
+                                        ? <Loader2 size={18} className="animate-spin" style={{ color: "var(--foreground-muted)" }} />
+                                        : <>
+                                            <span className="text-lg" style={{ color: "var(--foreground-muted)" }}>+</span>
+                                            <span className="text-[9px] font-bold" style={{ color: "var(--foreground-muted)" }}>추가</span>
+                                          </>
+                                    }
+                                    <input type="file" accept="image/*" multiple className="hidden"
+                                        onChange={handleLandingImageSelect} disabled={landingUploading} />
+                                </label>
+                            </div>
+                            <p className="text-[10px]" style={{ color: "var(--foreground-muted)" }}>
+                                상품 상세 페이지에 표시되는 랜딩 이미지예요. 나중에 추가해도 돼요.
+                            </p>
+                        </div>
 
                         <div className="flex flex-col gap-1.5">
                             <label className="text-[11px] font-bold uppercase tracking-widest" style={{ color: "var(--foreground-muted)" }}>캡션</label>
