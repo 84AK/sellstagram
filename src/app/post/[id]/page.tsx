@@ -285,7 +285,7 @@ export default function PostDetailPage() {
     const isMyPost = post.user_handle === me.handle;
 
     return (
-        <div className="min-h-screen pb-24" style={{ background: "var(--background)" }}>
+        <div className="min-h-screen pb-4" style={{ background: "var(--background)" }}>
 
             {/* ── 모바일 헤더 ── */}
             <div className="flex items-center gap-3 px-4 py-3 md:hidden sticky top-0 z-10" style={{ borderBottom: "1px solid var(--border)", background: "var(--surface)" }}>
@@ -519,8 +519,8 @@ export default function PostDetailPage() {
                             </div>
                         )}
 
-                        {/* ── 고정 하단 구매 버튼 ── */}
-                        <div className="fixed bottom-0 left-0 right-0 z-20 px-4 py-4 max-w-2xl mx-auto"
+                        {/* ── 하단 구매 버튼 ── */}
+                        <div className="sticky bottom-0 z-20 px-4 py-4"
                             style={{ background: "var(--surface)", borderTop: "1px solid var(--border)" }}>
                             {buyError && (
                                 <p className="text-[12px] font-bold text-center mb-2" style={{ color: "var(--primary)" }}>{buyError}</p>
