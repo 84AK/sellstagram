@@ -17,6 +17,7 @@ import {
     Zap,
     Palette,
     Lock,
+    Gift,
 } from "lucide-react";
 import { useGameStore } from "@/store/useGameStore";
 import { supabase } from "@/lib/supabase/client";
@@ -26,6 +27,7 @@ import {
     getUnlockedStyleIds,
     addUnlockedStyle,
 } from "@/lib/avatar/styles";
+import { RewardsContent } from "@/app/rewards/page";
 
 interface Product {
     id: string;
@@ -44,13 +46,17 @@ interface Product {
 export default function ShopPage() {
     const { balance, addFunds, addPoints, user, setUploadModalOpen } = useGameStore();
     const [products, setProducts] = useState<Product[]>([]);
-    const [ownedIds, setOwnedIds] = useState<Set<string>>(new Set());
+    // product_id → { quantity: 보유수량, sold_quantity: 판매된수량 }
+    const [ownedInventory, setOwnedInventory] = useState<Map<string, { quantity: number; sold_quantity: number }>>(new Map());
+    const [purchaseQtys, setPurchaseQtys] = useState<Record<string, number>>({});
     const [loading, setLoading] = useState(true);
     const [purchasing, setPurchasing] = useState<string | null>(null);
     const [selectedCategory, setSelectedCategory] = useState("All");
     const [searchQuery, setSearchQuery] = useState("");
     const [toast, setToast] = useState<{ name: string; xp: number } | null>(null);
 
+    // 최상위 탭: 셀러샵 vs 리워드 마켓
+    const [outerTab, setOuterTab] = useState<"shop" | "rewards">("shop");
     // 탭: 상점 vs 아바타
     const [activeTab, setActiveTab] = useState<"shop" | "avatar">("shop");
     // 아바타 스타일 해금
@@ -97,9 +103,13 @@ export default function ShopPage() {
             if (session?.user?.id) {
                 const { data: bought } = await supabase
                     .from("purchases")
-                    .select("product_id")
+                    .select("product_id, quantity, sold_quantity")
                     .eq("user_id", session.user.id);
-                setOwnedIds(new Set((bought ?? []).map((b: { product_id: string }) => b.product_id)));
+                const inv = new Map<string, { quantity: number; sold_quantity: number }>();
+                (bought ?? []).forEach((b: { product_id: string; quantity: number; sold_quantity: number }) => {
+                    inv.set(b.product_id, { quantity: b.quantity ?? 1, sold_quantity: b.sold_quantity ?? 0 });
+                });
+                setOwnedInventory(inv);
             }
             setLoading(false);
         };
@@ -114,33 +124,46 @@ export default function ShopPage() {
     );
 
     const handlePurchase = async (product: Product) => {
-        if (purchasing || ownedIds.has(product.id) || balance < product.price) return;
+        const qty = purchaseQtys[product.id] ?? 5;
+        const totalCost = product.price * qty;
+        if (purchasing || balance < totalCost) return;
         setPurchasing(product.id);
 
         const { data: { session } } = await supabase.auth.getSession();
         if (!session) { setPurchasing(null); return; }
 
-        const { error } = await supabase.from("purchases").insert({
-            user_id: session.user.id,
-            product_id: product.id,
-        });
+        const existing = ownedInventory.get(product.id);
+        let error;
+
+        if (existing) {
+            // 추가 구매: 수량만 증가
+            ({ error } = await supabase
+                .from("purchases")
+                .update({ quantity: existing.quantity + qty })
+                .eq("user_id", session.user.id)
+                .eq("product_id", product.id));
+        } else {
+            // 최초 구매
+            ({ error } = await supabase
+                .from("purchases")
+                .insert({ user_id: session.user.id, product_id: product.id, quantity: qty, sold_quantity: 0 }));
+        }
 
         if (!error) {
-            const newBalance = balance - product.price;
-            const newPoints = user.points + product.xp_bonus;
+            const newBalance = balance - totalCost;
+            const xpGain = existing ? 0 : product.xp_bonus; // XP는 최초 구매 시에만
+            addFunds(-totalCost);
+            if (xpGain > 0) addPoints(xpGain);
 
-            // Zustand 업데이트
-            addFunds(-product.price);
-            addPoints(product.xp_bonus);
-
-            // DB에 잔액 차감 + XP 저장
             await supabase
                 .from("profiles")
-                .update({ balance: newBalance, points: newPoints })
+                .update({ balance: newBalance, ...(xpGain > 0 ? { points: user.points + xpGain } : {}) })
                 .eq("id", session.user.id);
 
-            setOwnedIds(prev => new Set([...prev, product.id]));
-            setToast({ name: product.name, xp: product.xp_bonus });
+            const newQty = (existing?.quantity ?? 0) + qty;
+            const newSold = existing?.sold_quantity ?? 0;
+            setOwnedInventory(prev => new Map(prev).set(product.id, { quantity: newQty, sold_quantity: newSold }));
+            setToast({ name: `${product.name} ${qty}개`, xp: xpGain });
             setTimeout(() => setToast(null), 3500);
         }
         setPurchasing(null);
@@ -151,7 +174,39 @@ export default function ShopPage() {
         : buildStyleUrl("fun-emoji", {}, user.handle || "user", 200);
 
     return (
-        <div className="flex flex-col gap-8 p-4 pt-12 lg:pt-16 max-w-6xl mx-auto pb-32">
+        <div className="flex flex-col min-h-screen">
+            {/* ── 최상위 탭 ── */}
+            <div className="sticky top-0 z-20 px-4 py-4"
+                style={{ background: "var(--background)", borderBottom: "1px solid var(--border)", boxShadow: "0 2px 12px rgba(0,0,0,0.05)" }}>
+                <div className="flex items-center gap-2">
+                    {[
+                        { id: "shop" as const,    icon: <ShoppingBag size={17} />, label: "셀러샵",    color: "#FF6B35" },
+                        { id: "rewards" as const, icon: <Gift size={17} />,        label: "리워드 마켓", color: "#D97706" },
+                    ].map(t => {
+                        const active = outerTab === t.id;
+                        return (
+                            <button key={t.id} onClick={() => setOuterTab(t.id)}
+                                className="flex items-center gap-2.5 px-5 py-3 rounded-2xl text-sm font-black whitespace-nowrap transition-all active:scale-95"
+                                style={{
+                                    background: active ? t.color : "var(--surface-2)",
+                                    color: active ? "white" : "var(--foreground-soft)",
+                                    boxShadow: active ? `0 4px 14px ${t.color}44` : "none",
+                                    transform: active ? "scale(1.03)" : "scale(1)",
+                                }}>
+                                <span style={{ opacity: active ? 1 : 0.6 }}>{t.icon}</span>
+                                {t.label}
+                                {active && <span className="w-1.5 h-1.5 rounded-full bg-white/70 ml-0.5" />}
+                            </button>
+                        );
+                    })}
+                </div>
+            </div>
+
+            {/* 리워드 마켓 탭 */}
+            {outerTab === "rewards" && <RewardsContent />}
+
+            {/* 셀러샵 탭 */}
+            {outerTab === "shop" && <div className="flex flex-col gap-8 p-4 pt-6 max-w-6xl mx-auto pb-32 w-full">
 
             {/* 아바타 구매 토스트 */}
             {avatarToast && (
@@ -437,8 +492,12 @@ export default function ShopPage() {
             ) : (
                 <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
                     {filtered.map(product => {
-                        const isOwned = ownedIds.has(product.id);
-                        const canAfford = balance >= product.price;
+                        const inv = ownedInventory.get(product.id);
+                        const isOwned = !!inv;
+                        const remaining = inv ? inv.quantity - inv.sold_quantity : 0;
+                        const qty = purchaseQtys[product.id] ?? 5;
+                        const totalCost = product.price * qty;
+                        const canAfford = balance >= totalCost;
                         const isBuying = purchasing === product.id;
                         const margin = product.price - product.cost;
                         const marginRate = product.cost > 0 ? Math.round((margin / product.cost) * 100) : 0;
@@ -471,8 +530,9 @@ export default function ShopPage() {
                                     </div>
                                     {isOwned && (
                                         <div className="absolute top-3 left-3 flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-black text-white"
-                                            style={{ background: "var(--accent)" }}>
-                                            <CheckCircle size={11} />보유 중
+                                            style={{ background: remaining > 0 ? "var(--accent)" : "var(--foreground-muted)" }}>
+                                            <CheckCircle size={11} />
+                                            {remaining > 0 ? `${remaining}개 남음` : "재고 소진"}
                                         </div>
                                     )}
                                 </div>
@@ -500,18 +560,35 @@ export default function ShopPage() {
                                         </div>
                                     </div>
 
-                                    {/* 구매 / 실습 버튼 */}
-                                    {isOwned ? (
-                                        <button
-                                            onClick={() => setUploadModalOpen(true, "mission")}
-                                            className="w-full py-3 rounded-xl flex items-center justify-center gap-2 font-bold text-sm transition-all hover:opacity-90 active:scale-[0.98]"
-                                            style={{ background: "var(--accent)", color: "white" }}
-                                        >
-                                            <Zap size={15} />
-                                            지금 콘텐츠 만들기
-                                            <ArrowRight size={15} />
-                                        </button>
-                                    ) : (
+                                    {/* 수량 선택 */}
+                                    <div className="flex flex-col gap-2">
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: "var(--foreground-muted)" }}>
+                                                {isOwned ? "추가 구매 수량" : "구매 수량"}
+                                            </span>
+                                            <span className="text-xs font-black" style={{ color: "var(--primary)" }}>
+                                                ₩{(product.price * qty).toLocaleString()}
+                                            </span>
+                                        </div>
+                                        <div className="flex gap-1.5">
+                                            {[5, 10, 20, 50].map(n => (
+                                                <button
+                                                    key={n}
+                                                    onClick={() => setPurchaseQtys(prev => ({ ...prev, [product.id]: n }))}
+                                                    className="flex-1 py-2 rounded-xl text-xs font-black transition-all"
+                                                    style={{
+                                                        background: qty === n ? "var(--secondary)" : "var(--surface-2)",
+                                                        color: qty === n ? "white" : "var(--foreground-soft)",
+                                                    }}
+                                                >
+                                                    {n}개
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    {/* 구매 + 콘텐츠 버튼 */}
+                                    <div className="flex flex-col gap-2">
                                         <button
                                             disabled={!canAfford || isBuying}
                                             onClick={() => handlePurchase(product)}
@@ -524,12 +601,23 @@ export default function ShopPage() {
                                             {isBuying ? (
                                                 <><Loader2 size={15} className="animate-spin" /> 구매 중...</>
                                             ) : canAfford ? (
-                                                <>구매 및 실습 등록 <ArrowRight size={15} /></>
+                                                <>{isOwned ? "추가 구매" : "구매 등록"} {qty}개 <ArrowRight size={15} /></>
                                             ) : (
-                                                <><AlertCircle size={15} /> 잔액 부족 (₩{(product.price - balance).toLocaleString()} 부족)</>
+                                                <><AlertCircle size={15} /> 잔액 부족</>
                                             )}
                                         </button>
-                                    )}
+                                        {isOwned && remaining > 0 && (
+                                            <button
+                                                onClick={() => setUploadModalOpen(true, "mission")}
+                                                className="w-full py-3 rounded-xl flex items-center justify-center gap-2 font-bold text-sm transition-all hover:opacity-90 active:scale-[0.98]"
+                                                style={{ background: "var(--accent)", color: "white" }}
+                                            >
+                                                <Zap size={15} />
+                                                콘텐츠 만들기 ({remaining}개 남음)
+                                                <ArrowRight size={15} />
+                                            </button>
+                                        )}
+                                    </div>
                                 </div>
                             </GlassCard>
                         );
@@ -538,23 +626,24 @@ export default function ShopPage() {
             )}
 
             {/* 안내 섹션 */}
-            {ownedIds.size > 0 && (
+            {ownedInventory.size > 0 && (
                 <div className="flex items-center gap-4 p-4 rounded-2xl" style={{ background: "var(--secondary-light)", border: "1px solid rgba(67,97,238,0.15)" }}>
                     <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style={{ background: "var(--secondary)" }}>
                         <Tag size={18} className="text-white" />
                     </div>
                     <div>
                         <p className="text-sm font-bold" style={{ color: "var(--secondary)" }}>
-                            {ownedIds.size}개 상품 보유 중
+                            {ownedInventory.size}종 상품 보유 중 · 총 {Array.from(ownedInventory.values()).reduce((a, v) => a + v.quantity - v.sold_quantity, 0)}개 재고
                         </p>
                         <p className="text-xs" style={{ color: "var(--foreground-soft)" }}>
-                            보유 상품으로 콘텐츠를 업로드하면 더 높은 시뮬레이션 효과를 얻을 수 있어요.
+                            콘텐츠를 올릴 때마다 재고가 1개씩 소진돼요. 재고가 없으면 목록에서 사라져요.
                         </p>
                     </div>
                 </div>
             )}
 
             </> /* end shop tab */}
+        </div>}
         </div>
     );
 }

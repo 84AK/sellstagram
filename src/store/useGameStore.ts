@@ -127,6 +127,9 @@ interface GameState {
     setWeek: (week: number) => void;
     resetPosts: () => void;
     setBalance: (amount: number) => void;
+
+    sidebarExpanded: boolean;
+    setSidebarExpanded: (expanded: boolean) => void;
 }
 
 // 미션 조건 충족 여부 판단
@@ -182,6 +185,7 @@ export const useGameStore = create<GameState>((set) => ({
     week: 1,
     isUploadModalOpen: false,
     isGuideModalOpen: false,
+    sidebarExpanded: false,
     isAIReportModalOpen: false,
     activeInsight: null,
     uploadContext: "general",
@@ -308,4 +312,5 @@ export const useGameStore = create<GameState>((set) => ({
     prevWeek: () => set((state) => ({ week: Math.max(1, state.week - 1) })),
     setWeek: (week) => set({ week: Math.max(1, Math.min(29, week)) }),
     resetPosts: () => set({ posts: [] }),
+    setSidebarExpanded: (expanded) => set({ sidebarExpanded: expanded }),
 }));

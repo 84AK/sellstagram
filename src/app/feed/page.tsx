@@ -37,6 +37,8 @@ function dbPostToStorePost(p: DbPost) {
         },
         timeAgo: new Date(p.created_at).toLocaleString("ko-KR", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }),
         createdAt: p.created_at,
+        sellingPrice: p.selling_price ?? undefined,
+        landingImages: p.landing_images ?? undefined,
     };
 }
 

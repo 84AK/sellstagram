@@ -20,12 +20,25 @@ import {
     Zap,
     BarChart2,
     ShoppingBag,
+    ChevronRight,
+    Tag,
 } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useGameStore } from "@/store/useGameStore";
 import { supabase } from "@/lib/supabase/client";
 import { simulateMarketingEffect } from "@/lib/simulation/engine";
 import { getTodayChallenge } from "@/lib/challenges/dailyChallenges";
 import AIContentStudio from "./AIContentStudio";
+
+interface OwnedProduct {
+    id: string;
+    name: string;
+    price: number;
+    category: string;
+    image_url: string | null;
+    quantity: number;
+    sold_quantity: number;
+}
 
 export default function UploadModal() {
     const {
@@ -40,6 +53,7 @@ export default function UploadModal() {
         startCampaign,
         user
     } = useGameStore();
+    const router = useRouter();
     const [uploadType, setUploadType] = useState<"post" | "video">("post");
     const [currentWeek, setCurrentWeek] = useState<number>(1);
 
@@ -62,11 +76,38 @@ export default function UploadModal() {
     const [isAIStudioOpen, setIsAIStudioOpen] = useState(false);
     const [productPrice, setProductPrice] = useState("10000");
 
+    // 구매한 상품 관련
+    const [ownedProducts, setOwnedProducts] = useState<OwnedProduct[]>([]);
+    const [selectedProduct, setSelectedProduct] = useState<OwnedProduct | null>(null);
+    const [showProductPrompt, setShowProductPrompt] = useState(false);
+    const [productsLoaded, setProductsLoaded] = useState(false);
+
     // 이미지 업로드 관련
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
     const [previewUrl, setPreviewUrl] = useState<string | null>(null);
     const [isDragging, setIsDragging] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
+
+    // 랜딩 페이지 상세 이미지 (최대 5장)
+    const [landingFiles, setLandingFiles] = useState<File[]>([]);
+    const [landingPreviews, setLandingPreviews] = useState<string[]>([]);
+    const landingInputRef = useRef<HTMLInputElement>(null);
+
+    const handleLandingFilesChange = (files: FileList | null) => {
+        if (!files) return;
+        const arr = Array.from(files).slice(0, 5 - landingFiles.length);
+        const newFiles = [...landingFiles, ...arr].slice(0, 5);
+        setLandingFiles(newFiles);
+        const previews = newFiles.map(f => URL.createObjectURL(f));
+        setLandingPreviews(previews);
+    };
+
+    const removeLandingImage = (idx: number) => {
+        const newFiles = landingFiles.filter((_, i) => i !== idx);
+        const newPreviews = landingPreviews.filter((_, i) => i !== idx);
+        setLandingFiles(newFiles);
+        setLandingPreviews(newPreviews);
+    };
 
     // Prevent background scrolling when modal is open
     useEffect(() => {
@@ -78,6 +119,30 @@ export default function UploadModal() {
         return () => {
             document.body.style.overflow = "unset";
         };
+    }, [isUploadModalOpen]);
+
+    // 모달 열릴 때 구매한 상품 로드 + 상품 없으면 안내 팝업
+    useEffect(() => {
+        if (!isUploadModalOpen) return;
+        (async () => {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session?.user) { setProductsLoaded(true); return; }
+            const { data } = await supabase
+                .from("purchases")
+                .select("product_id, quantity, sold_quantity, products(id, name, price, category, image_url)")
+                .eq("user_id", session.user.id);
+            const products: OwnedProduct[] = (data ?? [])
+                .map((row: any) => ({
+                    ...row.products,
+                    quantity: row.quantity ?? 1,
+                    sold_quantity: row.sold_quantity ?? 0,
+                }))
+                .filter((p: OwnedProduct) => p && p.id && (p.quantity - p.sold_quantity) > 0); // 재고 있는 상품만
+            setOwnedProducts(products);
+            setProductsLoaded(true);
+            if (products.length === 0) setShowProductPrompt(true);
+        })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [isUploadModalOpen]);
 
     const onClose = () => {
@@ -92,6 +157,9 @@ export default function UploadModal() {
         setPersonaReactions([]);
         setChallengeMode(false);
         setProductPrice("10000");
+        setSelectedProduct(null);
+        setShowProductPrompt(false);
+        setProductsLoaded(false);
     };
 
     const handleFileSelect = (file: File) => {
@@ -123,6 +191,66 @@ export default function UploadModal() {
     };
 
     if (!isUploadModalOpen) return null;
+
+    // ── 소프트 강제 팝업: 구매한 상품 없을 때
+    if (productsLoaded && showProductPrompt) {
+        return (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+                <div className="w-full max-w-sm rounded-3xl overflow-hidden shadow-2xl"
+                    style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
+                    {/* 헤더 */}
+                    <div className="px-6 pt-7 pb-4 text-center">
+                        <div className="w-16 h-16 rounded-2xl mx-auto mb-4 flex items-center justify-center"
+                            style={{ background: "linear-gradient(135deg, var(--primary), #FF9A72)" }}>
+                            <ShoppingBag size={30} className="text-white" />
+                        </div>
+                        <h2 className="text-xl font-black" style={{ color: "var(--foreground)" }}>
+                            홍보할 상품이 없어요!
+                        </h2>
+                        <p className="text-sm mt-2 leading-relaxed" style={{ color: "var(--foreground-soft)" }}>
+                            셀러 상점에서 상품을 구매하면<br />
+                            해당 상품을 콘텐츠로 홍보하고<br />
+                            시뮬레이션에서 실제 매출을 낼 수 있어요.
+                        </p>
+                    </div>
+
+                    {/* 흐름 안내 */}
+                    <div className="mx-6 mb-5 p-4 rounded-2xl flex items-center gap-3"
+                        style={{ background: "var(--surface-2)" }}>
+                        {["상품 구매", "콘텐츠 제작", "시뮬 매출"].map((step, i, arr) => (
+                            <React.Fragment key={step}>
+                                <div className="flex flex-col items-center gap-1 flex-1">
+                                    <span className="text-lg">{["🛍️", "📸", "💰"][i]}</span>
+                                    <span className="text-[10px] font-bold text-center" style={{ color: "var(--foreground-muted)" }}>{step}</span>
+                                </div>
+                                {i < arr.length - 1 && (
+                                    <ChevronRight size={14} style={{ color: "var(--foreground-muted)" }} />
+                                )}
+                            </React.Fragment>
+                        ))}
+                    </div>
+
+                    {/* 버튼 */}
+                    <div className="px-6 pb-6 flex flex-col gap-2.5">
+                        <button
+                            onClick={() => { onClose(); router.push("/shop"); }}
+                            className="w-full py-3.5 rounded-2xl font-black text-[15px] text-white flex items-center justify-center gap-2 transition-all hover:opacity-90"
+                            style={{ background: "linear-gradient(135deg, var(--primary), #FF9A72)", boxShadow: "0 4px 16px var(--primary-glow)" }}
+                        >
+                            <ShoppingBag size={18} /> 셀러 상점으로 이동
+                        </button>
+                        <button
+                            onClick={() => setShowProductPrompt(false)}
+                            className="w-full py-2.5 rounded-2xl text-[13px] font-medium transition-all hover:opacity-70"
+                            style={{ color: "var(--foreground-muted)" }}
+                        >
+                            상품 없이 올리기
+                        </button>
+                    </div>
+                </div>
+            </div>
+        );
+    }
 
     const isMissionMode = uploadContext === "mission";
 
@@ -174,6 +302,15 @@ export default function UploadModal() {
                 imageUrl = await uploadImageToStorage(selectedFile);
             }
 
+            // 랜딩 페이지 상세 이미지 업로드
+            const landingImageUrls: string[] = [];
+            for (const file of landingFiles) {
+                const url = await uploadImageToStorage(file);
+                if (url) landingImageUrls.push(url);
+            }
+
+            const parsedSellingPrice = parseInt(productPrice.replace(/,/g, "")) || null;
+
             // Supabase에 저장 (실패 시 로컬 fallback)
             const { data: inserted, error } = await supabase.from("posts").insert({
                 user_id: userId ?? null,
@@ -190,8 +327,12 @@ export default function UploadModal() {
                 comments: 0,
                 shares: 0,
                 engagement_rate: "0%",
-                sales: uploadType === "post" ? `₩${parseInt(productPrice) || 10000}` : null,
+                sales: uploadType === "post" ? `₩${parsedSellingPrice ?? 10000}` : null,
                 week: currentWeek,
+                landing_images: landingImageUrls,
+                selling_price: uploadType === "post" && selectedProduct ? parsedSellingPrice : null,
+                seller_user_id: uploadType === "post" && selectedProduct ? (session?.user?.id ?? null) : null,
+                sold_count: 0,
             }).select().single();
 
             if (error || !inserted) {
@@ -222,6 +363,24 @@ export default function UploadModal() {
                         });
                 }
             });
+
+            // 선택된 상품 재고 1개 차감 (sold_quantity + 1)
+            if (selectedProduct && session?.user?.id) {
+                supabase
+                    .from("purchases")
+                    .update({ sold_quantity: (selectedProduct.sold_quantity ?? 0) + 1 })
+                    .eq("user_id", session.user.id)
+                    .eq("product_id", selectedProduct.id)
+                    .then(() => {
+                        // 로컬 상태도 업데이트
+                        setOwnedProducts(prev =>
+                            prev.map(p => p.id === selectedProduct.id
+                                ? { ...p, sold_quantity: (p.sold_quantity ?? 0) + 1 }
+                                : p
+                            ).filter(p => (p.quantity - p.sold_quantity) > 0)
+                        );
+                    });
+            }
 
             // 스킬 XP 적립
             addSkillXP("copywriting", isMissionMode ? 20 : 15);
@@ -403,6 +562,7 @@ export default function UploadModal() {
                     setIsAIStudioOpen(false);
                 }}
                 onClose={() => setIsAIStudioOpen(false)}
+                prefilledProduct={selectedProduct ?? (ownedProducts.length > 0 ? ownedProducts[0] : null)}
             />
         )}
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300">
@@ -533,37 +693,159 @@ export default function UploadModal() {
                             </div>
                         )}
 
-                        {/* 제품 가격 입력 */}
+                        {/* 홍보 상품 선택 */}
                         <div className="flex flex-col gap-2">
                             <div className="flex items-center justify-between ml-1">
-                                <label className="text-[10px] font-bold text-foreground/40 uppercase tracking-widest">
-                                    Product Price
+                                <label className="text-[10px] font-bold text-foreground/40 uppercase tracking-widest flex items-center gap-1">
+                                    <Tag size={11} /> 홍보 상품
                                 </label>
-                                <span className="text-[9px] font-bold px-2 py-0.5 rounded-full"
-                                    style={{ background: "rgba(255,194,51,0.15)", color: "#D97706" }}>
-                                    마켓 시뮬레이션 기준 단가
-                                </span>
+                                {ownedProducts.length === 0 ? (
+                                    <button
+                                        onClick={() => { onClose(); router.push("/shop"); }}
+                                        className="text-[9px] font-bold px-2 py-0.5 rounded-full transition-all hover:opacity-80"
+                                        style={{ background: "var(--primary-light)", color: "var(--primary)" }}
+                                    >
+                                        상점에서 구매하기 →
+                                    </button>
+                                ) : (
+                                    <span className="text-[9px] font-bold px-2 py-0.5 rounded-full"
+                                        style={{ background: "rgba(255,194,51,0.15)", color: "#D97706" }}>
+                                        시뮬 단가 자동 반영
+                                    </span>
+                                )}
                             </div>
-                            <div className="relative">
-                                <ShoppingBag size={14} className="absolute left-4 top-1/2 -translate-y-1/2" style={{ color: "#D97706" }} />
-                                <input
-                                    type="number"
-                                    min={0}
-                                    step={1000}
-                                    placeholder="10000"
-                                    value={productPrice}
-                                    onChange={(e) => setProductPrice(e.target.value)}
-                                    className="w-full bg-foreground/5 border border-foreground/10 rounded-2xl py-3 pl-10 pr-16 text-sm focus:outline-none focus:ring-2 transition-all font-bold"
-                                    style={{ focusRingColor: "rgba(255,194,51,0.3)" } as React.CSSProperties}
-                                />
-                                <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[11px] font-black"
-                                    style={{ color: "var(--foreground-muted)" }}>원</span>
-                            </div>
-                            <p className="text-[10px] ml-1" style={{ color: "var(--foreground-muted)" }}>
-                                구매 1건당 이 금액이 잔고에 반영됩니다 · 미입력 시 ₩10,000 적용
-                            </p>
+
+                            {ownedProducts.length > 0 ? (
+                                <div className="flex flex-col gap-2">
+                                    {ownedProducts.map(p => {
+                                        const isSelected = selectedProduct?.id === p.id;
+                                        return (
+                                            <button
+                                                key={p.id}
+                                                onClick={() => {
+                                                    setSelectedProduct(isSelected ? null : p);
+                                                    setProductPrice(isSelected ? "10000" : String(p.price));
+                                                }}
+                                                className="flex items-center gap-3 p-3 rounded-2xl text-left transition-all"
+                                                style={{
+                                                    border: isSelected ? "2px solid var(--primary)" : "1.5px solid var(--border)",
+                                                    background: isSelected ? "var(--primary-light)" : "var(--surface-2)",
+                                                }}
+                                            >
+                                                <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 overflow-hidden"
+                                                    style={{ background: "var(--surface)" }}>
+                                                    {p.image_url
+                                                        ? <img src={p.image_url} alt={p.name} className="w-full h-full object-cover" />
+                                                        : <ShoppingBag size={18} style={{ color: "var(--foreground-muted)" }} />
+                                                    }
+                                                </div>
+                                                <div className="flex-1 min-w-0">
+                                                    <p className="text-[13px] font-bold truncate" style={{ color: "var(--foreground)" }}>{p.name}</p>
+                                                    <p className="text-[11px]" style={{ color: "#D97706" }}>
+                                                        ₩{p.price.toLocaleString()}
+                                                    </p>
+                                                </div>
+                                                <span className="shrink-0 text-[10px] font-black px-2 py-1 rounded-full"
+                                                    style={{ background: "var(--accent-light)", color: "var(--accent)" }}>
+                                                    {p.quantity - p.sold_quantity}개
+                                                </span>
+                                                {isSelected && (
+                                                    <CheckCircle size={18} style={{ color: "var(--primary)" }} />
+                                                )}
+                                            </button>
+                                        );
+                                    })}
+                                    {!selectedProduct && (
+                                        <p className="text-[11px] ml-1" style={{ color: "var(--foreground-muted)" }}>
+                                            상품을 선택하면 시뮬레이션 단가가 자동 적용됩니다
+                                        </p>
+                                    )}
+                                </div>
+                            ) : (
+                                <div className="flex items-center gap-3 p-3 rounded-2xl"
+                                    style={{ background: "var(--surface-2)", border: "1.5px dashed var(--border)" }}>
+                                    <ShoppingBag size={16} style={{ color: "var(--foreground-muted)" }} />
+                                    <div className="flex-1">
+                                        <p className="text-[12px] font-semibold" style={{ color: "var(--foreground-soft)" }}>
+                                            재고가 있는 상품이 없어요
+                                        </p>
+                                        <p className="text-[10px]" style={{ color: "var(--foreground-muted)" }}>
+                                            상점에서 상품을 구매하거나 재고를 추가하세요
+                                        </p>
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     </div>
+
+                    {/* 랜딩 페이지 상세 이미지 (상품 선택 시) */}
+                    {selectedProduct && (
+                        <div className="flex flex-col gap-2">
+                            <div className="flex items-center justify-between ml-1">
+                                <label className="text-[10px] font-bold text-foreground/40 uppercase tracking-widest flex items-center gap-1">
+                                    <ImageIcon size={11} /> 상품 상세 이미지 <span className="normal-case font-normal">(최대 5장)</span>
+                                </label>
+                                <span className="text-[9px] font-bold px-2 py-0.5 rounded-full"
+                                    style={{ background: "rgba(67,97,238,0.12)", color: "var(--secondary)" }}>
+                                    구매 랜딩 페이지에 표시
+                                </span>
+                            </div>
+
+                            {/* 이미지 미리보기 그리드 */}
+                            {landingPreviews.length > 0 && (
+                                <div className="grid grid-cols-5 gap-1.5">
+                                    {landingPreviews.map((url, i) => (
+                                        <div key={i} className="relative aspect-square rounded-xl overflow-hidden group/img">
+                                            <img src={url} alt="" className="w-full h-full object-cover" />
+                                            <button
+                                                onClick={() => removeLandingImage(i)}
+                                                className="absolute inset-0 bg-black/50 opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center justify-center"
+                                            >
+                                                <Trash2 size={14} className="text-white" />
+                                            </button>
+                                        </div>
+                                    ))}
+                                    {landingPreviews.length < 5 && (
+                                        <button
+                                            onClick={() => landingInputRef.current?.click()}
+                                            className="aspect-square rounded-xl border-2 border-dashed flex items-center justify-center transition-colors hover:border-secondary/50"
+                                            style={{ borderColor: "var(--border)" }}
+                                        >
+                                            <Upload size={16} style={{ color: "var(--foreground-muted)" }} />
+                                        </button>
+                                    )}
+                                </div>
+                            )}
+
+                            {/* 업로드 버튼 (이미지 없을 때) */}
+                            {landingPreviews.length === 0 && (
+                                <button
+                                    onClick={() => landingInputRef.current?.click()}
+                                    className="flex items-center gap-3 p-4 rounded-2xl border-2 border-dashed transition-colors hover:border-secondary/50"
+                                    style={{ borderColor: "var(--border)", background: "var(--surface-2)" }}
+                                >
+                                    <Upload size={18} style={{ color: "var(--foreground-muted)" }} />
+                                    <div className="text-left">
+                                        <p className="text-[12px] font-semibold" style={{ color: "var(--foreground-soft)" }}>
+                                            상품 상세 이미지 업로드
+                                        </p>
+                                        <p className="text-[10px]" style={{ color: "var(--foreground-muted)" }}>
+                                            구매 페이지에 표시될 상세 이미지를 올려주세요
+                                        </p>
+                                    </div>
+                                </button>
+                            )}
+
+                            <input
+                                ref={landingInputRef}
+                                type="file"
+                                accept="image/*"
+                                multiple
+                                className="hidden"
+                                onChange={(e) => handleLandingFilesChange(e.target.files)}
+                            />
+                        </div>
+                    )}
 
                     {/* 오늘의 챌린지 참여 토글 */}
                     <div

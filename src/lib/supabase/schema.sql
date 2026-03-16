@@ -15,6 +15,8 @@ create table if not exists public.profiles (
     points integer default 0,
     rank text default 'Beginner',
     balance integer default 100000,
+    bio text,
+    profile_link text,
     created_at timestamptz default now()
 );
 
@@ -77,7 +79,7 @@ create table if not exists public.game_state (
 );
 
 insert into public.game_state (id, week, is_session_active, teacher_pin, initial_balance)
-values (1, 1, false, '1234', 1000000)
+values (1, 1, false, '1234', 100000)
 on conflict (id) do nothing;
 
 -- 6. Products (셀러샵 상품 - 교사가 관리)
@@ -179,14 +181,18 @@ alter table public.comments enable row level security;
 create policy "comments_read" on public.comments for select using (true);
 create policy "comments_insert" on public.comments for insert with check (auth.uid() is not null);
 
--- posts.comments 카운트 자동 동기화 트리거
+-- posts.comments 카운트 자동 동기화 트리거 (AI 반응 댓글 제외)
 create or replace function public.update_post_comment_count()
 returns trigger language plpgsql as $$
 begin
     if TG_OP = 'INSERT' then
-        update public.posts set comments = comments + 1 where id = NEW.post_id;
+        if NEW.is_ai_reaction is distinct from true then
+            update public.posts set comments = comments + 1 where id = NEW.post_id;
+        end if;
     elsif TG_OP = 'DELETE' then
-        update public.posts set comments = comments - 1 where id = OLD.post_id;
+        if OLD.is_ai_reaction is distinct from true then
+            update public.posts set comments = comments - 1 where id = OLD.post_id;
+        end if;
     end if;
     return null;
 end;

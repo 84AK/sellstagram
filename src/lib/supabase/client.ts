@@ -54,6 +54,10 @@ export interface DbPost {
     highlighted: boolean;
     created_at: string;
     week: number | null;
+    landing_images: string[] | null;
+    selling_price: number | null;
+    sold_count: number | null;
+    seller_user_id: string | null;
 }
 
 export interface DbMission {

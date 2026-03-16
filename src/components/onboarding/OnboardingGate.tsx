@@ -58,7 +58,9 @@ export default function OnboardingGate({ children }: { children: React.ReactNode
                 .eq("id", session.user.id)
                 .single();
 
-            if (error || !profile) {
+            // 프로필이 없거나, 이름/역할이 미설정된 신규 유저 → 온보딩 필요
+            const isNewUser = !profile || !profile.name?.trim() || !profile.role;
+            if (error || isNewUser) {
                 // 이미 ready 상태인 사용자를 다시 온보딩으로 보내지 않음
                 setStatus(prev => prev === "ready" ? "ready" : "needs-onboarding");
                 return;
@@ -114,11 +116,12 @@ export default function OnboardingGate({ children }: { children: React.ReactNode
             setStatus("ready");
         };
 
-        checkAuthAndProfile();
-
+        // onAuthStateChange의 INITIAL_SESSION을 통해 초기 인증 체크
+        // (getSession() 직접 호출 시 OAuth 직후 race condition 발생 가능)
         const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
-            // SIGNED_IN은 토큰 갱신 시에도 발생하므로, 이미 초기화된 경우 무시
-            if (event === "SIGNED_IN" && !initializedRef.current) checkAuthAndProfile();
+            // INITIAL_SESSION: 구독 등록 시 현재 세션 상태를 즉시 알려줌 (신뢰성 높음)
+            // SIGNED_IN: OAuth 콜백 직후 세션 확립 시 발생
+            if ((event === "INITIAL_SESSION" || event === "SIGNED_IN") && !initializedRef.current) checkAuthAndProfile();
             if (event === "SIGNED_OUT") {
                 initializedRef.current = false;
                 if (balanceChannelRef.current) {

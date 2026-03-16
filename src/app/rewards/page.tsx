@@ -37,7 +37,7 @@ const TYPE_META: Record<string, { label: string; color: string; bg: string; icon
     real:    { label: "실물 보상",     color: "#D97706",          bg: "rgba(217,119,6,0.1)",    icon: <Star size={12} /> },
 };
 
-export default function RewardsPage() {
+export function RewardsContent() {
     const { user, addPoints } = useGameStore();
     const [items, setItems] = useState<RewardItem[]>([]);
     const [ownedIds, setOwnedIds] = useState<Set<string>>(new Set());
@@ -366,3 +366,5 @@ export default function RewardsPage() {
         </div>
     );
 }
+
+export default RewardsContent;

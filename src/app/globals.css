@@ -305,3 +305,11 @@ body {
   grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
   gap: 1.25rem;
 }
+
+/* ═══ 사이드바 동적 마진 ═══ */
+@media (min-width: 768px) {
+  .hidden-md-ml {
+    margin-left: var(--sidebar-w, 0px);
+    transition: margin-left 220ms cubic-bezier(0.4, 0, 0.2, 1);
+  }
+}

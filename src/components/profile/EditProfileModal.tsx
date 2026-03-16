@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState } from "react";
-import { X, Loader2, CheckCircle2, Save } from "lucide-react";
+import React, { useEffect, useState } from "react";
+import { X, Loader2, CheckCircle2, Save, Link as LinkIcon, FileText } from "lucide-react";
 import { supabase, isSupabaseConfigured } from "@/lib/supabase/client";
 import { useGameStore } from "@/store/useGameStore";
 
@@ -15,12 +15,31 @@ export default function EditProfileModal({ onClose }: EditProfileModalProps) {
     const { user, updateProfile } = useGameStore();
 
     const [name, setName] = useState(user.name);
-    // DiceBear URL이면 이모지 선택 시 교체, 아니면 그대로 사용
     const initialAvatar = user.avatar?.startsWith("http") ? "🦊" : (user.avatar || "🦊");
     const [avatar, setAvatar] = useState(initialAvatar);
+    const [bio, setBio] = useState("");
+    const [profileLink, setProfileLink] = useState("");
     const [saving, setSaving] = useState(false);
     const [saved, setSaved] = useState(false);
     const [error, setError] = useState("");
+
+    // DB에서 bio/link 불러오기
+    useEffect(() => {
+        (async () => {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session?.user) return;
+            const { data } = await supabase
+                .from("profiles")
+                .select("bio, profile_link")
+                .eq("id", session.user.id)
+                .single();
+            if (data) {
+                setBio(data.bio ?? "");
+                setProfileLink(data.profile_link ?? "");
+            }
+        })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
     const handleSave = async () => {
         if (!name.trim()) return;
@@ -33,7 +52,12 @@ export default function EditProfileModal({ onClose }: EditProfileModalProps) {
                 if (session?.user) {
                     const { error: dbError } = await supabase
                         .from("profiles")
-                        .update({ name: name.trim(), avatar })
+                        .update({
+                            name: name.trim(),
+                            avatar,
+                            bio: bio.trim() || null,
+                            profile_link: profileLink.trim() || null,
+                        })
                         .eq("id", session.user.id);
                     if (dbError) throw dbError;
                 }
@@ -135,6 +159,50 @@ export default function EditProfileModal({ onClose }: EditProfileModalProps) {
                             style={{
                                 background: "var(--surface-2)",
                                 border: name.trim() ? "2px solid var(--primary)" : "2px solid transparent",
+                                color: "var(--foreground)",
+                            }}
+                        />
+                    </div>
+
+                    {/* 자기소개 */}
+                    <div>
+                        <label className="text-[10px] font-bold uppercase tracking-widest mb-2 flex items-center gap-1 block"
+                            style={{ color: "var(--foreground-muted)" }}>
+                            <FileText size={10} /> 자기소개
+                        </label>
+                        <textarea
+                            value={bio}
+                            onChange={e => setBio(e.target.value)}
+                            maxLength={120}
+                            rows={3}
+                            placeholder="나를 소개하는 한 줄을 써보세요"
+                            className="w-full px-4 py-3 rounded-xl text-sm font-semibold outline-none transition-all resize-none"
+                            style={{
+                                background: "var(--surface-2)",
+                                border: bio.trim() ? "2px solid var(--secondary)" : "2px solid transparent",
+                                color: "var(--foreground)",
+                            }}
+                        />
+                        <p className="text-right text-[10px] mt-1" style={{ color: "var(--foreground-muted)" }}>
+                            {bio.length}/120
+                        </p>
+                    </div>
+
+                    {/* 프로필 링크 */}
+                    <div>
+                        <label className="text-[10px] font-bold uppercase tracking-widest mb-2 flex items-center gap-1 block"
+                            style={{ color: "var(--foreground-muted)" }}>
+                            <LinkIcon size={10} /> 링크
+                        </label>
+                        <input
+                            type="text"
+                            value={profileLink}
+                            onChange={e => setProfileLink(e.target.value)}
+                            placeholder="linktr.ee/username"
+                            className="w-full px-4 py-3 rounded-xl text-sm font-semibold outline-none transition-all"
+                            style={{
+                                background: "var(--surface-2)",
+                                border: profileLink.trim() ? "2px solid var(--accent)" : "2px solid transparent",
                                 color: "var(--foreground)",
                             }}
                         />

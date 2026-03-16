@@ -291,9 +291,17 @@ function ResultCard({
     );
 }
 
+interface DbPost {
+    id: string;
+    caption: string | null;
+    image_url: string | null;
+    engagement_rate: string | null;
+    sales: string | null;
+}
+
 // ─── 메인 페이지 ─────────────────────────────────────────────
 export default function SimulatePage() {
-    const { user, posts, addFunds } = useGameStore();
+    const { user, addFunds } = useGameStore();
     const [simState, setSimState] = useState<SimState>({ active: false, startedAt: null, durationMinutes: 10 });
     const [selectedPostId, setSelectedPostId] = useState<string>("");
     const [elapsedMs, setElapsedMs] = useState(0);
@@ -303,22 +311,39 @@ export default function SimulatePage() {
     const [finished, setFinished] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const [saved, setSaved] = useState(false);
+    const [dbPosts, setDbPosts] = useState<DbPost[]>([]);
     const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
     const eventFeedRef = useRef<HTMLDivElement>(null);
     const lastVisibleCountRef = useRef(0);
 
-    const myPosts = posts.filter(p =>
-        p.user.handle === user.handle && p.type === "post" && p.content?.image
-    );
+    // DB에서 내 게시물 로드
+    useEffect(() => {
+        if (!user.handle) return;
+        supabase
+            .from("posts")
+            .select("id, caption, image_url, engagement_rate, sales")
+            .eq("user_handle", user.handle)
+            .order("created_at", { ascending: false })
+            .limit(20)
+            .then(({ data }) => {
+                if (data) {
+                    setDbPosts(data);
+                    if (data.length > 0 && !selectedPostId) setSelectedPostId(data[0].id);
+                }
+            });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [user.handle]);
 
-    const selectedPost = myPosts.find(p => p.id === selectedPostId);
-    const simPost: SimPost | null = selectedPost ? {
-        id: selectedPost.id,
-        caption: selectedPost.content?.caption ?? "",
-        imageUrl: selectedPost.content?.image ?? "",
-        engagementRate: selectedPost.stats.engagement ?? "5%",
-        productPrice: selectedPost.stats.sales
-            ? parseFloat(String(selectedPost.stats.sales).replace(/[^0-9.]/g, "")) || 10000
+    const myPosts = dbPosts;
+
+    const selectedDbPost = myPosts.find(p => p.id === selectedPostId);
+    const simPost: SimPost | null = selectedDbPost ? {
+        id: selectedDbPost.id,
+        caption: selectedDbPost.caption ?? "",
+        imageUrl: selectedDbPost.image_url ?? "",
+        engagementRate: selectedDbPost.engagement_rate ?? "5%",
+        productPrice: selectedDbPost.sales
+            ? parseFloat(String(selectedDbPost.sales).replace(/[^0-9.]/g, "")) || 10000
             : 10000,
     } : null;
 
@@ -410,11 +435,7 @@ export default function SimulatePage() {
         }
     }, [elapsedMs, allEvents, simState.active]);
 
-    // 게시물 자동 선택
-    useEffect(() => {
-        if (myPosts.length > 0 && !selectedPostId) setSelectedPostId(myPosts[0].id);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [myPosts.length]);
+    // 게시물 자동 선택 (DB 로드 시 처리됨, 이 useEffect 불필요)
 
     const handleSaveResult = useCallback(async () => {
         if (!simPost || !simState.startedAt || isSaving || saved) return;
@@ -545,19 +566,21 @@ export default function SimulatePage() {
             </div>
 
             {/* 게시물 선택 */}
-            {!finished && myPosts.length > 1 && (
+            {myPosts.length > 0 && (
                 <div>
-                    <p className="text-xs font-bold mb-2 px-1" style={{ color: "var(--foreground-muted)" }}>분석할 게시물 선택</p>
+                    <p className="text-xs font-bold mb-2 px-1" style={{ color: "var(--foreground-muted)" }}>
+                        분석할 게시물 선택 ({myPosts.length}개)
+                    </p>
                     <div className="flex gap-2 overflow-x-auto pb-1">
                         {myPosts.map(post => (
-                            <button key={post.id} onClick={() => setSelectedPostId(post.id)}
+                            <button key={post.id} onClick={() => { setSelectedPostId(post.id); setSaved(false); }}
                                 className="flex-shrink-0 w-16 h-16 rounded-xl overflow-hidden transition-all"
                                 style={{
                                     border: selectedPostId === post.id ? "3px solid var(--primary)" : "2px solid var(--border)",
                                     opacity: selectedPostId === post.id ? 1 : 0.6,
                                 }}>
-                                {post.content?.image
-                                    ? <img src={post.content.image} alt="" className="w-full h-full object-cover" />
+                                {post.image_url
+                                    ? <img src={post.image_url} alt="" className="w-full h-full object-cover" />
                                     : <div className="w-full h-full flex items-center justify-center text-lg" style={{ background: "var(--surface-2)" }}>📝</div>
                                 }
                             </button>

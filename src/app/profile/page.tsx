@@ -26,6 +26,14 @@ import {
     Download,
     Share2,
     Check,
+    Grid3x3,
+    Heart,
+    MessageCircle,
+    Send,
+    Trash2,
+    ExternalLink,
+    X,
+    Link as LinkIcon,
 } from "lucide-react";
 import { useGameStore } from "@/store/useGameStore";
 import { supabase, isSupabaseConfigured, DbProfile } from "@/lib/supabase/client";
@@ -111,9 +119,24 @@ export default function ProfilePage() {
     const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
     const [teamCreatedAt, setTeamCreatedAt] = useState<string | null>(null);
     const [loadingTeam, setLoadingTeam] = useState(true);
-    const [activeTab, setActiveTab] = useState<"team" | "skills" | "bookmarks" | "idcard">("idcard");
+    const [activeTab, setActiveTab] = useState<"team" | "skills" | "bookmarks" | "idcard" | "posts">("posts");
     const [bookmarkedPosts, setBookmarkedPosts] = useState<{ id: string; image_url: string | null; caption: string | null; likes: number }[]>([]);
     const [loadingBookmarks, setLoadingBookmarks] = useState(false);
+
+    // 내 게시물 탭
+    const [myPosts, setMyPosts] = useState<{ id: string; caption: string | null; image_url: string | null; likes: number; comments: number; created_at: string }[]>([]);
+    const [loadingMyPosts, setLoadingMyPosts] = useState(false);
+    // 포스트 상세 모달
+    const [activePost, setActivePost] = useState<typeof myPosts[0] | null>(null);
+    const [modalComments, setModalComments] = useState<{ id: string; user_name: string; user_handle: string; user_avatar: string; text: string; created_at: string }[]>([]);
+    const [commentInput, setCommentInput] = useState("");
+    const [commentLoading, setCommentLoading] = useState(false);
+    const [isLiked, setIsLiked] = useState(false);
+    const [likeCount, setLikeCount] = useState(0);
+    const [likeLoading, setLikeLoading] = useState(false);
+    // bio/link (프로필 편집에서 저장됨, 상단 표시용)
+    const [bio, setBioDisplay] = useState<string | null>(null);
+    const [profileLink, setProfileLinkDisplay] = useState<string | null>(null);
     const [recentPosts, setRecentPosts] = useState<{ id: string; caption: string | null; image_url: string | null; likes: number; engagement_rate: string; created_at: string; week: number | null }[]>([]);
     const [loadingActivity, setLoadingActivity] = useState(true);
     const [postCount, setPostCount] = useState(0);
@@ -205,6 +228,84 @@ export default function ProfilePage() {
             });
     }, [user.handle]);
 
+    // bio/link 표시용 로드
+    useEffect(() => {
+        (async () => {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session?.user) return;
+            const { data } = await supabase.from("profiles").select("bio, profile_link").eq("id", session.user.id).single();
+            if (data) { setBioDisplay(data.bio ?? null); setProfileLinkDisplay(data.profile_link ?? null); }
+        })();
+    }, []);
+
+    // 내 게시물 탭 로드
+    useEffect(() => {
+        if (activeTab !== "posts" || !user.handle) return;
+        setLoadingMyPosts(true);
+        supabase.from("posts").select("id, caption, image_url, likes, comments, created_at")
+            .eq("user_handle", user.handle).order("created_at", { ascending: false })
+            .then(({ data }) => { setMyPosts(data ?? []); setLoadingMyPosts(false); });
+    }, [activeTab, user.handle]);
+
+    // 포스트 상세 모달 열기
+    const openPostModal = async (post: typeof myPosts[0]) => {
+        setActivePost(post);
+        setLikeCount(post.likes);
+        setCommentInput("");
+        const { data: cmts } = await supabase.from("comments")
+            .select("id, user_name, user_handle, user_avatar, text, created_at")
+            .eq("post_id", post.id).order("created_at", { ascending: true });
+        setModalComments(cmts ?? []);
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.user) {
+            const { data: likeRow } = await supabase.from("post_likes")
+                .select("post_id").eq("post_id", post.id).eq("user_id", session.user.id).single();
+            setIsLiked(!!likeRow);
+        }
+    };
+
+    const toggleModalLike = async () => {
+        if (!activePost || likeLoading) return;
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session?.user) return;
+        setLikeLoading(true);
+        if (isLiked) {
+            await supabase.from("post_likes").delete().eq("post_id", activePost.id).eq("user_id", session.user.id);
+            await supabase.from("posts").update({ likes: likeCount - 1 }).eq("id", activePost.id);
+            setIsLiked(false); setLikeCount(c => c - 1);
+        } else {
+            await supabase.from("post_likes").insert({ post_id: activePost.id, user_id: session.user.id });
+            await supabase.from("posts").update({ likes: likeCount + 1 }).eq("id", activePost.id);
+            setIsLiked(true); setLikeCount(c => c + 1);
+        }
+        setMyPosts(prev => prev.map(p => p.id === activePost.id ? { ...p, likes: isLiked ? likeCount - 1 : likeCount + 1 } : p));
+        setLikeLoading(false);
+    };
+
+    const submitModalComment = async () => {
+        if (!activePost || !commentInput.trim() || commentLoading) return;
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session?.user) return;
+        setCommentLoading(true);
+        const { data, error } = await supabase.from("comments").insert({
+            post_id: activePost.id, user_id: session.user.id,
+            user_name: user.name || "익명", user_handle: user.handle || "unknown",
+            user_avatar: user.avatar || "🦊", text: commentInput.trim(),
+        }).select().single();
+        if (!error && data) {
+            setModalComments(prev => [...prev, data]);
+            setMyPosts(prev => prev.map(p => p.id === activePost.id ? { ...p, comments: p.comments + 1 } : p));
+        }
+        setCommentInput(""); setCommentLoading(false);
+    };
+
+    const deleteModalComment = async (commentId: string, commentHandle: string) => {
+        if (commentHandle !== user.handle) return;
+        await supabase.from("comments").delete().eq("id", commentId);
+        setModalComments(prev => prev.filter(c => c.id !== commentId));
+        if (activePost) setMyPosts(prev => prev.map(p => p.id === activePost.id ? { ...p, comments: Math.max(0, p.comments - 1) } : p));
+    };
+
     // 북마크 탭 선택 시 로드
     useEffect(() => {
         if (activeTab !== "bookmarks") return;
@@ -294,6 +395,22 @@ export default function ProfilePage() {
                             <span className="text-foreground/40 font-medium">@{user.handle} • {user.team} 소속</span>
                         </div>
 
+                        {/* bio */}
+                        {bio && (
+                            <p className="text-sm leading-relaxed" style={{ color: "var(--foreground-soft)" }}>{bio}</p>
+                        )}
+                        {/* 링크 */}
+                        {profileLink && (
+                            <a href={profileLink.startsWith("http") ? profileLink : `https://${profileLink}`}
+                                target="_blank" rel="noopener noreferrer"
+                                className="flex items-center gap-1 text-sm font-semibold w-fit"
+                                style={{ color: "var(--secondary)" }}>
+                                <LinkIcon size={12} />
+                                {profileLink.replace(/^https?:\/\//, "")}
+                                <ExternalLink size={10} />
+                            </a>
+                        )}
+
                         <div className="flex flex-wrap justify-center md:justify-start gap-3 mt-2">
                             <button
                                 onClick={() => setShowEditModal(true)}
@@ -307,6 +424,12 @@ export default function ProfilePage() {
                                 style={{ background: "var(--primary)", color: "white" }}
                             >
                                 아바타 꾸미기 <Palette size={14} />
+                            </button>
+                            <button
+                                onClick={() => router.push(`/profile/${encodeURIComponent(user.handle)}`)}
+                                className="px-6 py-2.5 bg-foreground/5 border border-foreground/10 rounded-2xl text-xs font-black italic hover:bg-foreground/10 transition-all flex items-center gap-2 active:scale-[0.97]"
+                            >
+                                공개 프로필 보기 <ExternalLink size={14} />
                             </button>
                             {isTeacher && (
                                 <button
@@ -340,6 +463,7 @@ export default function ProfilePage() {
                 {/* 탭 전환 */}
                 <div className="flex gap-1 p-1 rounded-2xl w-fit overflow-x-auto no-scrollbar" style={{ background: "var(--surface-2)" }}>
                     {([
+                        { key: "posts", label: "내 게시물", icon: Grid3x3 },
                         { key: "idcard", label: "ID 카드", icon: ShieldCheck },
                         { key: "team", label: "팀 워크스페이스", icon: Users },
                         { key: "skills", label: "스킬 트리", icon: TrendingUp },
@@ -363,6 +487,63 @@ export default function ProfilePage() {
 
                 {/* Main Content Area: Team & Activity */}
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+
+                    {/* ── 내 게시물 탭 (인스타그램 그리드) ── */}
+                    {activeTab === "posts" && (
+                        <div className="lg:col-span-3 flex flex-col gap-4">
+                            <div className="flex items-center justify-between px-1">
+                                <div className="flex items-center gap-2">
+                                    <Grid3x3 size={20} style={{ color: "var(--primary)" }} />
+                                    <h2 className="text-xl font-black italic">내 게시물</h2>
+                                    {!loadingMyPosts && (
+                                        <span className="text-sm font-bold px-2 py-0.5 rounded-full"
+                                            style={{ background: "var(--surface-2)", color: "var(--foreground-muted)" }}>
+                                            {myPosts.length}
+                                        </span>
+                                    )}
+                                </div>
+                            </div>
+
+                            {loadingMyPosts ? (
+                                <div className="flex justify-center py-20">
+                                    <Loader2 size={28} className="animate-spin" style={{ color: "var(--foreground-muted)" }} />
+                                </div>
+                            ) : myPosts.length === 0 ? (
+                                <div className="flex flex-col items-center justify-center py-24 gap-4 rounded-3xl"
+                                    style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
+                                    <span className="text-5xl">📷</span>
+                                    <p className="font-black text-lg" style={{ color: "var(--foreground-muted)" }}>아직 게시물이 없어요</p>
+                                    <p className="text-sm" style={{ color: "var(--foreground-muted)" }}>피드에서 첫 콘텐츠를 올려보세요!</p>
+                                </div>
+                            ) : (
+                                <div className="grid grid-cols-3 gap-0.5 rounded-2xl overflow-hidden">
+                                    {myPosts.map(post => (
+                                        <button key={post.id} onClick={() => openPostModal(post)}
+                                            className="relative aspect-square overflow-hidden hover:opacity-90 transition-opacity"
+                                            style={{ background: "var(--surface-2)" }}>
+                                            {post.image_url ? (
+                                                <img src={post.image_url} alt="" className="w-full h-full object-cover" />
+                                            ) : (
+                                                <div className="w-full h-full flex flex-col items-center justify-center gap-1">
+                                                    <ImageIcon size={20} style={{ color: "var(--foreground-muted)", opacity: 0.4 }} />
+                                                    <span className="text-[10px]" style={{ color: "var(--foreground-muted)" }}>텍스트</span>
+                                                </div>
+                                            )}
+                                            {/* 호버 오버레이 */}
+                                            <div className="absolute inset-0 bg-black/0 hover:bg-black/40 transition-all flex items-center justify-center gap-3 opacity-0 hover:opacity-100">
+                                                <span className="text-white text-xs font-black flex items-center gap-1">
+                                                    <Heart size={12} fill="white" /> {post.likes}
+                                                </span>
+                                                <span className="text-white text-xs font-black flex items-center gap-1">
+                                                    <MessageCircle size={12} fill="white" /> {post.comments}
+                                                </span>
+                                            </div>
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    )}
 
                     {/* ID 카드 탭 */}
                     {activeTab === "idcard" && (
@@ -699,6 +880,140 @@ export default function ProfilePage() {
                     </div>}
                 </div>
             </div>
+
+            {/* 포스트 상세 모달 */}
+            {activePost && (
+                <div
+                    className="fixed inset-0 z-[300] flex items-center justify-center p-4"
+                    style={{ background: "rgba(0,0,0,0.75)", backdropFilter: "blur(8px)" }}
+                    onClick={(e) => { if (e.target === e.currentTarget) setActivePost(null); }}
+                >
+                    <div
+                        className="w-full max-w-3xl rounded-3xl overflow-hidden flex flex-col md:flex-row"
+                        style={{ background: "var(--surface)", boxShadow: "var(--shadow-lg)", maxHeight: "90vh" }}
+                    >
+                        {/* 이미지 */}
+                        <div className="md:w-1/2 bg-black flex items-center justify-center shrink-0"
+                            style={{ minHeight: 280 }}>
+                            {activePost.image_url ? (
+                                <img src={activePost.image_url} alt="" className="w-full h-full object-contain" />
+                            ) : (
+                                <div className="w-full h-full flex items-center justify-center" style={{ minHeight: 280 }}>
+                                    <span className="text-6xl">📷</span>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* 우측: 정보 + 댓글 */}
+                        <div className="md:w-1/2 flex flex-col overflow-hidden">
+                            {/* 헤더 */}
+                            <div className="flex items-center justify-between px-5 py-4"
+                                style={{ borderBottom: "1px solid var(--border)" }}>
+                                <div className="flex items-center gap-3">
+                                    <div className="w-9 h-9 rounded-2xl overflow-hidden flex items-center justify-center"
+                                        style={{ background: "var(--surface-2)" }}>
+                                        {user.avatar?.startsWith("http") ? (
+                                            <img src={user.avatar} alt="" className="w-full h-full object-contain" />
+                                        ) : (
+                                            <span className="text-xl">{user.avatar || "🦊"}</span>
+                                        )}
+                                    </div>
+                                    <div>
+                                        <p className="text-sm font-black" style={{ color: "var(--foreground)" }}>{user.name}</p>
+                                        <p className="text-xs" style={{ color: "var(--foreground-muted)" }}>@{user.handle}</p>
+                                    </div>
+                                </div>
+                                <button onClick={() => setActivePost(null)}
+                                    className="w-8 h-8 rounded-xl flex items-center justify-center transition-colors hover:bg-foreground/10"
+                                    style={{ color: "var(--foreground-muted)" }}>
+                                    <X size={16} />
+                                </button>
+                            </div>
+
+                            {/* 캡션 */}
+                            {activePost.caption && (
+                                <div className="px-5 py-3" style={{ borderBottom: "1px solid var(--border)" }}>
+                                    <p className="text-sm leading-relaxed" style={{ color: "var(--foreground)" }}>
+                                        {activePost.caption}
+                                    </p>
+                                </div>
+                            )}
+
+                            {/* 댓글 목록 */}
+                            <div className="flex-1 overflow-y-auto px-5 py-4 flex flex-col gap-3">
+                                {modalComments.length === 0 ? (
+                                    <p className="text-xs text-center py-8" style={{ color: "var(--foreground-muted)" }}>
+                                        첫 댓글을 남겨보세요!
+                                    </p>
+                                ) : (
+                                    modalComments.map(c => (
+                                        <div key={c.id} className="flex items-start gap-2.5 group">
+                                            <div className="w-7 h-7 rounded-xl overflow-hidden flex items-center justify-center shrink-0"
+                                                style={{ background: "var(--surface-2)" }}>
+                                                {c.user_avatar?.startsWith("http") ? (
+                                                    <img src={c.user_avatar} alt="" className="w-full h-full object-contain" />
+                                                ) : (
+                                                    <span className="text-sm">{c.user_avatar || "🦊"}</span>
+                                                )}
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <p className="text-xs font-black" style={{ color: "var(--foreground)" }}>
+                                                    {c.user_name}
+                                                    <span className="font-normal ml-2" style={{ color: "var(--foreground-muted)" }}>{c.text}</span>
+                                                </p>
+                                            </div>
+                                            {c.user_handle === user.handle && (
+                                                <button onClick={() => deleteModalComment(c.id, c.user_handle)}
+                                                    className="opacity-0 group-hover:opacity-100 transition-opacity"
+                                                    style={{ color: "var(--foreground-muted)" }}>
+                                                    <Trash2 size={12} />
+                                                </button>
+                                            )}
+                                        </div>
+                                    ))
+                                )}
+                            </div>
+
+                            {/* 하단: 좋아요 + 댓글 입력 */}
+                            <div style={{ borderTop: "1px solid var(--border)" }}>
+                                <div className="flex items-center gap-4 px-5 py-3">
+                                    <button
+                                        onClick={toggleModalLike}
+                                        disabled={likeLoading}
+                                        className="flex items-center gap-1.5 text-sm font-black transition-all active:scale-90"
+                                        style={{ color: isLiked ? "#EF4444" : "var(--foreground-muted)" }}
+                                    >
+                                        <Heart size={20} fill={isLiked ? "#EF4444" : "none"} />
+                                        {likeCount}
+                                    </button>
+                                    <span className="flex items-center gap-1.5 text-sm font-bold" style={{ color: "var(--foreground-muted)" }}>
+                                        <MessageCircle size={18} /> {modalComments.length}
+                                    </span>
+                                </div>
+                                <div className="flex items-center gap-2 px-4 pb-4">
+                                    <input
+                                        type="text"
+                                        value={commentInput}
+                                        onChange={e => setCommentInput(e.target.value)}
+                                        onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); submitModalComment(); } }}
+                                        placeholder="댓글 달기..."
+                                        className="flex-1 px-4 py-2.5 rounded-2xl text-sm outline-none"
+                                        style={{ background: "var(--surface-2)", color: "var(--foreground)", border: "1px solid var(--border)" }}
+                                    />
+                                    <button
+                                        onClick={submitModalComment}
+                                        disabled={!commentInput.trim() || commentLoading}
+                                        className="w-10 h-10 rounded-2xl flex items-center justify-center transition-all hover:opacity-80 active:scale-95 disabled:opacity-30"
+                                        style={{ background: "var(--primary)", color: "white" }}
+                                    >
+                                        {commentLoading ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </>
     );
 }

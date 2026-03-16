@@ -89,12 +89,20 @@ interface Draft {
     marketingTip: string;
 }
 
+interface PrefilledProduct {
+    name: string;
+    price: number;
+    category: string;
+    description?: string | null;
+}
+
 interface AIContentStudioProps {
     onApply: (caption: string, tags: string) => void;
     onClose: () => void;
+    prefilledProduct?: PrefilledProduct | null;
 }
 
-export default function AIContentStudio({ onApply, onClose }: AIContentStudioProps) {
+export default function AIContentStudio({ onApply, onClose, prefilledProduct }: AIContentStudioProps) {
     const { addSkillXP } = useGameStore();
 
     const [step, setStep] = useState(1);
@@ -121,6 +129,12 @@ export default function AIContentStudio({ onApply, onClose }: AIContentStudioPro
     const [isRefining, setIsRefining] = useState(false);
 
     const [copied, setCopied] = useState(false);
+
+    // 구매한 상품 정보 자동 입력
+    React.useEffect(() => {
+        if (!prefilledProduct) return;
+        setProductName(prefilledProduct.name);
+    }, [prefilledProduct]);
 
     const strategy = MARKETING_STRATEGIES.find(s => s.id === selectedStrategy);
     const tone = TONES.find(t => t.id === selectedTone);
@@ -255,6 +269,23 @@ export default function AIContentStudio({ onApply, onClose }: AIContentStudioPro
                                 <p className="text-sm text-foreground/50 mt-1">제품 정보와 마케팅 전략을 선택하면 AI가 캡션 초안을 만들어줘요.</p>
                             </div>
 
+                            {/* 구매한 상품 자동 입력 배지 */}
+                            {prefilledProduct && (
+                                <div className="flex items-center gap-3 px-4 py-3 rounded-2xl"
+                                    style={{ background: "rgba(6,214,160,0.08)", border: "1.5px solid rgba(6,214,160,0.3)" }}>
+                                    <span className="text-lg">🛍️</span>
+                                    <div className="flex-1 min-w-0">
+                                        <p className="text-[11px] font-bold" style={{ color: "var(--accent)" }}>구매한 상품 자동 입력됨</p>
+                                        <p className="text-[13px] font-semibold truncate" style={{ color: "var(--foreground)" }}>
+                                            {prefilledProduct.name}
+                                        </p>
+                                    </div>
+                                    <span className="text-[12px] font-black" style={{ color: "#D97706" }}>
+                                        ₩{prefilledProduct.price.toLocaleString()}
+                                    </span>
+                                </div>
+                            )}
+
                             {/* 제품명 */}
                             <div className="flex flex-col gap-2">
                                 <label className="text-sm font-bold text-foreground/70">
@@ -264,7 +295,11 @@ export default function AIContentStudio({ onApply, onClose }: AIContentStudioPro
                                     value={productName}
                                     onChange={e => setProductName(e.target.value)}
                                     placeholder="예: 오트밀 프로틴 쉐이크, 핸드메이드 캔들..."
-                                    className="w-full bg-foreground/5 border border-foreground/10 rounded-2xl px-4 py-3.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
+                                    className="w-full rounded-2xl px-4 py-3.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
+                                    style={{
+                                        background: prefilledProduct ? "rgba(6,214,160,0.06)" : "var(--foreground-5, rgba(0,0,0,0.05))",
+                                        border: prefilledProduct ? "1.5px solid rgba(6,214,160,0.4)" : "1px solid var(--border)",
+                                    }}
                                 />
                             </div>
 

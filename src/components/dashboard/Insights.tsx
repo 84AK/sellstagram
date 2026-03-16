@@ -47,23 +47,34 @@ export default function Insights() {
     const { campaigns, balance, insights, posts, missions, user, setAIReportModal } = useGameStore();
     const [teamRankings, setTeamRankings] = useState<TeamRank[]>([]);
     const [showStatsModal, setShowStatsModal] = useState(false);
+    const [realStats, setRealStats] = useState({ totalEngagement: 0, avgEngagementRate: 0, postCount: 0 });
 
     const totalRevenue = campaigns.reduce((acc, curr) => acc + curr.revenue, 0);
-    const totalSpent = campaigns.reduce((acc, curr) => acc + (curr.spent || 0), 0);
-    const roas = campaigns.length > 0
-        ? totalSpent > 0
-            ? (totalRevenue / totalSpent).toFixed(1)
-            : (campaigns.reduce((acc, curr) => acc + curr.engagement, 0) / campaigns.length).toFixed(1)
-        : "0";
-
-    const totalReach = campaigns.length > 0
-        ? campaigns.reduce((acc, curr) => acc + (curr.revenue > 0 ? Math.round(curr.revenue / 0.05) : 500), 0)
-        : posts.length * 500;
-    const reachDisplay = totalReach >= 1000
-        ? (totalReach / 1000).toFixed(1) + "k"
-        : String(totalReach);
 
     const activeMission = missions.find(m => m.isActive && !m.isCompleted) ?? null;
+
+    const loadRealStats = async () => {
+        const { data } = await supabase
+            .from("posts")
+            .select("likes, comments, shares, engagement_rate");
+        if (!data || data.length === 0) return;
+
+        const totalEng = data.reduce((acc, p) =>
+            acc + (p.likes || 0) + (p.comments || 0) + (p.shares || 0), 0);
+        const rates = data
+            .map((p: { engagement_rate: string | null }) =>
+                parseFloat((p.engagement_rate ?? "0").replace("%", "")))
+            .filter((r: number) => !isNaN(r) && r > 0);
+        const avgRate = rates.length > 0
+            ? rates.reduce((a: number, b: number) => a + b, 0) / rates.length
+            : 0;
+
+        setRealStats({ totalEngagement: totalEng, avgEngagementRate: avgRate, postCount: data.length });
+    };
+
+    const engDisplay = realStats.totalEngagement >= 1000
+        ? (realStats.totalEngagement / 1000).toFixed(1) + "k"
+        : String(realStats.totalEngagement);
 
     const loadTeamRankings = async () => {
         const [{ data: profilesData }, { data: teamsData }] = await Promise.all([
@@ -99,11 +110,15 @@ export default function Insights() {
 
     useEffect(() => {
         loadTeamRankings();
+        loadRealStats();
 
         const ch = supabase
-            .channel("insights-profiles")
+            .channel("insights-live")
             .on("postgres_changes", { event: "*", schema: "public", table: "profiles" }, () => {
                 loadTeamRankings();
+            })
+            .on("postgres_changes", { event: "*", schema: "public", table: "posts" }, () => {
+                loadRealStats();
             })
             .subscribe();
 
@@ -158,24 +173,28 @@ export default function Insights() {
                 </div>
                 <div className="flex items-center gap-1.5 text-green-300">
                     <TrendingUp size={12} />
-                    <span className="text-[10px] font-bold">게시물 {posts.length}개 · 좋아요 {reachDisplay}</span>
+                    <span className="text-[10px] font-bold">게시물 {realStats.postCount}개 · 총 반응 {engDisplay}</span>
                 </div>
             </div>
 
-            {/* 캠페인 성과 그리드 */}
+            {/* 실시간 참여 지표 그리드 */}
             <div className="grid grid-cols-2 gap-3">
                 <div
                     className="rounded-2xl p-4 flex flex-col gap-1.5"
                     style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
                 >
                     <div className="flex items-center gap-1.5 mb-1">
-                        <Users size={13} style={{ color: "var(--accent)" }} />
+                        <Heart size={13} style={{ color: "var(--accent)" }} />
                         <span className="text-[10px] font-bold uppercase" style={{ color: "var(--foreground-muted)" }}>
-                            총 도달
+                            총 인게이지먼트
                         </span>
-                        <TermTooltip termKey="reach" size={12} />
                     </div>
-                    <span className="text-xl font-black" style={{ color: "var(--foreground)" }}>{reachDisplay || "0"}</span>
+                    <span className="text-xl font-black" style={{ color: "var(--foreground)" }}>
+                        {engDisplay || "0"}
+                    </span>
+                    <span className="text-[10px]" style={{ color: "var(--foreground-muted)" }}>
+                        좋아요·댓글·공유 합계
+                    </span>
                 </div>
                 <div
                     className="rounded-2xl p-4 flex flex-col gap-1.5"
@@ -184,12 +203,15 @@ export default function Insights() {
                     <div className="flex items-center gap-1.5 mb-1">
                         <Zap size={13} style={{ color: "var(--primary)" }} />
                         <span className="text-[10px] font-bold uppercase" style={{ color: "var(--foreground-muted)" }}>
-                            ROAS
+                            평균 참여율
                         </span>
-                        <TermTooltip termKey="roas" size={12} />
+                        <TermTooltip termKey="engagement" size={12} />
                     </div>
                     <span className="text-xl font-black" style={{ color: "var(--primary)" }}>
-                        {roas}x
+                        {realStats.postCount > 0 ? realStats.avgEngagementRate.toFixed(1) : "0"}%
+                    </span>
+                    <span className="text-[10px]" style={{ color: "var(--foreground-muted)" }}>
+                        게시물 {realStats.postCount}개 기준
                     </span>
                 </div>
             </div>

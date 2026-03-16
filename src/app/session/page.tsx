@@ -22,6 +22,8 @@ import {
     BarChart2,
     ExternalLink,
     PenLine,
+    Copy,
+    Check,
 } from "lucide-react";
 import {
     CURRICULUM,
@@ -33,12 +35,13 @@ import {
 import { useGameStore } from "@/store/useGameStore";
 import WeeklyReportModal from "@/components/feed/WeeklyReportModal";
 
-export default function SessionPage() {
+export function SessionContent() {
     const { week: currentWeek, setUploadModalOpen, user } = useGameStore();
     const [viewWeek, setViewWeek] = useState(currentWeek);
     const [expandedActivity, setExpandedActivity] = useState<number | null>(0);
     const [showCurriculumMap, setShowCurriculumMap] = useState(false);
     const [showReport, setShowReport] = useState(false);
+    const [promptCopied, setPromptCopied] = useState<number | null>(null);
     const [teamMembers, setTeamMembers] = useState<{ name: string; avatar: string }[]>([]);
     const [loadingTeam, setLoadingTeam] = useState(true);
     const [unlockedWeeks, setUnlockedWeeks] = useState<number[]>([]);
@@ -74,6 +77,13 @@ export default function SessionPage() {
 
     const themeStyle = THEME_COLORS[session.theme];
 
+    const copyPrompt = (text: string, index: number) => {
+        navigator.clipboard.writeText(text).then(() => {
+            setPromptCopied(index);
+            setTimeout(() => setPromptCopied(null), 2000);
+        });
+    };
+
     return (
         <>
         {showReport && (
@@ -103,13 +113,16 @@ export default function SessionPage() {
                         </h1>
                     </div>
                 </div>
+                {/* 커리큘럼 지도 토글 */}
                 <button
                     onClick={() => setShowCurriculumMap(!showCurriculumMap)}
-                    className="flex items-center gap-2 text-sm font-bold px-4 py-2.5 rounded-xl transition-all"
-                    style={{ background: "var(--surface-2)", color: "var(--foreground-soft)" }}
+                    className="flex items-center gap-1.5 text-sm font-bold px-3 py-2.5 rounded-xl transition-all"
+                    style={{
+                        background: showCurriculumMap ? "var(--secondary-light)" : "var(--surface-2)",
+                        color: showCurriculumMap ? "var(--secondary)" : "var(--foreground-soft)",
+                    }}
                 >
                     <BookOpen size={15} />
-                    커리큘럼 전체 보기
                     {showCurriculumMap ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
                 </button>
             </div>
@@ -199,7 +212,6 @@ export default function SessionPage() {
                     <ChevronLeft size={20} style={{ color: "var(--foreground-soft)" }} />
                 </button>
 
-                {/* 빠른 주차 선택 */}
                 <div className="flex-1 flex gap-2 overflow-x-auto pb-1 hide-scrollbar">
                     {[
                         Math.max(1, viewWeek - 2),
@@ -294,7 +306,6 @@ export default function SessionPage() {
                     </div>
                 </div>
 
-                {/* AI 도구 뱃지 */}
                 {session.aiTool && (
                     <div className="flex items-center gap-2 mt-4 pt-4" style={{ borderTop: `1px solid ${themeStyle.color}22` }}>
                         <Sparkles size={14} style={{ color: themeStyle.color }} />
@@ -308,7 +319,7 @@ export default function SessionPage() {
                 )}
             </div>
 
-            {/* ── 수업 결과 기록 버튼 (항상 표시) ── */}
+            {/* ── 수업 결과 기록 버튼 ── */}
             <a
                 href="https://84ak.github.io/activity_log/"
                 target="_blank"
@@ -365,6 +376,7 @@ export default function SessionPage() {
             )}
 
             {!isLocked && <>
+
             {/* ── 학습 목표 ── */}
             <div
                 className="rounded-2xl p-6"
@@ -404,6 +416,7 @@ export default function SessionPage() {
                     {session.activities.map((activity, i) => {
                         const isExpanded = expandedActivity === i;
                         const iconEmoji = ACTIVITY_ICONS[activity.type];
+                        const isCopied = promptCopied === i;
 
                         return (
                             <div
@@ -420,7 +433,6 @@ export default function SessionPage() {
                                     onClick={() => setExpandedActivity(isExpanded ? null : i)}
                                     className="w-full flex items-center gap-4 p-5 text-left"
                                 >
-                                    {/* 아이콘 */}
                                     <div
                                         className="w-11 h-11 rounded-xl flex items-center justify-center text-xl shrink-0"
                                         style={{
@@ -446,10 +458,46 @@ export default function SessionPage() {
 
                                 {/* 활동 상세 */}
                                 {isExpanded && (
-                                    <div className="px-5 pb-5">
-                                        <p className="text-base leading-relaxed mb-4" style={{ color: "var(--foreground-soft)" }}>
+                                    <div className="px-5 pb-5 flex flex-col gap-4">
+                                        <p className="text-base leading-relaxed" style={{ color: "var(--foreground-soft)" }}>
                                             {activity.desc}
                                         </p>
+
+                                        {/* Gemini 프롬프트 복사 블록 */}
+                                        {activity.aiPrompt && (
+                                            <div
+                                                className="rounded-xl overflow-hidden"
+                                                style={{ border: `1.5px solid ${themeStyle.color}33` }}
+                                            >
+                                                <div
+                                                    className="flex items-center justify-between px-4 py-2.5"
+                                                    style={{ background: themeStyle.bg }}
+                                                >
+                                                    <div className="flex items-center gap-2">
+                                                        <Sparkles size={13} style={{ color: themeStyle.color }} />
+                                                        <span className="text-xs font-black" style={{ color: themeStyle.color }}>
+                                                            Gemini 프롬프트
+                                                        </span>
+                                                    </div>
+                                                    <button
+                                                        onClick={() => copyPrompt(activity.aiPrompt!, i)}
+                                                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-black transition-all"
+                                                        style={{
+                                                            background: isCopied ? "var(--accent)" : themeStyle.color,
+                                                            color: "white",
+                                                        }}
+                                                    >
+                                                        {isCopied ? <Check size={11} /> : <Copy size={11} />}
+                                                        {isCopied ? "복사됨!" : "복사"}
+                                                    </button>
+                                                </div>
+                                                <div className="px-4 py-3" style={{ background: "var(--surface-2)" }}>
+                                                    <p className="text-sm font-medium leading-relaxed" style={{ color: "var(--foreground-soft)", fontFamily: "monospace" }}>
+                                                        {activity.aiPrompt}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        )}
 
                                         {activity.tip && (
                                             <div
@@ -468,17 +516,20 @@ export default function SessionPage() {
                                             </div>
                                         )}
 
-                                        {/* 실습 타입이면 바로 업로드 버튼 */}
+                                        {/* 실습 타입이면 업로드 버튼 (+XP 표시) */}
                                         {(activity.type === "practice" || activity.type === "wrap") && isCurrentSession && (
                                             <button
                                                 onClick={() => setUploadModalOpen(true, "mission")}
-                                                className="mt-4 w-full py-3 rounded-xl font-bold text-base text-white flex items-center justify-center gap-2 transition-all hover:opacity-90"
+                                                className="w-full py-3 rounded-xl font-bold text-base text-white flex items-center justify-center gap-2 transition-all hover:opacity-90"
                                                 style={{
                                                     background: `linear-gradient(135deg, ${themeStyle.color}, ${themeStyle.color}CC)`,
                                                 }}
                                             >
                                                 <Zap size={16} />
-                                                지금 실습하기
+                                                지금 업로드하기
+                                                <span className="ml-1 text-xs font-black px-2 py-0.5 rounded-full bg-white/20">
+                                                    +XP
+                                                </span>
                                             </button>
                                         )}
                                     </div>
@@ -631,3 +682,5 @@ export default function SessionPage() {
         </>
     );
 }
+
+export default SessionContent;

@@ -16,6 +16,8 @@ import {
     Trophy,
     Star,
     Sparkles,
+    GraduationCap,
+    Target,
 } from "lucide-react";
 import {
     CONCEPT_CARDS,
@@ -27,6 +29,8 @@ import {
     type Tutorial,
 } from "@/lib/learn/content";
 import { useGameStore } from "@/store/useGameStore";
+import { SessionContent } from "@/app/session/page";
+import MissionList from "@/components/dashboard/MissionList";
 
 type Tab = "today" | "concept" | "ai" | "tutorial";
 type SelectedItem =
@@ -488,8 +492,11 @@ function EmptyDetail() {
 /* ══════════════════════════════════════════════
    메인 페이지
 ══════════════════════════════════════════════ */
+type OuterTab = "session" | "learn" | "missions";
+
 export default function LearnPage() {
     const { week: currentWeek, setUploadModalOpen } = useGameStore();
+    const [outerTab, setOuterTab] = useState<OuterTab>("session");
     const [activeTab, setActiveTab] = useState<Tab>("today");
     const [selected, setSelected] = useState<SelectedItem>(null);
     const [filterDifficulty, setFilterDifficulty] = useState<Difficulty | "전체">("전체");
@@ -747,8 +754,62 @@ export default function LearnPage() {
         return null;
     };
 
+    const outerTabs: { id: OuterTab; label: string; icon: React.ReactNode; emoji: string; color: string; solidBg: string }[] = [
+        { id: "session",  label: "오늘의 수업", icon: <GraduationCap size={17} />, emoji: "📚", color: "#4361EE", solidBg: "#4361EE" },
+        { id: "learn",    label: "학습 자료",   icon: <BookOpen size={17} />,      emoji: "📖", color: "#06D6A0", solidBg: "#06D6A0" },
+        { id: "missions", label: "미션 센터",   icon: <Target size={17} />,        emoji: "🏆", color: "#D97706", solidBg: "#D97706" },
+    ];
+
     return (
-        <div className="flex flex-col">
+        <div className="flex flex-col min-h-screen">
+            {/* ── 최상위 탭 네비 ── */}
+            <div className="sticky top-0 z-20 px-4 py-4 overflow-x-auto"
+                style={{ background: "var(--background)", borderBottom: "1px solid var(--border)", boxShadow: "0 2px 12px rgba(0,0,0,0.05)" }}>
+                <div className="flex items-center gap-2">
+                    {outerTabs.map(t => {
+                        const active = outerTab === t.id;
+                        return (
+                            <button
+                                key={t.id}
+                                onClick={() => setOuterTab(t.id)}
+                                className="flex items-center gap-2.5 px-5 py-3 rounded-2xl text-sm font-black whitespace-nowrap transition-all active:scale-95"
+                                style={{
+                                    background: active ? t.solidBg : "var(--surface-2)",
+                                    color: active ? "white" : "var(--foreground-soft)",
+                                    boxShadow: active ? `0 4px 14px ${t.solidBg}44` : "none",
+                                    transform: active ? "scale(1.03)" : "scale(1)",
+                                }}
+                            >
+                                <span style={{ opacity: active ? 1 : 0.6 }}>{t.icon}</span>
+                                {t.label}
+                                {active && <span className="w-1.5 h-1.5 rounded-full bg-white/70 ml-0.5" />}
+                            </button>
+                        );
+                    })}
+                </div>
+            </div>
+
+            {/* 오늘의 수업 탭 */}
+            {outerTab === "session" && <SessionContent />}
+
+            {/* 미션 센터 탭 */}
+            {outerTab === "missions" && (
+                <div className="flex flex-col gap-8 p-4 pt-6 max-w-4xl mx-auto pb-32 w-full">
+                    <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: "var(--highlight-light)" }}>
+                            <Trophy size={20} style={{ color: "#D97706" }} />
+                        </div>
+                        <div>
+                            <h2 className="text-2xl font-black italic">미션 센터</h2>
+                            <p className="text-sm" style={{ color: "var(--foreground-muted)" }}>주간 미션을 완료하고 포인트를 획득하세요</p>
+                        </div>
+                    </div>
+                    <MissionList />
+                </div>
+            )}
+
+            {/* 학습 자료 탭 */}
+            {outerTab === "learn" && <div className="flex flex-col">
             {/* ── 헤더 + 탭 ── */}
             <div className="px-4 pt-5 pb-3" style={{ borderBottom: "1px solid var(--border)" }}>
                 <div className="flex items-center gap-3 mb-4">
@@ -855,6 +916,7 @@ export default function LearnPage() {
                     {renderDetail()}
                 </div>
             </div>
+        </div>}
         </div>
     );
 }
