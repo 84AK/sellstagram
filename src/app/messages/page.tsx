@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase/client";
 import { useGameStore } from "@/store/useGameStore";
-import { ArrowLeft, Send, ImageIcon, Inbox } from "lucide-react";
+import { ArrowLeft, Send, ImageIcon, Inbox, Loader2, Check } from "lucide-react";
 
 interface Message {
     id: string;
@@ -40,6 +40,9 @@ export default function MessagesPage() {
     const [messages, setMessages] = useState<Message[]>([]);
     const [loading, setLoading] = useState(true);
     const [activeMsg, setActiveMsg] = useState<Message | null>(null);
+    const [replyText, setReplyText] = useState("");
+    const [replySending, setReplySending] = useState(false);
+    const [replySent, setReplySent] = useState(false);
 
     useEffect(() => {
         (async () => {
@@ -64,9 +67,30 @@ export default function MessagesPage() {
     // 메시지 클릭 시 읽음 처리
     const openMessage = async (msg: Message) => {
         setActiveMsg(msg);
+        setReplyText("");
+        setReplySent(false);
         if (!msg.read) {
             await supabase.from("messages").update({ read: true }).eq("id", msg.id);
             setMessages(prev => prev.map(m => m.id === msg.id ? { ...m, read: true } : m));
+        }
+    };
+
+    // 답장 전송
+    const handleReply = async () => {
+        if (!replyText.trim() || replySending || replySent || !activeMsg) return;
+        setReplySending(true);
+        try {
+            const { data: { user: authUser } } = await supabase.auth.getUser();
+            if (!authUser) return;
+            await supabase.from("messages").insert({
+                sender_id: authUser.id,
+                receiver_id: activeMsg.sender_id,
+                text: replyText.trim(),
+            });
+            setReplySent(true);
+            setReplyText("");
+        } finally {
+            setReplySending(false);
         }
     };
 
@@ -154,10 +178,52 @@ export default function MessagesPage() {
                         )}
 
                         {/* 메시지 본문 */}
-                        <div className="px-5 py-5">
+                        <div className="px-5 pt-5 pb-3">
                             <p className="text-[15px] leading-relaxed" style={{ color: "var(--foreground)" }}>
                                 {activeMsg.text || "메시지 없음"}
                             </p>
+                        </div>
+
+                        {/* 답장 입력창 */}
+                        <div className="px-5 pb-5 pt-2" style={{ borderTop: "1px solid var(--border)" }}>
+                            {replySent ? (
+                                <div className="flex items-center justify-center gap-2 py-3 rounded-2xl"
+                                    style={{ background: "var(--accent-light)", color: "var(--accent)" }}>
+                                    <Check size={15} />
+                                    <span className="text-sm font-bold">
+                                        {activeMsg.sender?.name}님께 답장을 보냈어요!
+                                    </span>
+                                </div>
+                            ) : (
+                                <div className="flex items-center gap-2 mt-2">
+                                    <input
+                                        type="text"
+                                        value={replyText}
+                                        onChange={e => setReplyText(e.target.value)}
+                                        onKeyDown={e => e.key === "Enter" && handleReply()}
+                                        placeholder={`${activeMsg.sender?.name ?? ""}에게 답장...`}
+                                        className="flex-1 px-4 py-2.5 rounded-2xl text-[14px] outline-none"
+                                        style={{
+                                            background: "var(--surface-2)",
+                                            color: "var(--foreground)",
+                                            border: "1.5px solid var(--border)",
+                                        }}
+                                        autoFocus
+                                        disabled={replySending}
+                                    />
+                                    <button
+                                        onClick={handleReply}
+                                        disabled={!replyText.trim() || replySending}
+                                        className="w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 transition-all disabled:opacity-40"
+                                        style={{ background: "var(--secondary)", color: "white" }}
+                                    >
+                                        {replySending
+                                            ? <Loader2 size={16} className="animate-spin" />
+                                            : <Send size={16} />
+                                        }
+                                    </button>
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>
