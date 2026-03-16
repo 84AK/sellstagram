@@ -323,7 +323,9 @@ export default function FeedPage() {
                                 <VideoPlayer {...(post as any)} />
                             </div>
                         ) : (
-                            <FeedCard key={post.id} {...(post as any)} />
+                            <div key={post.id} className="max-w-md mx-auto w-full rounded-2xl overflow-hidden" style={{ boxShadow: "0 2px 12px rgba(0,0,0,0.07)" }}>
+                                <FeedCard {...(post as any)} />
+                            </div>
                         )
                     )}
                 </div>

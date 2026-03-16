@@ -15,6 +15,8 @@ import {
     Search,
     Link2,
     Check,
+    Pencil,
+    Trash2,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import TermTooltip from "../common/TermTooltip";
@@ -73,6 +75,12 @@ export default function FeedCard({ id, user, content, stats, timeAgo, sellingPri
     const [showSimResult, setShowSimResult] = useState(false);
     // AI 반응 제외한 실제 사람 댓글 수
     const [humanCommentCount, setHumanCommentCount] = useState(0);
+    // 편집/삭제
+    const [showEditModal, setShowEditModal] = useState(false);
+    const [editCaption, setEditCaption] = useState(content.caption);
+    const [editTags, setEditTags] = useState(content.tags.join(", "));
+    const [editSaving, setEditSaving] = useState(false);
+    const [deleted, setDeleted] = useState(false);
 
     const { addInsight, startCampaign, setAIReportModal, addSkillXP, user: currentUser } = useGameStore();
     const router = useRouter();
@@ -261,7 +269,29 @@ export default function FeedCard({ id, user, content, stats, timeAgo, sellingPri
         }
     };
 
+    const handleEditSave = async () => {
+        if (editSaving) return;
+        setEditSaving(true);
+        const tagList = editTags.split(",").map(t => t.trim()).filter(Boolean);
+        await supabase.from("posts").update({ caption: editCaption, tags: tagList }).eq("id", id);
+        content.caption = editCaption;
+        content.tags = tagList;
+        setEditSaving(false);
+        setShowEditModal(false);
+        setShowMenu(false);
+    };
+
+    const handleDelete = async () => {
+        if (!confirm("게시물을 삭제할까요?")) return;
+        await supabase.from("posts").delete().eq("id", id);
+        setDeleted(true);
+        setShowMenu(false);
+    };
+
+    if (deleted) return null;
+
     return (
+        <>
         <article className="border-b" style={{ background: "var(--surface)", borderColor: "var(--border)" }}>
 
             {/* ─── 헤더 ─── */}
@@ -289,10 +319,10 @@ export default function FeedCard({ id, user, content, stats, timeAgo, sellingPri
                         </div>
                     </div>
                     <div className="flex flex-col items-start">
-                        <span className="text-[13px] font-semibold leading-none" style={{ color: "var(--foreground)" }}>
+                        <span className="text-[15px] font-bold leading-none" style={{ color: "var(--foreground)" }}>
                             {user.name}
                         </span>
-                        <span className="text-[11px] mt-0.5" style={{ color: "var(--foreground-muted)" }}>
+                        <span className="text-[13px] mt-0.5" style={{ color: "var(--foreground-muted)" }}>
                             @{user.handle} · {timeAgo}
                         </span>
                     </div>
@@ -338,14 +368,27 @@ export default function FeedCard({ id, user, content, stats, timeAgo, sellingPri
                         {showMenu && (
                             <>
                                 <div className="fixed inset-0 z-10" onClick={() => setShowMenu(false)} />
-                                <div className="absolute right-0 top-8 z-20 min-w-[160px] rounded-2xl overflow-hidden shadow-xl"
+                                <div className="absolute right-0 top-8 z-20 min-w-[170px] rounded-2xl overflow-hidden shadow-xl"
                                     style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
                                     {isMyPost && (
-                                        <button onClick={handleAIAnalyze}
-                                            className="w-full flex items-center gap-2.5 px-4 py-3 text-sm font-bold transition-colors hover:bg-foreground/5 text-left"
-                                            style={{ color: "var(--primary)" }}>
-                                            <Sparkles size={15} /> AI 분석하기
-                                        </button>
+                                        <>
+                                            <button onClick={handleAIAnalyze}
+                                                className="w-full flex items-center gap-2.5 px-4 py-3 text-sm font-bold transition-colors hover:bg-foreground/5 text-left"
+                                                style={{ color: "var(--primary)" }}>
+                                                <Sparkles size={15} /> AI 분석하기
+                                            </button>
+                                            <button onClick={() => { setShowEditModal(true); setShowMenu(false); }}
+                                                className="w-full flex items-center gap-2.5 px-4 py-3 text-sm font-bold transition-colors hover:bg-foreground/5 text-left"
+                                                style={{ color: "var(--secondary)" }}>
+                                                <Pencil size={15} /> 수정하기
+                                            </button>
+                                            <button onClick={handleDelete}
+                                                className="w-full flex items-center gap-2.5 px-4 py-3 text-sm font-bold transition-colors hover:bg-red-50 text-left"
+                                                style={{ color: "#EF4444" }}>
+                                                <Trash2 size={15} /> 삭제하기
+                                            </button>
+                                            <div style={{ borderTop: "1px solid var(--border)" }} />
+                                        </>
                                     )}
                                     <button onClick={() => setShowMenu(false)}
                                         className="w-full flex items-center gap-2.5 px-4 py-3 text-sm font-medium transition-colors hover:bg-foreground/5 text-left"
@@ -431,16 +474,16 @@ export default function FeedCard({ id, user, content, stats, timeAgo, sellingPri
 
             {/* ─── 좋아요 수 + 인게이지먼트 ─── */}
             <div className="px-4 pb-1">
-                <p className="text-[13px] font-semibold" style={{ color: "var(--foreground)" }}>
+                <p className="text-[15px] font-bold" style={{ color: "var(--foreground)" }}>
                     좋아요 {localLikes.toLocaleString()}개
                 </p>
                 {totalEngagements > 0 && (
                     <div className="flex items-center gap-1 mt-0.5">
-                        <span className="text-[11px]" style={{ color: "var(--foreground-muted)" }}>
+                        <span className="text-[13px]" style={{ color: "var(--foreground-muted)" }}>
                             인게이지먼트
                         </span>
-                        <TermTooltip termKey="engagement" size={11} />
-                        <span className="text-[11px] font-bold" style={{ color: "var(--primary)" }}>
+                        <TermTooltip termKey="engagement" size={12} />
+                        <span className="text-[13px] font-bold" style={{ color: "var(--primary)" }}>
                             {totalEngagements}회 · {engagementRate}%
                         </span>
                     </div>
@@ -449,14 +492,14 @@ export default function FeedCard({ id, user, content, stats, timeAgo, sellingPri
 
             {/* ─── 캡션 + 해시태그 ─── */}
             <div className="px-4 pb-2">
-                <p className="text-[13px] leading-relaxed" style={{ color: "var(--foreground-soft)" }}>
-                    <span className="font-semibold" style={{ color: "var(--foreground)" }}>{user.handle} </span>
+                <p className="text-[15px] leading-relaxed" style={{ color: "var(--foreground-soft)" }}>
+                    <span className="font-bold" style={{ color: "var(--foreground)" }}>{user.handle} </span>
                     {content.caption}
                 </p>
                 {content.tags.length > 0 && (
-                    <div className="flex flex-wrap gap-1 mt-1">
+                    <div className="flex flex-wrap gap-1 mt-1.5">
                         {content.tags.map(tag => (
-                            <span key={tag} className="text-[13px] font-medium" style={{ color: "var(--secondary)" }}>
+                            <span key={tag} className="text-[14px] font-medium" style={{ color: "var(--secondary)" }}>
                                 #{tag}
                             </span>
                         ))}
@@ -744,5 +787,55 @@ export default function FeedCard({ id, user, content, stats, timeAgo, sellingPri
                 </div>
             )}
         </article>
+
+        {/* ─── 편집 모달 ─── */}
+        {showEditModal && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+                onClick={(e) => { if (e.target === e.currentTarget) setShowEditModal(false); }}>
+                <div className="w-full max-w-md rounded-3xl overflow-hidden shadow-2xl"
+                    style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
+                    {/* 헤더 */}
+                    <div className="flex items-center justify-between px-5 py-4" style={{ borderBottom: "1px solid var(--border)" }}>
+                        <span className="text-[16px] font-bold" style={{ color: "var(--foreground)" }}>게시물 수정</span>
+                        <button onClick={() => setShowEditModal(false)} className="p-1.5 rounded-full hover:bg-foreground/5">
+                            <X size={20} style={{ color: "var(--foreground-muted)" }} />
+                        </button>
+                    </div>
+                    {/* 본문 */}
+                    <div className="p-5 flex flex-col gap-4">
+                        <div className="flex flex-col gap-1.5">
+                            <label className="text-[11px] font-bold uppercase tracking-widest" style={{ color: "var(--foreground-muted)" }}>캡션</label>
+                            <textarea
+                                value={editCaption}
+                                onChange={e => setEditCaption(e.target.value)}
+                                rows={4}
+                                className="w-full rounded-2xl p-4 text-[14px] leading-relaxed resize-none focus:outline-none focus:ring-2 focus:ring-primary/20"
+                                style={{ background: "var(--surface-2)", border: "1px solid var(--border)", color: "var(--foreground)" }}
+                            />
+                        </div>
+                        <div className="flex flex-col gap-1.5">
+                            <label className="text-[11px] font-bold uppercase tracking-widest" style={{ color: "var(--foreground-muted)" }}>해시태그 (쉼표 구분)</label>
+                            <input
+                                value={editTags}
+                                onChange={e => setEditTags(e.target.value)}
+                                placeholder="태그1, 태그2, 태그3"
+                                className="w-full rounded-2xl px-4 py-3 text-[14px] focus:outline-none focus:ring-2 focus:ring-primary/20"
+                                style={{ background: "var(--surface-2)", border: "1px solid var(--border)", color: "var(--foreground)" }}
+                            />
+                        </div>
+                        <button
+                            onClick={handleEditSave}
+                            disabled={editSaving}
+                            className="w-full py-3.5 rounded-2xl font-bold text-[15px] text-white transition-all hover:opacity-90 disabled:opacity-50 flex items-center justify-center gap-2"
+                            style={{ background: "var(--secondary)" }}
+                        >
+                            {editSaving ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} />}
+                            {editSaving ? "저장 중..." : "저장하기"}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        )}
+        </>
     );
 }
