@@ -127,6 +127,7 @@ interface GameState {
     setWeek: (week: number) => void;
     resetPosts: () => void;
     setBalance: (amount: number) => void;
+    spendBalance: (amount: number) => void;
 
     sidebarExpanded: boolean;
     setSidebarExpanded: (expanded: boolean) => void;
@@ -278,6 +279,7 @@ export const useGameStore = create<GameState>((set) => ({
     clearMissionCompletionQueue: () => set({ missionCompletionQueue: [] }),
 
     setBalance: (amount) => set({ balance: amount }),
+    spendBalance: (amount) => set((state) => ({ balance: Math.max(0, state.balance - amount) })),
 
     setUploadModalOpen: (open, context = "general") => set({
         isUploadModalOpen: open,

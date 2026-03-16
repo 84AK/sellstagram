@@ -29,6 +29,13 @@ interface SimState {
     durationMinutes: number;
 }
 
+// 광고 예산별 전환 배율 (FeedCard와 동일)
+const AD_PLANS_SIM = [
+    { budget: 3000,  mult: 1.3 },
+    { budget: 10000, mult: 2.0 },
+    { budget: 30000, mult: 3.5 },
+];
+
 interface SimPost {
     id: string;
     caption: string;
@@ -37,6 +44,7 @@ interface SimPost {
     productPrice: number;
     tags: string[];
     landingImages: string[];
+    adBudget?: number;
 }
 
 const EVENT_META = {
@@ -304,6 +312,7 @@ interface DbPost {
     tags: string[] | null;
     landing_images: string[] | null;
     selling_price: number | null;
+    ad_budget: number | null;
 }
 
 // ─── 메인 페이지 ─────────────────────────────────────────────
@@ -330,7 +339,7 @@ export default function SimulatePage() {
         if (!user.handle) return;
         supabase
             .from("posts")
-            .select("id, caption, image_url, engagement_rate, sales, tags, landing_images, selling_price")
+            .select("id, caption, image_url, engagement_rate, sales, tags, landing_images, selling_price, ad_budget")
             .eq("user_handle", user.handle)
             .order("created_at", { ascending: false })
             .limit(20)
@@ -357,6 +366,7 @@ export default function SimulatePage() {
                 : 10000),
         tags: selectedDbPost.tags ?? [],
         landingImages: selectedDbPost.landing_images ?? [],
+        adBudget: selectedDbPost.ad_budget ?? undefined,
     } : null;
 
     const durationMs = simState.durationMinutes * 60 * 1000;
@@ -434,11 +444,12 @@ export default function SimulatePage() {
         if (!simState.active || !simState.startedAt || !simPost) {
             setAllEvents([]); setVisibleEvents([]); setFinished(false); return;
         }
+        const adMult = AD_PLANS_SIM.find(p => p.budget === simPost.adBudget)?.mult ?? 1.0;
         const events = generateSimEvents(
             simPost.id, simPost.engagementRate, simPost.productPrice,
             simState.durationMinutes, simState.startedAt,
             {
-                conversionBoost: aiAnalysis?.conversionBoost ?? 1.0,
+                conversionBoost: (aiAnalysis?.conversionBoost ?? 1.0) * adMult,
                 aiComments: (aiAnalysis?.aiComments as AiComment[]) ?? [],
             }
         );
@@ -703,6 +714,15 @@ export default function SimulatePage() {
                                         style={{ background: "rgba(67,97,238,0.12)", color: "#4361EE" }}>
                                         랜딩 {aiAnalysis.landingScore}/10
                                     </span>
+                                    {simPost?.adBudget && (() => {
+                                        const adMult = AD_PLANS_SIM.find(p => p.budget === simPost.adBudget)?.mult ?? 1.0;
+                                        return (
+                                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full"
+                                                style={{ background: "rgba(217,119,6,0.12)", color: "#D97706" }}>
+                                                📢 광고 ×{adMult}
+                                            </span>
+                                        );
+                                    })()}
                                 </div>
                             </div>
                             <p className="text-xs" style={{ color: "var(--foreground-soft)" }}>

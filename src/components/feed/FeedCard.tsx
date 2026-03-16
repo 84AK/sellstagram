@@ -19,6 +19,8 @@ import {
     Trash2,
     ChevronLeft,
     ChevronRight,
+    Megaphone,
+    Zap,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import TermTooltip from "../common/TermTooltip";
@@ -42,6 +44,13 @@ interface SimResult {
     created_at: string;
 }
 
+// 광고 예산 플랜
+const AD_PLANS = [
+    { budget: 3000,  label: "스타터",   mult: 1.3, emoji: "🌱", desc: "노출 1.3배" },
+    { budget: 10000, label: "부스트",   mult: 2.0, emoji: "🚀", desc: "노출 2배" },
+    { budget: 30000, label: "프리미엄", mult: 3.5, emoji: "💎", desc: "노출 3.5배" },
+];
+
 interface FeedCardProps {
     id: string;
     user: { name: string; handle: string; avatar: string };
@@ -51,9 +60,10 @@ interface FeedCardProps {
     sellingPrice?: number;
     landingImages?: string[];
     images?: string[];
+    adBudget?: number;
 }
 
-export default function FeedCard({ id, user, content, stats, timeAgo, sellingPrice, landingImages, images }: FeedCardProps) {
+export default function FeedCard({ id, user, content, stats, timeAgo, sellingPrice, landingImages, images, adBudget: initialAdBudget }: FeedCardProps) {
     const [isLiked, setIsLiked] = useState(false);
     const [localLikes, setLocalLikes] = useState(stats.likes);
     const [isSaved, setIsSaved] = useState(false);
@@ -91,7 +101,12 @@ export default function FeedCard({ id, user, content, stats, timeAgo, sellingPri
     const [editSaving, setEditSaving] = useState(false);
     const [deleted, setDeleted] = useState(false);
 
-    const { addInsight, startCampaign, setAIReportModal, addSkillXP, user: currentUser } = useGameStore();
+    // 광고 시스템
+    const [adBudget, setAdBudget] = useState<number | null>(initialAdBudget ?? null);
+    const [showAdModal, setShowAdModal] = useState(false);
+    const [adRunning, setAdRunning] = useState(false);
+
+    const { addInsight, startCampaign, setAIReportModal, addSkillXP, user: currentUser, balance, spendBalance } = useGameStore();
     const router = useRouter();
     const isMyPost = user.handle === currentUser.handle;
 
@@ -199,6 +214,29 @@ export default function FeedCard({ id, user, content, stats, timeAgo, sellingPri
         return () => { supabase.removeChannel(channel); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [showComments]);
+
+    // 광고 집행 핸들러
+    const handleRunAd = async (budget: number) => {
+        if (adRunning || balance < budget) return;
+        setAdRunning(true);
+        try {
+            // 잔고 차감 (로컬 + Supabase)
+            spendBalance(budget);
+            const { data: { session } } = await supabase.auth.getSession();
+            if (session?.user) {
+                const { data: prof } = await supabase.from("profiles").select("balance").eq("id", session.user.id).single();
+                if (prof) {
+                    await supabase.from("profiles").update({ balance: Math.max(0, prof.balance - budget) }).eq("id", session.user.id);
+                }
+            }
+            // posts 테이블에 ad_budget 저장 (기존 값보다 크면 업데이트)
+            await supabase.from("posts").update({ ad_budget: budget }).eq("id", id);
+            setAdBudget(budget);
+            setShowAdModal(false);
+        } finally {
+            setAdRunning(false);
+        }
+    };
 
     const handleAIAnalyze = async () => {
         setShowMenu(false);
@@ -328,11 +366,19 @@ export default function FeedCard({ id, user, content, stats, timeAgo, sellingPri
                         </div>
                     </div>
                     <div className="flex flex-col items-start">
-                        <span className="text-[15px] font-bold leading-none" style={{ color: "var(--foreground)" }}>
-                            {user.name}
-                        </span>
+                        <div className="flex items-center gap-1.5 leading-none">
+                            <span className="text-[15px] font-bold" style={{ color: "var(--foreground)" }}>
+                                {user.name}
+                            </span>
+                            {adBudget && (
+                                <span className="text-[9px] font-black px-1.5 py-0.5 rounded-full flex items-center gap-0.5"
+                                    style={{ background: "rgba(217,119,6,0.12)", color: "#D97706" }}>
+                                    <Megaphone size={8} /> 광고
+                                </span>
+                            )}
+                        </div>
                         <span className="text-[13px] mt-0.5" style={{ color: "var(--foreground-muted)" }}>
-                            @{user.handle} · {timeAgo}
+                            @{user.handle} · {adBudget ? "Sponsored" : timeAgo}
                         </span>
                     </div>
                 </button>
@@ -385,6 +431,12 @@ export default function FeedCard({ id, user, content, stats, timeAgo, sellingPri
                                                 className="w-full flex items-center gap-2.5 px-4 py-3 text-sm font-bold transition-colors hover:bg-foreground/5 text-left"
                                                 style={{ color: "var(--primary)" }}>
                                                 <Sparkles size={15} /> AI 분석하기
+                                            </button>
+                                            <button onClick={() => { setShowAdModal(true); setShowMenu(false); }}
+                                                className="w-full flex items-center gap-2.5 px-4 py-3 text-sm font-bold transition-colors hover:bg-foreground/5 text-left"
+                                                style={{ color: "#D97706" }}>
+                                                <Megaphone size={15} />
+                                                {adBudget ? `광고 중 (₩${adBudget.toLocaleString()})` : "광고 집행하기"}
                                             </button>
                                             <button onClick={() => { setShowEditModal(true); setShowMenu(false); }}
                                                 className="w-full flex items-center gap-2.5 px-4 py-3 text-sm font-bold transition-colors hover:bg-foreground/5 text-left"
@@ -842,6 +894,104 @@ export default function FeedCard({ id, user, content, stats, timeAgo, sellingPri
                 </div>
             )}
         </article>
+
+        {/* ─── 광고 집행 모달 ─── */}
+        {showAdModal && (
+            <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center"
+                style={{ background: "rgba(0,0,0,0.5)" }}
+                onClick={(e) => { if (e.target === e.currentTarget) setShowAdModal(false); }}
+            >
+                <div className="w-full max-w-sm rounded-t-3xl md:rounded-3xl overflow-hidden"
+                    style={{ background: "var(--surface)" }}>
+                    {/* 헤더 */}
+                    <div className="px-5 py-4 flex items-center justify-between"
+                        style={{ borderBottom: "1px solid var(--border)" }}>
+                        <div className="flex items-center gap-2">
+                            <div className="w-8 h-8 rounded-xl flex items-center justify-center"
+                                style={{ background: "rgba(217,119,6,0.12)" }}>
+                                <Megaphone size={15} style={{ color: "#D97706" }} />
+                            </div>
+                            <div>
+                                <p className="text-sm font-black" style={{ color: "var(--foreground)" }}>광고 집행하기</p>
+                                <p className="text-[10px]" style={{ color: "var(--foreground-muted)" }}>내 잔고: ₩{balance.toLocaleString()}</p>
+                            </div>
+                        </div>
+                        <button onClick={() => setShowAdModal(false)}
+                            className="p-1.5 rounded-xl" style={{ background: "var(--surface-2)" }}>
+                            <X size={14} style={{ color: "var(--foreground-muted)" }} />
+                        </button>
+                    </div>
+
+                    {/* 현재 광고 중이면 상태 표시 */}
+                    {adBudget && (
+                        <div className="mx-4 mt-4 p-3 rounded-2xl flex items-center gap-2"
+                            style={{ background: "rgba(217,119,6,0.08)", border: "1px solid rgba(217,119,6,0.25)" }}>
+                            <Zap size={14} style={{ color: "#D97706" }} />
+                            <p className="text-xs font-bold" style={{ color: "#D97706" }}>
+                                현재 ₩{adBudget.toLocaleString()} 광고 집행 중 · 시뮬레이션에서 전환율 ×{AD_PLANS.find(p => p.budget === adBudget)?.mult ?? "?"}배 적용
+                            </p>
+                        </div>
+                    )}
+
+                    {/* 광고 플랜 선택 */}
+                    <div className="p-4 flex flex-col gap-3">
+                        <p className="text-[11px] font-bold px-1" style={{ color: "var(--foreground-muted)" }}>
+                            💡 광고비를 쓸수록 AI 가상 고객 노출이 늘고, 시뮬레이션 구매 전환율이 올라가요
+                        </p>
+                        {AD_PLANS.map((plan) => {
+                            const canAfford = balance >= plan.budget;
+                            const isActive = adBudget === plan.budget;
+                            return (
+                                <button
+                                    key={plan.budget}
+                                    onClick={() => !isActive && handleRunAd(plan.budget)}
+                                    disabled={!canAfford || adRunning || isActive}
+                                    className="flex items-center gap-3 p-4 rounded-2xl text-left transition-all"
+                                    style={{
+                                        background: isActive
+                                            ? "rgba(217,119,6,0.10)"
+                                            : canAfford ? "var(--surface-2)" : "var(--surface-2)",
+                                        border: isActive
+                                            ? "2px solid #D97706"
+                                            : "1.5px solid var(--border)",
+                                        opacity: !canAfford && !isActive ? 0.4 : 1,
+                                    }}
+                                >
+                                    <span className="text-2xl">{plan.emoji}</span>
+                                    <div className="flex-1">
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-sm font-black" style={{ color: "var(--foreground)" }}>
+                                                {plan.label}
+                                            </span>
+                                            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full"
+                                                style={{ background: "rgba(217,119,6,0.12)", color: "#D97706" }}>
+                                                {plan.desc}
+                                            </span>
+                                            {isActive && (
+                                                <span className="text-[10px] font-black px-1.5 py-0.5 rounded-full"
+                                                    style={{ background: "#D97706", color: "white" }}>집행 중</span>
+                                            )}
+                                        </div>
+                                        <p className="text-xs mt-0.5" style={{ color: "var(--foreground-muted)" }}>
+                                            시뮬레이션 구매 전환율 ×{plan.mult}배 · ROAS 학습
+                                        </p>
+                                    </div>
+                                    <span className="text-sm font-black" style={{ color: canAfford ? "#D97706" : "var(--foreground-muted)" }}>
+                                        ₩{plan.budget.toLocaleString()}
+                                    </span>
+                                </button>
+                            );
+                        })}
+                        {adRunning && (
+                            <div className="flex items-center justify-center gap-2 py-2">
+                                <Loader2 size={14} className="animate-spin" style={{ color: "#D97706" }} />
+                                <span className="text-xs font-bold" style={{ color: "#D97706" }}>광고 집행 중...</span>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            </div>
+        )}
 
         {/* ─── 편집 모달 ─── */}
         {showEditModal && (

@@ -40,6 +40,7 @@ function dbPostToStorePost(p: DbPost) {
         sellingPrice: p.selling_price ?? undefined,
         landingImages: p.landing_images ?? undefined,
         images: p.images && p.images.length > 0 ? p.images : undefined,
+        adBudget: p.ad_budget ?? undefined,
     };
 }
 

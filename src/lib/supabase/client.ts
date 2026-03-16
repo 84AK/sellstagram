@@ -59,6 +59,7 @@ export interface DbPost {
     sold_count: number | null;
     seller_user_id: string | null;
     images: string[] | null;
+    ad_budget: number | null;
 }
 
 export interface DbMission {
