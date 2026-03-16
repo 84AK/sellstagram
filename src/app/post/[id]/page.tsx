@@ -47,6 +47,7 @@ export default function PostDetailPage() {
     const { id } = useParams<{ id: string }>();
     const router = useRouter();
     const { user: me, balance, addFunds } = useGameStore();
+    const isLoggedIn = !!me.handle;
 
     const [post, setPost] = useState<PostDetail | null>(null);
     const [comments, setComments] = useState<Comment[]>([]);
@@ -471,6 +472,7 @@ export default function PostDetailPage() {
                                 <p className="text-[12px] text-center py-2" style={{ color: "var(--foreground-muted)" }}>첫 댓글을 남겨보세요!</p>
                             )}
                             {/* 댓글 입력 */}
+                            {isLoggedIn ? (
                             <div className="flex items-center gap-2 pt-2" style={{ borderTop: "1px solid var(--border)" }}>
                                 <div className="w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold text-white shrink-0"
                                     style={{ background: "linear-gradient(135deg, var(--secondary), var(--accent))" }}>
@@ -492,6 +494,11 @@ export default function PostDetailPage() {
                                         className="text-[13px] font-bold disabled:opacity-30" style={{ color: "var(--secondary)" }}>게시</button>
                                 }
                             </div>
+                            ) : (
+                            <div className="pt-2 text-center text-[12px]" style={{ borderTop: "1px solid var(--border)", color: "var(--foreground-muted)" }}>
+                                <a href="/login" className="font-bold" style={{ color: "var(--secondary)" }}>로그인</a>하고 댓글을 달아보세요
+                            </div>
+                            )}
                         </div>
 
                                         {/* ── 구매 완료 모달 ── */}
@@ -538,7 +545,13 @@ export default function PostDetailPage() {
                             {buyError && (
                                 <p className="text-[12px] font-bold text-center mb-2" style={{ color: "var(--primary)" }}>{buyError}</p>
                             )}
-                            {isMyPost ? (
+                            {!isLoggedIn ? (
+                                <a href="/login"
+                                    className="w-full py-4 rounded-2xl flex items-center justify-center gap-2 font-black text-sm text-white transition-all hover:opacity-90"
+                                    style={{ background: "linear-gradient(135deg, var(--secondary), #6B8EFF)" }}>
+                                    <ShoppingBag size={18} /> 로그인하고 구매하기
+                                </a>
+                            ) : isMyPost ? (
                                 <div className="w-full py-4 rounded-2xl flex items-center justify-center gap-2 font-black text-sm"
                                     style={{ background: "var(--surface-2)", border: "1px solid var(--border)", color: "var(--foreground-muted)" }}>
                                     <ShoppingBag size={18} /> 내 게시물 · 판매 중
@@ -560,7 +573,7 @@ export default function PostDetailPage() {
                                 </button>
                             )}
                             <p className="text-[11px] text-center mt-1.5" style={{ color: "var(--foreground-muted)" }}>
-                                {isMyPost ? `누적 판매 ${localSoldCount}건` : `내 잔액: ₩${balance.toLocaleString()} · 구매 시 즉시 판매자에게 전달`}
+                                {!isLoggedIn ? "셀스타그램에 로그인하면 구매할 수 있어요" : isMyPost ? `누적 판매 ${localSoldCount}건` : `내 잔액: ₩${balance.toLocaleString()} · 구매 시 즉시 판매자에게 전달`}
                             </p>
                         </div>
                     </div>
@@ -695,6 +708,7 @@ export default function PostDetailPage() {
                                     </button>
                                 </div>
 
+                                {isLoggedIn ? (
                                 <div className="flex items-center gap-2 px-4 py-3" style={{ borderTop: "1px solid var(--border)" }}>
                                     <div className="w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold text-white shrink-0"
                                         style={{ background: "linear-gradient(135deg, var(--secondary), var(--accent))" }}>
@@ -716,6 +730,11 @@ export default function PostDetailPage() {
                                             className="text-[13px] font-bold disabled:opacity-30" style={{ color: "var(--secondary)" }}>게시</button>
                                     }
                                 </div>
+                                ) : (
+                                <div className="px-4 py-3 text-center text-[12px]" style={{ borderTop: "1px solid var(--border)", color: "var(--foreground-muted)" }}>
+                                    <a href="/login" className="font-bold" style={{ color: "var(--secondary)" }}>로그인</a>하고 댓글을 달아보세요
+                                </div>
+                                )}
                             </div>
                         </div>
                     </div>

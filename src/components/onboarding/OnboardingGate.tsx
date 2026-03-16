@@ -7,8 +7,8 @@ import { useGameStore } from "@/store/useGameStore";
 import OnboardingWizard from "./OnboardingWizard";
 import { Loader2 } from "lucide-react";
 
-// 인증 체크를 건너뛸 페이지 (홈, 로그인, 콜백, 교사 대시보드, 관리자)
-const PUBLIC_PATHS = ["/login", "/auth/callback", "/teacher", "/admin"];
+// 인증 체크를 건너뛸 페이지 (홈, 로그인, 콜백, 교사 대시보드, 관리자, 게시물 공유)
+const PUBLIC_PATHS = ["/login", "/auth/callback", "/teacher", "/admin", "/post/"];
 
 type Status = "loading" | "needs-onboarding" | "ready";
 
