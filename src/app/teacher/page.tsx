@@ -2358,6 +2358,14 @@ function TeamsTab() {
     const [codePopupTeam, setCodePopupTeam] = useState<DbTeam | null>(null);
     const [regeneratingId, setRegeneratingId] = useState<string | null>(null);
 
+    // 팀 이름/이모지/색상 편집 상태
+    const [editingId, setEditingId] = useState<string | null>(null);
+    const [editName, setEditName] = useState("");
+    const [editEmoji, setEditEmoji] = useState("");
+    const [editColor, setEditColor] = useState("");
+    const [editSaving, setEditSaving] = useState(false);
+    const [editMsg, setEditMsg] = useState("");
+
     const loadTeams = async () => {
         setLoading(true);
         const { data } = await supabase.from("teams").select("*").order("created_at", { ascending: true });
@@ -2461,6 +2469,48 @@ function TeamsTab() {
             setCodePopupTeam(prev => prev?.id === team.id ? json.team : prev);
         }
         setRegeneratingId(null);
+    };
+
+    const startEdit = (team: DbTeam) => {
+        setEditingId(team.id);
+        setEditName(team.name);
+        setEditEmoji(team.emoji ?? "🔥");
+        setEditColor(team.color ?? "#FF6B35");
+        setEditMsg("");
+    };
+
+    const cancelEdit = () => {
+        setEditingId(null);
+        setEditMsg("");
+    };
+
+    const handleEditSave = async () => {
+        if (!editingId || !editName.trim()) return;
+        setEditSaving(true);
+        setEditMsg("");
+        const { data: { session } } = await supabase.auth.getSession();
+        const token = session?.access_token;
+        const res = await fetch("/api/teacher/teams", {
+            method: "PATCH",
+            headers: {
+                "Content-Type": "application/json",
+                ...(token ? { "Authorization": `Bearer ${token}` } : {}),
+            },
+            body: JSON.stringify({ id: editingId, name: editName.trim(), emoji: editEmoji, color: editColor }),
+        });
+        const json = await res.json();
+        if (!res.ok) {
+            setEditMsg(json.error ?? "오류가 발생했어요");
+        } else {
+            setTeams(prev => prev.map(t => t.id === editingId ? json.team : t));
+            // 학생 목록의 team 이름도 동기화
+            const oldTeam = teams.find(t => t.id === editingId);
+            if (oldTeam && oldTeam.name !== json.team.name) {
+                setStudents(prev => prev.map(s => s.team === oldTeam.name ? { ...s, team: json.team.name } : s));
+            }
+            setEditingId(null);
+        }
+        setEditSaving(false);
     };
 
     const memberCount = (teamName: string) => students.filter(s => s.team === teamName).length;
@@ -2585,63 +2635,153 @@ function TeamsTab() {
                 ) : (
                     <div className="divide-y" style={{ borderColor: "var(--border)" }}>
                         {teams.map(team => (
-                            <div key={team.id} className="flex items-center gap-3 px-5 py-4">
-                                <div
-                                    className="w-11 h-11 rounded-2xl flex items-center justify-center text-2xl shrink-0"
-                                    style={{ background: `${team.color}18` }}
-                                >
-                                    {team.emoji}
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                    <p className="font-black text-base" style={{ color: team.color }}>{team.name}</p>
-                                    <div className="flex items-center gap-2 mt-0.5">
-                                        <span className="text-xs" style={{ color: "var(--foreground-muted)" }}>
-                                            {memberCount(team.name)}명 배정됨
-                                        </span>
-                                        {team.join_code ? (
-                                            <span
-                                                className="text-[10px] font-black tracking-widest px-2 py-0.5 rounded-lg"
-                                                style={{ background: `${team.color}18`, color: team.color, letterSpacing: "0.12em" }}
-                                            >
-                                                {team.join_code}
-                                            </span>
-                                        ) : (
-                                            <span className="text-[10px]" style={{ color: "var(--foreground-muted)" }}>코드 없음</span>
-                                        )}
+                            <div key={team.id}>
+                                {/* 일반 행 */}
+                                <div className="flex items-center gap-3 px-5 py-4">
+                                    <div
+                                        className="w-11 h-11 rounded-2xl flex items-center justify-center text-2xl shrink-0"
+                                        style={{ background: `${team.color}18` }}
+                                    >
+                                        {team.emoji}
                                     </div>
+                                    <div className="flex-1 min-w-0">
+                                        <p className="font-black text-base" style={{ color: team.color }}>{team.name}</p>
+                                        <div className="flex items-center gap-2 mt-0.5">
+                                            <span className="text-xs" style={{ color: "var(--foreground-muted)" }}>
+                                                {memberCount(team.name)}명 배정됨
+                                            </span>
+                                            {team.join_code ? (
+                                                <span
+                                                    className="text-[10px] font-black tracking-widest px-2 py-0.5 rounded-lg"
+                                                    style={{ background: `${team.color}18`, color: team.color, letterSpacing: "0.12em" }}
+                                                >
+                                                    {team.join_code}
+                                                </span>
+                                            ) : (
+                                                <span className="text-[10px]" style={{ color: "var(--foreground-muted)" }}>코드 없음</span>
+                                            )}
+                                        </div>
+                                    </div>
+                                    {/* 편집 버튼 */}
+                                    <button
+                                        onClick={() => editingId === team.id ? cancelEdit() : startEdit(team)}
+                                        className="p-2 rounded-xl transition-all hover:opacity-80"
+                                        title="팀 이름/이모지/색상 수정"
+                                        style={{ background: editingId === team.id ? `${team.color}20` : "var(--surface-2)" }}
+                                    >
+                                        <Pencil size={14} style={{ color: editingId === team.id ? team.color : "var(--foreground-muted)" }} />
+                                    </button>
+                                    {/* 코드 공개 버튼 */}
+                                    <button
+                                        onClick={() => setCodePopupTeam(team)}
+                                        className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold text-white transition-all hover:opacity-90"
+                                        style={{ background: team.color }}
+                                        title="팀 코드 공개"
+                                    >
+                                        <Megaphone size={13} />
+                                        코드 공개
+                                    </button>
+                                    {/* 코드 재생성 */}
+                                    <button
+                                        onClick={() => handleRegenerateCode(team)}
+                                        disabled={regeneratingId === team.id}
+                                        className="p-2 rounded-xl transition-all hover:opacity-80 disabled:opacity-50"
+                                        title="입장 코드 재생성"
+                                        style={{ background: "var(--surface-2)" }}
+                                    >
+                                        {regeneratingId === team.id
+                                            ? <Loader2 size={14} className="animate-spin" style={{ color: "var(--foreground-muted)" }} />
+                                            : <RotateCcw size={14} style={{ color: "var(--foreground-muted)" }} />}
+                                    </button>
+                                    <button
+                                        onClick={() => handleDelete(team.id)}
+                                        disabled={deletingId === team.id}
+                                        className="p-2 rounded-xl transition-all hover:bg-red-50 disabled:opacity-50"
+                                        title="팀 삭제"
+                                    >
+                                        {deletingId === team.id
+                                            ? <Loader2 size={16} className="animate-spin" style={{ color: "var(--foreground-muted)" }} />
+                                            : <Trash2 size={16} style={{ color: "#EF4444" }} />}
+                                    </button>
                                 </div>
-                                {/* 코드 공개 버튼 */}
-                                <button
-                                    onClick={() => setCodePopupTeam(team)}
-                                    className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold text-white transition-all hover:opacity-90"
-                                    style={{ background: team.color }}
-                                    title="팀 코드 공개"
-                                >
-                                    <Megaphone size={13} />
-                                    코드 공개
-                                </button>
-                                {/* 코드 재생성 */}
-                                <button
-                                    onClick={() => handleRegenerateCode(team)}
-                                    disabled={regeneratingId === team.id}
-                                    className="p-2 rounded-xl transition-all hover:opacity-80 disabled:opacity-50"
-                                    title="입장 코드 재생성"
-                                    style={{ background: "var(--surface-2)" }}
-                                >
-                                    {regeneratingId === team.id
-                                        ? <Loader2 size={14} className="animate-spin" style={{ color: "var(--foreground-muted)" }} />
-                                        : <RotateCcw size={14} style={{ color: "var(--foreground-muted)" }} />}
-                                </button>
-                                <button
-                                    onClick={() => handleDelete(team.id)}
-                                    disabled={deletingId === team.id}
-                                    className="p-2 rounded-xl transition-all hover:bg-red-50 disabled:opacity-50"
-                                    title="팀 삭제"
-                                >
-                                    {deletingId === team.id
-                                        ? <Loader2 size={16} className="animate-spin" style={{ color: "var(--foreground-muted)" }} />
-                                        : <Trash2 size={16} style={{ color: "#EF4444" }} />}
-                                </button>
+
+                                {/* 인라인 편집 폼 */}
+                                {editingId === team.id && (
+                                    <div className="mx-4 mb-4 rounded-2xl p-4 flex flex-col gap-3" style={{ background: "var(--surface-2)", border: `1.5px solid ${team.color}40` }}>
+                                        <p className="text-[10px] font-black uppercase tracking-wider" style={{ color: "var(--foreground-muted)" }}>팀 정보 수정</p>
+
+                                        {/* 이름 */}
+                                        <input
+                                            type="text"
+                                            value={editName}
+                                            onChange={e => setEditName(e.target.value)}
+                                            placeholder="팀 이름"
+                                            maxLength={12}
+                                            className="px-3 py-2 rounded-xl text-sm font-bold outline-none"
+                                            style={{ background: "var(--surface)", border: "1px solid var(--border)", color: "var(--foreground)" }}
+                                        />
+
+                                        {/* 이모지 */}
+                                        <div className="flex flex-wrap gap-1.5">
+                                            {EMOJI_PRESETS.map(e => (
+                                                <button
+                                                    key={e}
+                                                    onClick={() => setEditEmoji(e)}
+                                                    className="w-9 h-9 rounded-xl text-lg flex items-center justify-center transition-all hover:scale-110"
+                                                    style={{
+                                                        background: editEmoji === e ? `${editColor}20` : "var(--surface)",
+                                                        border: editEmoji === e ? `2px solid ${editColor}` : "2px solid transparent",
+                                                    }}
+                                                >
+                                                    {e}
+                                                </button>
+                                            ))}
+                                        </div>
+
+                                        {/* 색상 */}
+                                        <div className="flex flex-wrap gap-1.5">
+                                            {COLOR_PRESETS.map(c => (
+                                                <button
+                                                    key={c}
+                                                    onClick={() => setEditColor(c)}
+                                                    className="w-7 h-7 rounded-full transition-all hover:scale-110"
+                                                    style={{
+                                                        background: c,
+                                                        border: editColor === c ? "3px solid var(--foreground)" : "3px solid transparent",
+                                                        outline: editColor === c ? `2px solid ${c}` : "none",
+                                                        outlineOffset: "2px",
+                                                    }}
+                                                />
+                                            ))}
+                                        </div>
+
+                                        {/* 미리보기 */}
+                                        <div className="flex items-center gap-2 px-3 py-2 rounded-xl self-start" style={{ background: `${editColor}18`, border: `1px solid ${editColor}40` }}>
+                                            <span className="text-lg">{editEmoji}</span>
+                                            <span className="font-black text-sm" style={{ color: editColor }}>{editName || "팀 이름"}</span>
+                                        </div>
+
+                                        {editMsg && <p className="text-xs font-bold" style={{ color: "#EF4444" }}>{editMsg}</p>}
+
+                                        <div className="flex gap-2">
+                                            <button
+                                                onClick={handleEditSave}
+                                                disabled={editSaving || !editName.trim()}
+                                                className="flex-1 py-2 rounded-xl font-bold text-sm text-white transition-all disabled:opacity-50"
+                                                style={{ background: editColor }}
+                                            >
+                                                {editSaving ? "저장 중..." : "저장"}
+                                            </button>
+                                            <button
+                                                onClick={cancelEdit}
+                                                className="px-4 py-2 rounded-xl font-bold text-sm"
+                                                style={{ background: "var(--surface)", color: "var(--foreground-muted)" }}
+                                            >
+                                                취소
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                         ))}
                     </div>

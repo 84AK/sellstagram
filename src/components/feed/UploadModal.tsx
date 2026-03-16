@@ -13,6 +13,8 @@ import {
     Eye,
     FileText,
     ArrowRight,
+    ChevronLeft,
+    GripVertical,
     Upload,
     Trash2,
     TrendingUp,
@@ -175,6 +177,43 @@ export default function UploadModal() {
         setSelectedFiles(newFiles);
         setPreviewUrls(newFiles.map(f => URL.createObjectURL(f)));
     };
+
+    // 이미지 순서 변경: idx 위치를 dir(-1=왼쪽, +1=오른쪽)으로 이동
+    const movePostImage = (idx: number, dir: -1 | 1) => {
+        const to = idx + dir;
+        if (to < 0 || to >= selectedFiles.length) return;
+        const newFiles = [...selectedFiles];
+        const newPreviews = [...previewUrls];
+        [newFiles[idx], newFiles[to]] = [newFiles[to], newFiles[idx]];
+        [newPreviews[idx], newPreviews[to]] = [newPreviews[to], newPreviews[idx]];
+        setSelectedFiles(newFiles);
+        setPreviewUrls(newPreviews);
+    };
+
+    // 드래그앤드롭 순서 변경
+    const [dragIdx, setDragIdx] = useState<number | null>(null);
+    const [dragOverIdx, setDragOverIdx] = useState<number | null>(null);
+
+    const handleImageDragStart = (idx: number) => setDragIdx(idx);
+    const handleImageDragOver = (e: React.DragEvent, idx: number) => {
+        e.preventDefault();
+        setDragOverIdx(idx);
+    };
+    const handleImageDrop = (e: React.DragEvent, toIdx: number) => {
+        e.preventDefault();
+        if (dragIdx === null || dragIdx === toIdx) { setDragIdx(null); setDragOverIdx(null); return; }
+        const newFiles = [...selectedFiles];
+        const newPreviews = [...previewUrls];
+        const [movedFile] = newFiles.splice(dragIdx, 1);
+        const [movedPreview] = newPreviews.splice(dragIdx, 1);
+        newFiles.splice(toIdx, 0, movedFile);
+        newPreviews.splice(toIdx, 0, movedPreview);
+        setSelectedFiles(newFiles);
+        setPreviewUrls(newPreviews);
+        setDragIdx(null);
+        setDragOverIdx(null);
+    };
+    const handleImageDragEnd = () => { setDragIdx(null); setDragOverIdx(null); };
 
     const handleDrop = (e: React.DragEvent) => {
         e.preventDefault();
@@ -632,7 +671,7 @@ export default function UploadModal() {
                     />
                     {previewUrls.length > 0 && uploadType === "post" ? (
                         <div className="flex flex-col gap-2 flex-shrink-0">
-                            {/* 첫 번째 이미지 (메인) */}
+                            {/* 메인 이미지 (index 0) */}
                             <div className="relative w-full rounded-2xl overflow-hidden group/preview aspect-square">
                                 <img src={previewUrls[0]} alt="preview" className="w-full h-full object-cover" />
                                 <button
@@ -642,33 +681,89 @@ export default function UploadModal() {
                                     <Trash2 size={14} />
                                 </button>
                                 <div className="absolute bottom-3 left-3 px-2 py-1 bg-black/50 rounded-lg flex items-center gap-1.5">
-                                    <Upload size={10} className="text-white/70" />
-                                    <span className="text-[9px] font-bold text-white/70 uppercase tracking-wider">{previewUrls.length}장 선택됨</span>
+                                    <span className="text-[9px] font-bold text-white uppercase tracking-wider">대표 이미지</span>
+                                </div>
+                                <div className="absolute bottom-3 right-3 px-2 py-1 bg-black/50 rounded-lg">
+                                    <span className="text-[9px] text-white/70">{previewUrls.length}장</span>
                                 </div>
                             </div>
-                            {/* 추가 이미지 썸네일 + 추가 버튼 */}
-                            {(previewUrls.length > 1 || previewUrls.length < 10) && (
-                                <div className="flex gap-1.5">
-                                    {previewUrls.slice(1).map((url, i) => (
-                                        <div key={i} className="relative w-16 h-16 rounded-xl overflow-hidden group/thumb flex-shrink-0">
-                                            <img src={url} alt="" className="w-full h-full object-cover" />
-                                            <button
-                                                onClick={() => removePostImage(i + 1)}
-                                                className="absolute inset-0 bg-black/50 opacity-0 group-hover/thumb:opacity-100 transition-opacity flex items-center justify-center"
+
+                            {/* 전체 이미지 순서 변경 그리드 */}
+                            {previewUrls.length > 1 && (
+                                <div className="rounded-xl p-2" style={{ background: "var(--surface)" }}>
+                                    <p className="text-[10px] mb-1.5 flex items-center gap-1" style={{ color: "var(--foreground-muted)" }}>
+                                        <GripVertical size={10} /> 드래그하거나 ← → 버튼으로 순서 변경
+                                    </p>
+                                    <div className="flex gap-1.5 flex-wrap">
+                                        {previewUrls.map((url, i) => (
+                                            <div
+                                                key={url}
+                                                draggable
+                                                onDragStart={() => handleImageDragStart(i)}
+                                                onDragOver={(e) => handleImageDragOver(e, i)}
+                                                onDrop={(e) => handleImageDrop(e, i)}
+                                                onDragEnd={handleImageDragEnd}
+                                                className={`relative w-16 h-16 rounded-xl overflow-hidden group/thumb flex-shrink-0 cursor-grab active:cursor-grabbing transition-all ${
+                                                    dragIdx === i ? "opacity-40 scale-95" : ""
+                                                } ${
+                                                    dragOverIdx === i && dragIdx !== i ? "ring-2 ring-primary scale-105" : ""
+                                                } ${i === 0 ? "ring-2 ring-orange-400" : ""}`}
                                             >
-                                                <Trash2 size={12} className="text-white" />
+                                                <img src={url} alt="" className="w-full h-full object-cover pointer-events-none" />
+                                                {/* 순서 번호 */}
+                                                <div className="absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-black/70 flex items-center justify-center">
+                                                    <span className="text-[8px] font-bold text-white">{i + 1}</span>
+                                                </div>
+                                                {/* 호버 시 컨트롤 */}
+                                                <div className="absolute inset-0 bg-black/60 opacity-0 group-hover/thumb:opacity-100 transition-opacity flex flex-col items-center justify-center gap-0.5">
+                                                    <div className="flex gap-0.5">
+                                                        <button
+                                                            onClick={(e) => { e.stopPropagation(); movePostImage(i, -1); }}
+                                                            disabled={i === 0}
+                                                            className="p-0.5 bg-white/20 hover:bg-white/40 disabled:opacity-30 rounded transition-colors"
+                                                        >
+                                                            <ChevronLeft size={10} className="text-white" />
+                                                        </button>
+                                                        <button
+                                                            onClick={(e) => { e.stopPropagation(); movePostImage(i, 1); }}
+                                                            disabled={i === previewUrls.length - 1}
+                                                            className="p-0.5 bg-white/20 hover:bg-white/40 disabled:opacity-30 rounded transition-colors"
+                                                        >
+                                                            <ChevronRight size={10} className="text-white" />
+                                                        </button>
+                                                    </div>
+                                                    <button
+                                                        onClick={(e) => { e.stopPropagation(); removePostImage(i); }}
+                                                        className="p-0.5 bg-red-500/70 hover:bg-red-500 rounded transition-colors"
+                                                    >
+                                                        <Trash2 size={10} className="text-white" />
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        ))}
+                                        {previewUrls.length < 10 && (
+                                            <button
+                                                onClick={() => fileInputRef.current?.click()}
+                                                className="w-16 h-16 rounded-xl border-2 border-dashed flex items-center justify-center flex-shrink-0 transition-colors hover:border-primary/50"
+                                                style={{ borderColor: "var(--border)" }}
+                                            >
+                                                <Upload size={16} style={{ color: "var(--foreground-muted)" }} />
                                             </button>
-                                        </div>
-                                    ))}
-                                    {previewUrls.length < 10 && (
-                                        <button
-                                            onClick={() => fileInputRef.current?.click()}
-                                            className="w-16 h-16 rounded-xl border-2 border-dashed flex items-center justify-center flex-shrink-0 transition-colors hover:border-primary/50"
-                                            style={{ borderColor: "var(--border)" }}
-                                        >
-                                            <Upload size={16} style={{ color: "var(--foreground-muted)" }} />
-                                        </button>
-                                    )}
+                                        )}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* 이미지가 1장일 때 추가 버튼 */}
+                            {previewUrls.length === 1 && previewUrls.length < 10 && (
+                                <div className="flex gap-1.5">
+                                    <button
+                                        onClick={() => fileInputRef.current?.click()}
+                                        className="w-16 h-16 rounded-xl border-2 border-dashed flex items-center justify-center flex-shrink-0 transition-colors hover:border-primary/50"
+                                        style={{ borderColor: "var(--border)" }}
+                                    >
+                                        <Upload size={16} style={{ color: "var(--foreground-muted)" }} />
+                                    </button>
                                 </div>
                             )}
                         </div>

@@ -82,14 +82,48 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ team: data });
 }
 
-// PATCH: 팀 코드 재생성 (교사 전용)
+// PATCH: 팀 코드 재생성 또는 팀 정보(이름/이모지/색상) 수정 (교사 전용)
 export async function PATCH(request: NextRequest) {
     if (!(await isAuthorized(request))) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-    const { id } = await request.json();
+    const body = await request.json();
+    const { id, name, emoji, color } = body;
     if (!id) return NextResponse.json({ error: "Missing id" }, { status: 400 });
+
     const admin = createAdminClient();
+
+    // 이름/이모지/색상 업데이트 모드
+    if (name !== undefined) {
+        if (!name.trim()) return NextResponse.json({ error: "팀 이름은 필수입니다" }, { status: 400 });
+
+        // 기존 팀 이름 조회 (profiles.team 동기화용)
+        const { data: existing } = await admin.from("teams").select("name").eq("id", id).single();
+
+        const updates: Record<string, string> = { name: name.trim() };
+        if (emoji !== undefined) updates.emoji = emoji;
+        if (color !== undefined) updates.color = color;
+
+        const { data, error } = await admin
+            .from("teams")
+            .update(updates)
+            .eq("id", id)
+            .select()
+            .single();
+        if (error) {
+            if (error.code === "23505") return NextResponse.json({ error: "이미 존재하는 팀 이름입니다" }, { status: 409 });
+            return NextResponse.json({ error: error.message }, { status: 500 });
+        }
+
+        // 팀 이름이 바뀌었으면 해당 학생들의 team 컬럼도 업데이트
+        if (existing && existing.name !== name.trim()) {
+            await admin.from("profiles").update({ team: name.trim() }).eq("team", existing.name);
+        }
+
+        return NextResponse.json({ team: data });
+    }
+
+    // 기본 모드: 코드 재생성
     const { data, error } = await admin
         .from("teams")
         .update({ join_code: generateJoinCode() })
