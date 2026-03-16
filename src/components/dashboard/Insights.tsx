@@ -19,10 +19,26 @@ import {
     Share2,
     Wallet,
     FileText,
+    Megaphone,
 } from "lucide-react";
 import { useGameStore } from "@/store/useGameStore";
 import { supabase } from "@/lib/supabase/client";
 import TermTooltip from "@/components/common/TermTooltip";
+
+const AD_PLANS = [
+    { budget: 3000,  label: "스타터",   mult: 1.3, emoji: "🌱" },
+    { budget: 10000, label: "부스트",   mult: 2.0, emoji: "🚀" },
+    { budget: 30000, label: "프리미엄", mult: 3.5, emoji: "💎" },
+];
+
+interface ActiveAd {
+    id: string;
+    caption: string | null;
+    image_url: string | null;
+    ad_budget: number;
+    likes: number;
+    engagement_rate: string | null;
+}
 
 interface TeamRank {
     name: string;
@@ -48,6 +64,7 @@ export default function Insights() {
     const [teamRankings, setTeamRankings] = useState<TeamRank[]>([]);
     const [showStatsModal, setShowStatsModal] = useState(false);
     const [realStats, setRealStats] = useState({ totalEngagement: 0, avgEngagementRate: 0, postCount: 0 });
+    const [activeAds, setActiveAds] = useState<ActiveAd[]>([]);
 
     const totalRevenue = campaigns.reduce((acc, curr) => acc + curr.revenue, 0);
 
@@ -55,6 +72,16 @@ export default function Insights() {
 
     // 내 게시물만 (미션 진행률 계산용)
     const myPostCount = posts.filter(p => p.user?.handle === user.handle).length;
+
+    const loadActiveAds = async () => {
+        if (!user.handle) return;
+        const { data } = await supabase
+            .from("posts")
+            .select("id, caption, image_url, ad_budget, likes, engagement_rate")
+            .eq("user_handle", user.handle)
+            .gt("ad_budget", 0);
+        if (data) setActiveAds(data as ActiveAd[]);
+    };
 
     const loadRealStats = async () => {
         if (!user.handle) return;
@@ -119,6 +146,7 @@ export default function Insights() {
     useEffect(() => {
         loadTeamRankings();
         loadRealStats();
+        loadActiveAds();
 
         const ch = supabase
             .channel("insights-live")
@@ -127,12 +155,13 @@ export default function Insights() {
             })
             .on("postgres_changes", { event: "*", schema: "public", table: "posts" }, () => {
                 loadRealStats();
+                loadActiveAds();
             })
             .subscribe();
 
         return () => { supabase.removeChannel(ch); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [user.handle]);  // 유저 핸들이 확정된 후 내 게시물만 조회
+    }, [user.handle]);
 
     const maxScore = teamRankings[0]?.score ?? 1;
 
@@ -223,6 +252,89 @@ export default function Insights() {
                     </span>
                 </div>
             </div>
+
+            {/* 광고 현황 */}
+            {activeAds.length > 0 && (
+                <div
+                    className="rounded-2xl overflow-hidden"
+                    style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
+                >
+                    <div
+                        className="flex items-center justify-between px-4 py-3"
+                        style={{ borderBottom: "1px solid var(--border)" }}
+                    >
+                        <div className="flex items-center gap-2">
+                            <div
+                                className="w-6 h-6 rounded-lg flex items-center justify-center"
+                                style={{ background: "rgba(255,107,53,0.15)" }}
+                            >
+                                <Megaphone size={13} style={{ color: "var(--primary)" }} />
+                            </div>
+                            <span className="text-xs font-black uppercase tracking-wider" style={{ color: "var(--foreground-soft)" }}>
+                                진행 중인 광고
+                            </span>
+                        </div>
+                        <span className="flex items-center gap-1 text-[10px] font-bold" style={{ color: "var(--primary)" }}>
+                            <span className="w-1.5 h-1.5 bg-orange-500 rounded-full animate-pulse inline-block" />
+                            {activeAds.length}개
+                        </span>
+                    </div>
+
+                    <div className="flex flex-col">
+                        {activeAds.map((ad, idx) => {
+                            const plan = AD_PLANS.reduce((best, p) =>
+                                ad.ad_budget >= p.budget ? p : best, AD_PLANS[0]);
+                            const engRate = parseFloat((ad.engagement_rate ?? "0").replace("%", "")) || 0;
+                            const boostedEng = (engRate * plan.mult).toFixed(1);
+
+                            return (
+                                <div
+                                    key={ad.id}
+                                    className="flex gap-3 px-4 py-3"
+                                    style={{ borderTop: idx === 0 ? "none" : "1px solid var(--border)" }}
+                                >
+                                    {/* 썸네일 */}
+                                    <div
+                                        className="w-10 h-10 rounded-xl overflow-hidden shrink-0"
+                                        style={{ background: "var(--surface-2)", border: "1px solid var(--border)" }}
+                                    >
+                                        {ad.image_url
+                                            ? <img src={ad.image_url} alt="" className="w-full h-full object-cover" />
+                                            : <div className="w-full h-full flex items-center justify-center text-lg font-black" style={{ color: "var(--border)" }}>S</div>
+                                        }
+                                    </div>
+
+                                    {/* 정보 */}
+                                    <div className="flex-1 min-w-0">
+                                        <p className="text-[11px] font-bold truncate mb-1" style={{ color: "var(--foreground)" }}>
+                                            {ad.caption?.slice(0, 30) || "게시물"}
+                                        </p>
+                                        <div className="flex items-center gap-2 flex-wrap">
+                                            <span
+                                                className="text-[10px] font-bold px-1.5 py-0.5 rounded-full"
+                                                style={{ background: "rgba(255,107,53,0.12)", color: "var(--primary)" }}
+                                            >
+                                                {plan.emoji} {plan.label} ×{plan.mult}배
+                                            </span>
+                                            <span className="text-[10px] font-bold" style={{ color: "var(--foreground-muted)" }}>
+                                                ₩{ad.ad_budget.toLocaleString()}
+                                            </span>
+                                        </div>
+                                        {engRate > 0 && (
+                                            <div className="flex items-center gap-1 mt-1">
+                                                <TrendingUp size={9} style={{ color: "var(--accent)" }} />
+                                                <span className="text-[10px]" style={{ color: "var(--foreground-muted)" }}>
+                                                    참여율 {engRate.toFixed(1)}% → <span className="font-bold" style={{ color: "var(--accent)" }}>{boostedEng}%</span> 예상
+                                                </span>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                </div>
+            )}
 
             {/* 실시간 팀 랭킹 */}
             <div
