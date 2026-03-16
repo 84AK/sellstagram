@@ -65,7 +65,7 @@ export default function RootLayout({
       >
         <ThemeProvider attribute="data-theme" defaultTheme="light" enableSystem>
           <OnboardingGate>
-            <div className="flex min-h-screen bg-background text-foreground transition-colors duration-300">
+            <div className="flex min-h-screen bg-background text-foreground transition-colors duration-300 w-full overflow-x-hidden">
               {/* Sidebar will show on MD+ screens */}
               <Sidebar />
 

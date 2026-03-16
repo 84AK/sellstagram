@@ -356,10 +356,10 @@ export default function FeedCard({ id, user, content, stats, timeAgo, sellingPri
         <article className="border-b" style={{ background: "var(--surface)", borderColor: "var(--border)" }}>
 
             {/* ─── 헤더 ─── */}
-            <div className="flex items-center justify-between px-4 py-3">
+            <div className="flex items-center justify-between px-4 py-3 gap-2 min-w-0">
                 <button
                     onClick={() => router.push(`/profile/${encodeURIComponent(user.handle)}`)}
-                    className="flex items-center gap-2.5 hover:opacity-80 transition-opacity"
+                    className="flex items-center gap-2.5 hover:opacity-80 transition-opacity min-w-0 flex-1"
                 >
                     {/* 인스타그램 스타일 그라디언트 링 아바타 */}
                     <div
@@ -379,25 +379,25 @@ export default function FeedCard({ id, user, content, stats, timeAgo, sellingPri
                             )}
                         </div>
                     </div>
-                    <div className="flex flex-col items-start">
-                        <div className="flex items-center gap-1.5 leading-none">
-                            <span className="text-[15px] font-bold" style={{ color: "var(--foreground)" }}>
+                    <div className="flex flex-col items-start min-w-0 flex-1">
+                        <div className="flex items-center gap-1.5 leading-none min-w-0 w-full">
+                            <span className="text-[15px] font-bold truncate" style={{ color: "var(--foreground)" }}>
                                 {user.name}
                             </span>
                             {adBudget && (
-                                <span className="text-[9px] font-black px-1.5 py-0.5 rounded-full flex items-center gap-0.5"
+                                <span className="text-[9px] font-black px-1.5 py-0.5 rounded-full flex items-center gap-0.5 shrink-0"
                                     style={{ background: "rgba(217,119,6,0.12)", color: "#D97706" }}>
                                     <Megaphone size={8} /> 광고
                                 </span>
                             )}
                         </div>
-                        <span className="text-[13px] mt-0.5" style={{ color: "var(--foreground-muted)" }}>
+                        <span className="text-[13px] mt-0.5 truncate w-full" style={{ color: "var(--foreground-muted)" }}>
                             @{user.handle} · {adBudget ? "Sponsored" : timeAgo}
                         </span>
                     </div>
                 </button>
 
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3 shrink-0">
                     {!isMyPost && (
                         <button
                             onClick={async () => {

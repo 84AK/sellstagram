@@ -1769,7 +1769,9 @@ function ShopManageTab() {
     const [form, setForm] = useState<ProductForm>(EMPTY_PRODUCT_FORM);
     const [editingId, setEditingId] = useState<string | null>(null);
     const [editForm, setEditForm] = useState<ProductForm>(EMPTY_PRODUCT_FORM);
+    const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
+    // SELECT는 RLS 없이도 읽힐 수 있지만, 목록이 없으면 admin 클라이언트로 재시도
     useEffect(() => {
         supabase.from("products")
             .select("id,name,description,price,cost,category,xp_bonus,is_active,image_url,sort_order,detail_images")
@@ -1778,33 +1780,63 @@ function ShopManageTab() {
             .then(({ data }) => { setProducts(data ?? []); setLoading(false); });
     }, []);
 
+    // INSERT — API 라우트 경유 (RLS 우회)
     const handleCreate = async () => {
         if (!form.name.trim()) return;
         setSaving(true);
+        setErrorMsg(null);
         const maxOrder = products.reduce((max, p) => Math.max(max, p.sort_order ?? 0), 0);
-        const { data } = await supabase.from("products").insert({
-            ...form,
-            image_url: form.image_url || null,
-            detail_images: form.detail_images,
-            stock: 100,
-            is_active: true,
-            sort_order: maxOrder + 1,
-        }).select().single();
-        if (data) setProducts(prev => [...prev, data]);
-        setShowForm(false);
-        setForm(EMPTY_PRODUCT_FORM);
+        const res = await fetch("/api/products", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                ...form,
+                image_url: form.image_url || null,
+                detail_images: form.detail_images,
+                stock: 100,
+                sort_order: maxOrder + 1,
+            }),
+        });
+        const json = await res.json();
+        if (!res.ok) {
+            setErrorMsg(json.error ?? "상품 등록에 실패했습니다.");
+        } else if (json.data) {
+            setProducts(prev => [...prev, json.data]);
+            setShowForm(false);
+            setForm(EMPTY_PRODUCT_FORM);
+        }
         setSaving(false);
     };
 
+    // TOGGLE — API 라우트 경유 (RLS 우회)
     const handleToggle = async (id: string, current: boolean) => {
-        await supabase.from("products").update({ is_active: !current }).eq("id", id);
         setProducts(prev => prev.map(p => p.id === id ? { ...p, is_active: !current } : p));
+        const res = await fetch(`/api/products/${id}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ is_active: !current }),
+        });
+        if (!res.ok) {
+            // 실패 시 롤백
+            setProducts(prev => prev.map(p => p.id === id ? { ...p, is_active: current } : p));
+        }
     };
 
+    // DELETE — API 라우트 경유 (RLS 우회)
     const handleDelete = async (id: string) => {
         if (!confirm("이 상품을 삭제할까요?")) return;
-        await supabase.from("products").delete().eq("id", id);
         setProducts(prev => prev.filter(p => p.id !== id));
+        const res = await fetch(`/api/products/${id}`, { method: "DELETE" });
+        if (!res.ok) {
+            const json = await res.json();
+            setErrorMsg(json.error ?? "상품 삭제에 실패했습니다.");
+            // 실패 시 재로드
+            supabase.from("products")
+                .select("id,name,description,price,cost,category,xp_bonus,is_active,image_url,sort_order,detail_images")
+                .order("sort_order", { ascending: true, nullsFirst: false })
+                .order("created_at")
+                .then(({ data }) => setProducts(data ?? []));
+        }
     };
 
     const handleEditStart = (p: DbProduct) => {
@@ -1821,21 +1853,33 @@ function ShopManageTab() {
         });
     };
 
+    // UPDATE — API 라우트 경유 (RLS 우회)
     const handleEditSave = async (id: string) => {
         setSaving(true);
-        await supabase.from("products").update({
-            ...editForm,
-            image_url: editForm.image_url || null,
-            detail_images: editForm.detail_images,
-        }).eq("id", id);
-        setProducts(prev => prev.map(p => p.id === id
-            ? { ...p, ...editForm, image_url: editForm.image_url || null, detail_images: editForm.detail_images }
-            : p
-        ));
-        setEditingId(null);
+        setErrorMsg(null);
+        const res = await fetch(`/api/products/${id}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                ...editForm,
+                image_url: editForm.image_url || null,
+                detail_images: editForm.detail_images,
+            }),
+        });
+        if (!res.ok) {
+            const json = await res.json();
+            setErrorMsg(json.error ?? "상품 수정에 실패했습니다.");
+        } else {
+            setProducts(prev => prev.map(p => p.id === id
+                ? { ...p, ...editForm, image_url: editForm.image_url || null, detail_images: editForm.detail_images }
+                : p
+            ));
+            setEditingId(null);
+        }
         setSaving(false);
     };
 
+    // 순서 변경 — API 라우트 경유 (RLS 우회)
     const handleMove = async (index: number, dir: -1 | 1) => {
         const target = index + dir;
         if (target < 0 || target >= products.length) return;
@@ -1846,8 +1890,16 @@ function ShopManageTab() {
         next[target] = a;
         setProducts(next);
         await Promise.all([
-            supabase.from("products").update({ sort_order: target }).eq("id", a.id),
-            supabase.from("products").update({ sort_order: index }).eq("id", b.id),
+            fetch(`/api/products/${a.id}`, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ sort_order: target }),
+            }),
+            fetch(`/api/products/${b.id}`, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ sort_order: index }),
+            }),
         ]);
     };
 
@@ -1855,12 +1907,20 @@ function ShopManageTab() {
         <div className="flex flex-col gap-4">
             <div className="flex items-center justify-between">
                 <p className="text-sm font-bold" style={{ color: "var(--foreground)" }}>등록된 상품 {products.length}개</p>
-                <button onClick={() => { setShowForm(v => !v); setEditingId(null); }}
+                <button onClick={() => { setShowForm(v => !v); setEditingId(null); setErrorMsg(null); }}
                     className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold text-white"
                     style={{ background: "linear-gradient(135deg, var(--primary), #FF9A72)" }}>
                     <Plus size={14} /> 상품 추가
                 </button>
             </div>
+
+            {/* 오류 메시지 */}
+            {errorMsg && (
+                <div className="px-4 py-3 rounded-xl text-sm font-medium"
+                    style={{ background: "#FEF2F2", color: "#DC2626", border: "1px solid #FECACA" }}>
+                    ⚠️ {errorMsg}
+                </div>
+            )}
 
             {/* 새 상품 등록 폼 */}
             {showForm && (

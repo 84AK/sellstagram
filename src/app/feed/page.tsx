@@ -156,13 +156,13 @@ export default function FeedPage() {
     }, []);
 
     return (
-        <div className="flex flex-col lg:flex-row gap-8 p-4 pt-6 lg:pt-10 max-w-6xl mx-auto">
+        <div className="flex flex-col lg:flex-row gap-8 p-4 pt-6 lg:pt-10 max-w-6xl mx-auto w-full overflow-x-hidden">
 
             {/* ── 메인 피드 영역 ── */}
-            <div className="flex-1 flex flex-col gap-5">
+            <div className="flex-1 flex flex-col gap-5 min-w-0 overflow-x-hidden">
 
                 {/* 모바일 헤더 */}
-                <header className="flex justify-between items-center px-1 md:hidden">
+                <header className="flex justify-between items-center px-1 md:hidden w-full">
                     <div className="flex items-center gap-2">
                         <div
                             className="w-8 h-8 rounded-xl flex items-center justify-center"

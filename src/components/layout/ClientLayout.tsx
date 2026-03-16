@@ -14,7 +14,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
     if (isFullWidthPage) {
         return (
             <main
-                className="flex-1 min-h-screen pb-24 md:pb-0 hidden-md-ml"
+                className="flex-1 min-h-screen pb-24 md:pb-0 hidden-md-ml w-full overflow-x-hidden"
                 style={{ "--sidebar-w": `${sidebarW}px` } as React.CSSProperties}
             >
                 {children}
@@ -24,7 +24,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
 
     return (
         <main
-            className="flex-1 flex flex-col pb-24 md:pb-0 hidden-md-ml"
+            className="flex-1 flex flex-col pb-24 md:pb-0 hidden-md-ml w-full overflow-x-hidden"
             style={{ "--sidebar-w": `${sidebarW}px` } as React.CSSProperties}
         >
             <div className="w-full max-w-5xl mx-auto min-h-screen">
