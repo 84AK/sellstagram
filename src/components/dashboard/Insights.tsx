@@ -53,11 +53,19 @@ export default function Insights() {
 
     const activeMission = missions.find(m => m.isActive && !m.isCompleted) ?? null;
 
+    // 내 게시물만 (미션 진행률 계산용)
+    const myPostCount = posts.filter(p => p.user?.handle === user.handle).length;
+
     const loadRealStats = async () => {
+        if (!user.handle) return;
         const { data } = await supabase
             .from("posts")
-            .select("likes, comments, shares, engagement_rate");
-        if (!data || data.length === 0) return;
+            .select("likes, comments, shares, engagement_rate")
+            .eq("user_handle", user.handle);
+        if (!data || data.length === 0) {
+            setRealStats({ totalEngagement: 0, avgEngagementRate: 0, postCount: 0 });
+            return;
+        }
 
         const totalEng = data.reduce((acc, p) =>
             acc + (p.likes || 0) + (p.comments || 0) + (p.shares || 0), 0);
@@ -124,7 +132,7 @@ export default function Insights() {
 
         return () => { supabase.removeChannel(ch); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
+    }, [user.handle]);  // 유저 핸들이 확정된 후 내 게시물만 조회
 
     const maxScore = teamRankings[0]?.score ?? 1;
 
@@ -414,15 +422,15 @@ export default function Insights() {
                         {activeMission.type === "posts" && (
                             <>
                                 <div className="flex justify-between text-[10px] font-bold mb-1.5">
-                                    <span style={{ color: "var(--foreground-muted)" }}>{posts.length}개 업로드</span>
+                                    <span style={{ color: "var(--foreground-muted)" }}>{myPostCount}개 업로드</span>
                                     <span style={{ color: "var(--accent)" }}>
-                                        {Math.min(100, Math.floor((posts.length / (activeMission.targetCount ?? 1)) * 100))}%
+                                        {Math.min(100, Math.floor((myPostCount / (activeMission.targetCount ?? 1)) * 100))}%
                                     </span>
                                 </div>
                                 <div className="progress-track">
                                     <div
                                         className="progress-fill progress-orange"
-                                        style={{ width: `${Math.min(100, (posts.length / (activeMission.targetCount ?? 1)) * 100)}%` }}
+                                        style={{ width: `${Math.min(100, (myPostCount / (activeMission.targetCount ?? 1)) * 100)}%` }}
                                     />
                                 </div>
                             </>
@@ -451,6 +459,9 @@ function StatsModal({ user, balance, posts, campaigns, onClose }: StatsModalProp
     const [simResults, setSimResults] = useState<SimResult[]>([]);
     const [tab, setTab] = useState<"summary" | "sims" | "posts">("summary");
 
+    // 내 게시물만 필터링
+    const myPosts = posts.filter(p => (p as unknown as { user: { handle: string } }).user?.handle === user.handle);
+
     useEffect(() => {
         const load = async () => {
             const { data: { session } } = await supabase.auth.getSession();
@@ -474,7 +485,7 @@ function StatsModal({ user, balance, posts, campaigns, onClose }: StatsModalProp
     const totalSpent = campaigns.reduce((s, c) => s + (c.spent ?? 0), 0);
 
     const statItems = [
-        { icon: <FileText size={18} />, label: "게시물", value: `${posts.length}개`, color: "var(--secondary)" },
+        { icon: <FileText size={18} />, label: "게시물", value: `${myPosts.length}개`, color: "var(--secondary)" },
         { icon: <Heart size={18} />, label: "총 좋아요", value: totalLikes.toLocaleString(), color: "#EF4444" },
         { icon: <MessageCircle size={18} />, label: "총 댓글", value: totalComments.toLocaleString(), color: "var(--accent)" },
         { icon: <Share2 size={18} />, label: "총 공유", value: totalShares.toLocaleString(), color: "#8B5CF6" },
@@ -653,11 +664,11 @@ function StatsModal({ user, balance, posts, campaigns, onClose }: StatsModalProp
                     {/* 게시물 탭 */}
                     {tab === "posts" && (
                         <div className="flex flex-col gap-3">
-                            {posts.length === 0 ? (
+                            {myPosts.length === 0 ? (
                                 <p className="text-center text-sm py-10" style={{ color: "var(--foreground-muted)" }}>
                                     아직 게시물이 없어요
                                 </p>
-                            ) : posts.map((p, i) => {
+                            ) : myPosts.map((p, i) => {
                                 const likes = typeof p.stats.likes === "number" ? p.stats.likes : parseFloat(String(p.stats.likes)) || 0;
                                 return (
                                     <div
