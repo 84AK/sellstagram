@@ -120,6 +120,7 @@ export default function FeedCard({ id, user, content, stats, timeAgo, sellingPri
         id: string; total_budget: number; daily_budget: number; duration_days: number;
         start_date: string; end_date: string; status: string;
         impressions: number; landing_visits: number; mult: number;
+        simulated_purchases: number; simulated_revenue: number;
     } | null>(null);
 
     const { addInsight, startCampaign, setAIReportModal, addSkillXP, user: currentUser, balance, spendBalance } = useGameStore();
@@ -141,7 +142,7 @@ export default function FeedCard({ id, user, content, stats, timeAgo, sellingPri
         if (!isMyPost) return;
         supabase
             .from("ad_campaigns")
-            .select("id,total_budget,daily_budget,duration_days,start_date,end_date,status,impressions,landing_visits,mult")
+            .select("id,total_budget,daily_budget,duration_days,start_date,end_date,status,impressions,landing_visits,mult,simulated_purchases,simulated_revenue")
             .eq("post_id", id)
             .eq("status", "active")
             .maybeSingle()
@@ -1005,18 +1006,15 @@ export default function FeedCard({ id, user, content, stats, timeAgo, sellingPri
             const canAfford = balance >= totalCost;
             const totalReach = plan.dailyReach * selectedDays;
 
-            // 진행 중인 캠페인 성과 계산
+            // 진행 중인 캠페인 기간 계산
             let elapsedDays = 0;
             let remainDays = 0;
-            let simImpressions = 0;
             if (activeCampaign) {
                 const now = Date.now();
                 const start = new Date(activeCampaign.start_date).getTime();
                 const end = new Date(activeCampaign.end_date).getTime();
                 elapsedDays = Math.min((now - start) / 86400000, activeCampaign.duration_days);
                 remainDays = Math.max(0, Math.ceil((end - now) / 86400000));
-                const activePlan = AD_PLANS.find(p => p.dailyBudget === activeCampaign.daily_budget) ?? AD_PLANS[0];
-                simImpressions = Math.round(elapsedDays * activePlan.dailyReach * (0.85 + Math.random() * 0.3));
             }
 
             return (
@@ -1068,10 +1066,10 @@ export default function FeedCard({ id, user, content, stats, timeAgo, sellingPri
                                 {/* 성과 지표 그리드 */}
                                 <div className="grid grid-cols-2 gap-2">
                                     {[
-                                        { label: "예상 노출", value: simImpressions.toLocaleString(), sub: "명", color: "var(--secondary)" },
+                                        { label: "노출", value: activeCampaign.impressions.toLocaleString(), sub: "명", color: "var(--secondary)" },
                                         { label: "랜딩 방문", value: activeCampaign.landing_visits.toLocaleString(), sub: "명", color: "var(--accent)" },
-                                        { label: "집행 예산", value: `₩${activeCampaign.total_budget.toLocaleString()}`, sub: `${activeCampaign.duration_days}일`, color: "#D97706" },
-                                        { label: "전환율 부스트", value: `×${activeCampaign.mult}배`, sub: AD_PLANS.find(p=>p.dailyBudget===activeCampaign.daily_budget)?.label ?? "", color: "var(--primary)" },
+                                        { label: "구매 건수", value: `${activeCampaign.simulated_purchases}건`, sub: "AI 시뮬", color: "var(--primary)" },
+                                        { label: "시뮬 매출", value: `₩${activeCampaign.simulated_revenue.toLocaleString()}`, sub: `예산 ₩${activeCampaign.total_budget.toLocaleString()}`, color: "#06D6A0" },
                                     ].map(item => (
                                         <div key={item.label} className="p-3 rounded-2xl flex flex-col gap-1"
                                             style={{ background: "var(--surface-2)", border: "1px solid var(--border)" }}>

@@ -40,9 +40,15 @@ interface ActiveAd {
     mult: number;
     start_date: string;
     end_date: string;
+    impressions: number;
     landing_visits: number;
+    simulated_purchases: number;
+    simulated_revenue: number;
+    last_simulated_at: string | null;
     post_caption: string | null;
     post_image: string | null;
+    post_selling_price: number | null;
+    post_seller_user_id: string | null;
 }
 
 interface TeamRank {
@@ -65,7 +71,7 @@ interface SimResult {
 }
 
 export default function Insights() {
-    const { campaigns, balance, insights, posts, missions, user, setAIReportModal } = useGameStore();
+    const { campaigns, balance, insights, posts, missions, user, setAIReportModal, addFunds } = useGameStore();
     const [teamRankings, setTeamRankings] = useState<TeamRank[]>([]);
     const [showStatsModal, setShowStatsModal] = useState(false);
     const [realStats, setRealStats] = useState({ totalEngagement: 0, avgEngagementRate: 0, postCount: 0 });
@@ -80,37 +86,110 @@ export default function Insights() {
 
     const loadActiveAds = async () => {
         if (!user.handle) return;
-        // 종료된 캠페인 자동 완료 처리
-        const now = new Date().toISOString();
+        const nowIso = new Date().toISOString();
+
+        // 종료된 캠페인 완료 처리
         await supabase.from("ad_campaigns")
             .update({ status: "completed" })
             .eq("user_handle", user.handle)
             .eq("status", "active")
-            .lt("end_date", now);
+            .lt("end_date", nowIso);
 
-        const { data: campaigns } = await supabase
+        const { data: campaignsData } = await supabase
             .from("ad_campaigns")
-            .select("id, post_id, total_budget, daily_budget, duration_days, mult, start_date, end_date, landing_visits")
+            .select("id,post_id,total_budget,daily_budget,duration_days,mult,start_date,end_date,impressions,landing_visits,simulated_purchases,simulated_revenue,last_simulated_at")
             .eq("user_handle", user.handle)
             .eq("status", "active")
             .order("created_at", { ascending: false });
 
-        if (!campaigns || campaigns.length === 0) { setActiveAds([]); return; }
+        if (!campaignsData || campaignsData.length === 0) { setActiveAds([]); return; }
 
         // post 정보 병합
-        const postIds = campaigns.map(c => c.post_id);
+        const postIds = campaignsData.map(c => c.post_id);
         const { data: postsData } = await supabase
             .from("posts")
-            .select("id, caption, image_url")
+            .select("id,caption,image_url,selling_price,seller_user_id")
             .in("id", postIds);
-        const postMap: Record<string, { caption: string | null; image_url: string | null }> = {};
+        const postMap: Record<string, { caption: string | null; image_url: string | null; selling_price: number | null; seller_user_id: string | null }> = {};
         (postsData ?? []).forEach(p => { postMap[p.id] = p; });
 
-        setActiveAds(campaigns.map(c => ({
+        const merged: ActiveAd[] = campaignsData.map(c => ({
             ...c,
             post_caption: postMap[c.post_id]?.caption ?? null,
             post_image: postMap[c.post_id]?.image_url ?? null,
-        })));
+            post_selling_price: postMap[c.post_id]?.selling_price ?? null,
+            post_seller_user_id: postMap[c.post_id]?.seller_user_id ?? null,
+        }));
+
+        // ── AI 시뮬레이션 엔진 ──
+        const { data: { session } } = await supabase.auth.getSession();
+        const userId = session?.user?.id ?? null;
+
+        for (const ad of merged) {
+            const now = new Date();
+            const lastSim = ad.last_simulated_at ? new Date(ad.last_simulated_at) : new Date(ad.start_date);
+            const elapsedHours = (now.getTime() - lastSim.getTime()) / 3600000;
+
+            // 30분 미만이면 스킵
+            if (elapsedHours < 0.5) continue;
+
+            const plan = AD_PLANS.find(p => p.dailyBudget === ad.daily_budget) ?? AD_PLANS[0];
+            const hourlyReach = plan.dailyReach / 24;
+
+            // 노출 (±25% 랜덤)
+            const randomFactor = 0.75 + Math.random() * 0.5;
+            const newImpressions = Math.round(hourlyReach * elapsedHours * randomFactor);
+
+            // 랜딩 방문 CTR: 3~12%
+            const ctr = 0.03 + Math.random() * 0.09;
+            const newLandingVisits = Math.round(newImpressions * ctr);
+
+            // 구매 전환율 CVR: 1~6%
+            const cvr = 0.01 + Math.random() * 0.05;
+            const newPurchases = Math.round(newLandingVisits * cvr);
+
+            const sellingPrice = ad.post_selling_price ?? 0;
+            const newRevenue = newPurchases * sellingPrice;
+
+            // DB 업데이트
+            const updatedImpressions = (ad.impressions ?? 0) + newImpressions;
+            const updatedLandingVisits = (ad.landing_visits ?? 0) + newLandingVisits;
+            const updatedPurchases = (ad.simulated_purchases ?? 0) + newPurchases;
+            const updatedRevenue = (ad.simulated_revenue ?? 0) + newRevenue;
+
+            await supabase.from("ad_campaigns").update({
+                impressions: updatedImpressions,
+                landing_visits: updatedLandingVisits,
+                simulated_purchases: updatedPurchases,
+                simulated_revenue: updatedRevenue,
+                last_simulated_at: now.toISOString(),
+            }).eq("id", ad.id);
+
+            // 구매 발생 시 판매자 잔고 + sold_count 업데이트
+            if (newPurchases > 0 && sellingPrice > 0) {
+                // sold_count 증가
+                const { data: postRow } = await supabase.from("posts").select("sold_count").eq("id", ad.post_id).single();
+                await supabase.from("posts").update({ sold_count: (postRow?.sold_count ?? 0) + newPurchases }).eq("id", ad.post_id);
+
+                // 판매자 프로필 잔고 증가
+                if (ad.post_seller_user_id) {
+                    const { data: sellerProf } = await supabase.from("profiles").select("balance").eq("id", ad.post_seller_user_id).single();
+                    await supabase.from("profiles").update({ balance: (sellerProf?.balance ?? 0) + newRevenue }).eq("id", ad.post_seller_user_id);
+                    // 현재 유저가 판매자면 Zustand도 업데이트
+                    if (userId && userId === ad.post_seller_user_id) {
+                        addFunds(newRevenue);
+                    }
+                }
+            }
+
+            // 로컬 상태 반영
+            ad.impressions = updatedImpressions;
+            ad.landing_visits = updatedLandingVisits;
+            ad.simulated_purchases = updatedPurchases;
+            ad.simulated_revenue = updatedRevenue;
+        }
+
+        setActiveAds(merged);
     };
 
     const loadRealStats = async () => {
@@ -350,11 +429,12 @@ export default function Insights() {
                                     </div>
 
                                     {/* 성과 지표 */}
-                                    <div className="grid grid-cols-3 gap-1.5">
+                                    <div className="grid grid-cols-2 gap-1.5">
                                         {[
-                                            { label: "노출", value: simImpressions.toLocaleString(), color: "var(--secondary)" },
+                                            { label: "노출", value: ad.impressions.toLocaleString(), color: "var(--secondary)" },
                                             { label: "랜딩 방문", value: ad.landing_visits.toLocaleString(), color: "var(--accent)" },
-                                            { label: "예산", value: `₩${ad.total_budget.toLocaleString()}`, color: "#D97706" },
+                                            { label: "구매 건수", value: `${ad.simulated_purchases}건`, color: "var(--primary)" },
+                                            { label: "시뮬 매출", value: `₩${ad.simulated_revenue.toLocaleString()}`, color: "#06D6A0" },
                                         ].map(m => (
                                             <div key={m.label} className="rounded-xl p-2 text-center"
                                                 style={{ background: "var(--surface-2)" }}>
