@@ -17,6 +17,8 @@ import {
     PanelLeftOpen,
     PanelLeftClose,
     Inbox,
+    Menu,
+    X,
 } from "lucide-react";
 import ThemeToggle from "@/components/common/ThemeToggle";
 import { useGameStore } from "@/store/useGameStore";
@@ -129,6 +131,23 @@ export default function Sidebar() {
     const xpProgress = user.points % 100;
 
     const W = sidebarExpanded ? 240 : 72;
+    const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+    // 드로어 열릴 때 body 스크롤 방지
+    const closeMobileMenu = () => setMobileMenuOpen(false);
+
+    const mobileExtraNavItems = [
+        { href: "/shop",     icon: ShoppingBag, label: "스토어" },
+        { href: "/simulate", icon: PlayCircle,  label: "마켓 시뮬레이션" },
+        { href: "/messages", icon: Inbox,       label: "메시지" },
+        { href: "/guide",    icon: HelpCircle,  label: "사용 가이드" },
+    ];
+
+    const mobileAdminItems = [
+        { href: "/teacher",     icon: Shield,     label: "교사 대시보드" },
+        { href: "/class-guide", icon: PlayCircle, label: "수업 시뮬레이션" },
+        { href: isAdmin ? "/admin/dashboard" : "/admin", icon: Shield, label: "관리자 대시보드" },
+    ];
 
     return (
         <>
@@ -138,10 +157,9 @@ export default function Sidebar() {
                 style={{ background: "var(--surface)", borderTop: "1px solid var(--border)" }}
             >
                 {[
-                    { href: "/feed",     icon: Home,        label: "홈" },
-                    { href: "/learn",    icon: BookOpen,    label: "학습" },
-                    { href: "/messages", icon: Inbox,       label: "메시지" },
-                    { href: "/profile",  icon: User,        label: "나" },
+                    { href: "/feed",    icon: Home,     label: "홈" },
+                    { href: "/learn",   icon: BookOpen, label: "학습" },
+                    { href: "/profile", icon: User,     label: "나" },
                 ].map(item => {
                     const Icon = item.icon;
                     const isActive = pathname === item.href;
@@ -154,28 +172,157 @@ export default function Sidebar() {
                         >
                             <div className="relative">
                                 <Icon size={24} strokeWidth={isActive ? 2.5 : 1.8} />
-                                {item.href === "/messages" && unreadMessages > 0 && (
-                                    <span className="absolute -top-1 -right-1 min-w-[14px] h-[14px] rounded-full flex items-center justify-center text-[9px] font-black text-white px-[3px]"
-                                        style={{ background: "var(--secondary)" }}>
-                                        {unreadMessages > 9 ? "9+" : unreadMessages}
-                                    </span>
-                                )}
                             </div>
                             <span className="text-[9px] font-semibold">{item.label}</span>
                         </Link>
                     );
                 })}
-                <button
-                    onClick={() => setUploadModalOpen(true)}
-                    className="flex flex-col items-center gap-0.5 -mt-1"
-                    style={{ color: "var(--foreground-muted)" }}
+
+                {/* 메시지 — 뱃지 포함 */}
+                <Link
+                    href="/messages"
+                    className="flex flex-col items-center gap-0.5 min-w-[44px]"
+                    style={{ color: pathname === "/messages" ? "var(--foreground)" : "var(--foreground-muted)" }}
                 >
-                    <div className="w-8 h-8 rounded-lg flex items-center justify-center"
-                        style={{ border: "1.5px solid var(--foreground)" }}>
-                        <Plus size={18} strokeWidth={2} />
+                    <div className="relative">
+                        <Inbox size={24} strokeWidth={pathname === "/messages" ? 2.5 : 1.8} />
+                        {unreadMessages > 0 && (
+                            <span className="absolute -top-1 -right-1 min-w-[14px] h-[14px] rounded-full flex items-center justify-center text-[9px] font-black text-white px-[3px]"
+                                style={{ background: "var(--secondary)" }}>
+                                {unreadMessages > 9 ? "9+" : unreadMessages}
+                            </span>
+                        )}
                     </div>
+                    <span className="text-[9px] font-semibold">메시지</span>
+                </Link>
+
+                {/* 햄버거 메뉴 버튼 */}
+                <button
+                    onClick={() => setMobileMenuOpen(true)}
+                    className="flex flex-col items-center gap-0.5 min-w-[44px]"
+                    style={{ color: mobileMenuOpen ? "var(--foreground)" : "var(--foreground-muted)" }}
+                >
+                    <Menu size={24} strokeWidth={1.8} />
+                    <span className="text-[9px] font-semibold">더보기</span>
                 </button>
             </nav>
+
+            {/* ── 모바일 드로어 (슬라이드업) ── */}
+            {mobileMenuOpen && (
+                <>
+                    {/* 배경 오버레이 */}
+                    <div
+                        className="fixed inset-0 z-[60] bg-black/40 backdrop-blur-sm md:hidden"
+                        onClick={closeMobileMenu}
+                    />
+                    {/* 드로어 본체 */}
+                    <div
+                        className="fixed bottom-0 left-0 right-0 z-[70] md:hidden rounded-t-3xl overflow-hidden"
+                        style={{
+                            background: "var(--surface)",
+                            boxShadow: "0 -8px 32px rgba(0,0,0,0.15)",
+                            paddingBottom: "env(safe-area-inset-bottom, 16px)",
+                        }}
+                    >
+                        {/* 핸들바 */}
+                        <div className="flex justify-center pt-3 pb-1">
+                            <div className="w-10 h-1 rounded-full" style={{ background: "var(--border)" }} />
+                        </div>
+
+                        {/* 헤더 */}
+                        <div className="flex items-center justify-between px-5 py-3"
+                            style={{ borderBottom: "1px solid var(--border)" }}>
+                            <span className="text-sm font-black" style={{ color: "var(--foreground)" }}>메뉴</span>
+                            <button
+                                onClick={closeMobileMenu}
+                                className="w-8 h-8 rounded-full flex items-center justify-center"
+                                style={{ background: "var(--surface-2)", color: "var(--foreground-muted)" }}
+                            >
+                                <X size={16} />
+                            </button>
+                        </div>
+
+                        {/* 만들기 버튼 */}
+                        <div className="px-4 pt-4 pb-2">
+                            <button
+                                onClick={() => { setUploadModalOpen(true); closeMobileMenu(); }}
+                                className="w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl font-bold text-sm text-white"
+                                style={{ background: "linear-gradient(135deg, var(--primary), #FF9A72)" }}
+                            >
+                                <Plus size={18} />
+                                콘텐츠 만들기
+                            </button>
+                        </div>
+
+                        {/* 일반 메뉴 */}
+                        <div className="px-4 py-2 flex flex-col gap-0.5">
+                            {mobileExtraNavItems.map(item => {
+                                const Icon = item.icon;
+                                const isActive = pathname === item.href;
+                                return (
+                                    <Link
+                                        key={item.href}
+                                        href={item.href}
+                                        onClick={closeMobileMenu}
+                                        className="flex items-center gap-3.5 px-4 py-3 rounded-2xl transition-colors"
+                                        style={{
+                                            background: isActive ? "var(--surface-2)" : "transparent",
+                                            color: isActive ? "var(--foreground)" : "var(--foreground-soft)",
+                                            fontWeight: isActive ? 700 : 500,
+                                        }}
+                                    >
+                                        <div className="relative">
+                                            <Icon size={20} strokeWidth={isActive ? 2.5 : 1.8} />
+                                            {item.href === "/messages" && unreadMessages > 0 && (
+                                                <span className="absolute -top-1 -right-1 min-w-[14px] h-[14px] rounded-full flex items-center justify-center text-[9px] font-black text-white px-[3px]"
+                                                    style={{ background: "var(--secondary)" }}>
+                                                    {unreadMessages > 9 ? "9+" : unreadMessages}
+                                                </span>
+                                            )}
+                                        </div>
+                                        <span className="text-[15px]">{item.label}</span>
+                                    </Link>
+                                );
+                            })}
+                        </div>
+
+                        {/* 관리자/선생님 메뉴 */}
+                        {(isAdmin || user.role === "teacher") && (
+                            <div className="px-4 pb-4">
+                                <div className="px-4 py-2">
+                                    <span className="text-[11px] font-bold uppercase tracking-wider"
+                                        style={{ color: "var(--foreground-muted)" }}>관리</span>
+                                </div>
+                                <div className="flex flex-col gap-0.5">
+                                    {mobileAdminItems.map(item => {
+                                        const Icon = item.icon;
+                                        const isActive = pathname === item.href || (item.href.startsWith("/admin") && pathname.startsWith("/admin"));
+                                        return (
+                                            <Link
+                                                key={item.href}
+                                                href={item.href}
+                                                onClick={closeMobileMenu}
+                                                className="flex items-center gap-3.5 px-4 py-3 rounded-2xl transition-colors"
+                                                style={{
+                                                    background: isActive ? "var(--surface-2)" : "transparent",
+                                                    color: isActive ? "var(--foreground)" : "var(--foreground-soft)",
+                                                    fontWeight: isActive ? 700 : 500,
+                                                }}
+                                            >
+                                                <Icon size={20} strokeWidth={isActive ? 2.5 : 1.8} />
+                                                <span className="text-[15px]">{item.label}</span>
+                                            </Link>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* 하단 여백 (홈 인디케이터) */}
+                        <div className="h-6" />
+                    </div>
+                </>
+            )}
 
             {/* ── 데스크탑 사이드바 ── */}
             <aside
