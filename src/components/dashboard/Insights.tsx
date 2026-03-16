@@ -26,18 +26,23 @@ import { supabase } from "@/lib/supabase/client";
 import TermTooltip from "@/components/common/TermTooltip";
 
 const AD_PLANS = [
-    { budget: 3000,  label: "스타터",   mult: 1.3, emoji: "🌱" },
-    { budget: 10000, label: "부스트",   mult: 2.0, emoji: "🚀" },
-    { budget: 30000, label: "프리미엄", mult: 3.5, emoji: "💎" },
+    { dailyBudget: 3000,  label: "스타터",   mult: 1.3, emoji: "🌱", dailyReach: 300 },
+    { dailyBudget: 10000, label: "부스트",   mult: 2.0, emoji: "🚀", dailyReach: 1000 },
+    { dailyBudget: 30000, label: "프리미엄", mult: 3.5, emoji: "💎", dailyReach: 3500 },
 ];
 
 interface ActiveAd {
     id: string;
-    caption: string | null;
-    image_url: string | null;
-    ad_budget: number;
-    likes: number;
-    engagement_rate: string | null;
+    post_id: string;
+    total_budget: number;
+    daily_budget: number;
+    duration_days: number;
+    mult: number;
+    start_date: string;
+    end_date: string;
+    landing_visits: number;
+    post_caption: string | null;
+    post_image: string | null;
 }
 
 interface TeamRank {
@@ -75,12 +80,37 @@ export default function Insights() {
 
     const loadActiveAds = async () => {
         if (!user.handle) return;
-        const { data } = await supabase
-            .from("posts")
-            .select("id, caption, image_url, ad_budget, likes, engagement_rate")
+        // 종료된 캠페인 자동 완료 처리
+        const now = new Date().toISOString();
+        await supabase.from("ad_campaigns")
+            .update({ status: "completed" })
             .eq("user_handle", user.handle)
-            .gt("ad_budget", 0);
-        if (data) setActiveAds(data as ActiveAd[]);
+            .eq("status", "active")
+            .lt("end_date", now);
+
+        const { data: campaigns } = await supabase
+            .from("ad_campaigns")
+            .select("id, post_id, total_budget, daily_budget, duration_days, mult, start_date, end_date, landing_visits")
+            .eq("user_handle", user.handle)
+            .eq("status", "active")
+            .order("created_at", { ascending: false });
+
+        if (!campaigns || campaigns.length === 0) { setActiveAds([]); return; }
+
+        // post 정보 병합
+        const postIds = campaigns.map(c => c.post_id);
+        const { data: postsData } = await supabase
+            .from("posts")
+            .select("id, caption, image_url")
+            .in("id", postIds);
+        const postMap: Record<string, { caption: string | null; image_url: string | null }> = {};
+        (postsData ?? []).forEach(p => { postMap[p.id] = p; });
+
+        setActiveAds(campaigns.map(c => ({
+            ...c,
+            post_caption: postMap[c.post_id]?.caption ?? null,
+            post_image: postMap[c.post_id]?.image_url ?? null,
+        })));
     };
 
     const loadRealStats = async () => {
@@ -282,52 +312,72 @@ export default function Insights() {
 
                     <div className="flex flex-col">
                         {activeAds.map((ad, idx) => {
-                            const plan = AD_PLANS.reduce((best, p) =>
-                                ad.ad_budget >= p.budget ? p : best, AD_PLANS[0]);
-                            const engRate = parseFloat((ad.engagement_rate ?? "0").replace("%", "")) || 0;
-                            const boostedEng = (engRate * plan.mult).toFixed(1);
+                            const now = Date.now();
+                            const start = new Date(ad.start_date).getTime();
+                            const end = new Date(ad.end_date).getTime();
+                            const elapsedDays = Math.min((now - start) / 86400000, ad.duration_days);
+                            const remainDays = Math.max(0, Math.ceil((end - now) / 86400000));
+                            const activePlan = AD_PLANS.find(p => p.dailyBudget === ad.daily_budget) ?? AD_PLANS[0];
+                            const simImpressions = Math.round(elapsedDays * activePlan.dailyReach);
+                            const progressPct = Math.min(100, (elapsedDays / ad.duration_days) * 100);
 
                             return (
-                                <div
-                                    key={ad.id}
-                                    className="flex gap-3 px-4 py-3"
-                                    style={{ borderTop: idx === 0 ? "none" : "1px solid var(--border)" }}
-                                >
-                                    {/* 썸네일 */}
-                                    <div
-                                        className="w-10 h-10 rounded-xl overflow-hidden shrink-0"
-                                        style={{ background: "var(--surface-2)", border: "1px solid var(--border)" }}
-                                    >
-                                        {ad.image_url
-                                            ? <img src={ad.image_url} alt="" className="w-full h-full object-cover" />
-                                            : <div className="w-full h-full flex items-center justify-center text-lg font-black" style={{ color: "var(--border)" }}>S</div>
-                                        }
-                                    </div>
-
-                                    {/* 정보 */}
-                                    <div className="flex-1 min-w-0">
-                                        <p className="text-[11px] font-bold truncate mb-1" style={{ color: "var(--foreground)" }}>
-                                            {ad.caption?.slice(0, 30) || "게시물"}
-                                        </p>
-                                        <div className="flex items-center gap-2 flex-wrap">
-                                            <span
-                                                className="text-[10px] font-bold px-1.5 py-0.5 rounded-full"
-                                                style={{ background: "rgba(255,107,53,0.12)", color: "var(--primary)" }}
-                                            >
-                                                {plan.emoji} {plan.label} ×{plan.mult}배
-                                            </span>
-                                            <span className="text-[10px] font-bold" style={{ color: "var(--foreground-muted)" }}>
-                                                ₩{ad.ad_budget.toLocaleString()}
-                                            </span>
+                                <div key={ad.id} className="px-4 py-3 flex flex-col gap-2.5"
+                                    style={{ borderTop: idx === 0 ? "none" : "1px solid var(--border)" }}>
+                                    {/* 상단: 썸네일 + 기본 정보 */}
+                                    <div className="flex gap-3">
+                                        <div className="w-10 h-10 rounded-xl overflow-hidden shrink-0"
+                                            style={{ background: "var(--surface-2)", border: "1px solid var(--border)" }}>
+                                            {ad.post_image
+                                                ? <img src={ad.post_image} alt="" className="w-full h-full object-cover" />
+                                                : <div className="w-full h-full flex items-center justify-center font-black" style={{ color: "var(--border)" }}>S</div>
+                                            }
                                         </div>
-                                        {engRate > 0 && (
-                                            <div className="flex items-center gap-1 mt-1">
-                                                <TrendingUp size={9} style={{ color: "var(--accent)" }} />
-                                                <span className="text-[10px]" style={{ color: "var(--foreground-muted)" }}>
-                                                    참여율 {engRate.toFixed(1)}% → <span className="font-bold" style={{ color: "var(--accent)" }}>{boostedEng}%</span> 예상
+                                        <div className="flex-1 min-w-0">
+                                            <p className="text-[11px] font-bold truncate" style={{ color: "var(--foreground)" }}>
+                                                {ad.post_caption?.slice(0, 28) || "게시물"}
+                                            </p>
+                                            <div className="flex items-center gap-1.5 mt-0.5">
+                                                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full"
+                                                    style={{ background: "rgba(217,119,6,0.12)", color: "#D97706" }}>
+                                                    {activePlan.emoji} {activePlan.label} ×{ad.mult}배
+                                                </span>
+                                                <span className="text-[10px] font-bold" style={{ color: remainDays <= 1 ? "#EF4444" : "var(--foreground-muted)" }}>
+                                                    D-{remainDays}
                                                 </span>
                                             </div>
-                                        )}
+                                        </div>
+                                    </div>
+
+                                    {/* 성과 지표 */}
+                                    <div className="grid grid-cols-3 gap-1.5">
+                                        {[
+                                            { label: "노출", value: simImpressions.toLocaleString(), color: "var(--secondary)" },
+                                            { label: "랜딩 방문", value: ad.landing_visits.toLocaleString(), color: "var(--accent)" },
+                                            { label: "예산", value: `₩${ad.total_budget.toLocaleString()}`, color: "#D97706" },
+                                        ].map(m => (
+                                            <div key={m.label} className="rounded-xl p-2 text-center"
+                                                style={{ background: "var(--surface-2)" }}>
+                                                <p className="text-[9px] font-bold mb-0.5" style={{ color: "var(--foreground-muted)" }}>{m.label}</p>
+                                                <p className="text-[11px] font-black" style={{ color: m.color }}>{m.value}</p>
+                                            </div>
+                                        ))}
+                                    </div>
+
+                                    {/* 기간 프로그레스 바 */}
+                                    <div>
+                                        <div className="h-1.5 rounded-full overflow-hidden" style={{ background: "var(--surface-2)" }}>
+                                            <div className="h-full rounded-full"
+                                                style={{ width: `${progressPct}%`, background: "linear-gradient(90deg, #D97706, #F59E0B)", transition: "width 0.5s" }} />
+                                        </div>
+                                        <div className="flex justify-between mt-1">
+                                            <span className="text-[9px]" style={{ color: "var(--foreground-muted)" }}>
+                                                {new Date(ad.start_date).toLocaleDateString("ko-KR", { month: "short", day: "numeric" })}
+                                            </span>
+                                            <span className="text-[9px]" style={{ color: "var(--foreground-muted)" }}>
+                                                {new Date(ad.end_date).toLocaleDateString("ko-KR", { month: "short", day: "numeric" })}
+                                            </span>
+                                        </div>
                                     </div>
                                 </div>
                             );

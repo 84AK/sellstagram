@@ -44,12 +44,13 @@ interface SimResult {
     created_at: string;
 }
 
-// 광고 예산 플랜
+// 광고 플랜 (일일 예산 기준)
 const AD_PLANS = [
-    { budget: 3000,  label: "스타터",   mult: 1.3, emoji: "🌱", desc: "노출 1.3배" },
-    { budget: 10000, label: "부스트",   mult: 2.0, emoji: "🚀", desc: "노출 2배" },
-    { budget: 30000, label: "프리미엄", mult: 3.5, emoji: "💎", desc: "노출 3.5배" },
+    { dailyBudget: 3000,  label: "스타터",   mult: 1.3, emoji: "🌱", dailyReach: 300 },
+    { dailyBudget: 10000, label: "부스트",   mult: 2.0, emoji: "🚀", dailyReach: 1000 },
+    { dailyBudget: 30000, label: "프리미엄", mult: 3.5, emoji: "💎", dailyReach: 3500 },
 ];
+const AD_DURATIONS = [1, 3, 7];
 
 interface FeedCardProps {
     id: string;
@@ -113,6 +114,13 @@ export default function FeedCard({ id, user, content, stats, timeAgo, sellingPri
     const [adBudget, setAdBudget] = useState<number | null>(initialAdBudget ?? null);
     const [showAdModal, setShowAdModal] = useState(false);
     const [adRunning, setAdRunning] = useState(false);
+    const [selectedPlanIdx, setSelectedPlanIdx] = useState(1); // 기본: 부스트
+    const [selectedDays, setSelectedDays] = useState(3);       // 기본: 3일
+    const [activeCampaign, setActiveCampaign] = useState<{
+        id: string; total_budget: number; daily_budget: number; duration_days: number;
+        start_date: string; end_date: string; status: string;
+        impressions: number; landing_visits: number; mult: number;
+    } | null>(null);
 
     const { addInsight, startCampaign, setAIReportModal, addSkillXP, user: currentUser, balance, spendBalance } = useGameStore();
     const router = useRouter();
@@ -127,6 +135,29 @@ export default function FeedCard({ id, user, content, stats, timeAgo, sellingPri
             .eq("is_ai_reaction", false)
             .then(({ count }) => setHumanCommentCount(count ?? 0));
     }, [id]);
+
+    // 광고 캠페인 로드 (내 게시물만)
+    useEffect(() => {
+        if (!isMyPost) return;
+        supabase
+            .from("ad_campaigns")
+            .select("id,total_budget,daily_budget,duration_days,start_date,end_date,status,impressions,landing_visits,mult")
+            .eq("post_id", id)
+            .eq("status", "active")
+            .maybeSingle()
+            .then(({ data }) => {
+                if (!data) return;
+                // 종료일이 지났으면 completed로 업데이트
+                const now = new Date();
+                if (data.end_date && new Date(data.end_date) < now) {
+                    supabase.from("ad_campaigns").update({ status: "completed" }).eq("id", data.id);
+                    setAdBudget(null);
+                } else {
+                    setActiveCampaign(data);
+                    setAdBudget(data.daily_budget);
+                }
+            });
+    }, [id, isMyPost]);
 
     // 인게이지먼트 실시간 계산 (좋아요+실제댓글+공유 / 기준팔로워 500명)
     const BASE_FOLLOWERS = 500;
@@ -224,26 +255,64 @@ export default function FeedCard({ id, user, content, stats, timeAgo, sellingPri
     }, [showComments]);
 
     // 광고 집행 핸들러
-    const handleRunAd = async (budget: number) => {
-        if (adRunning || balance < budget) return;
+    const handleRunAd = async () => {
+        const plan = AD_PLANS[selectedPlanIdx];
+        const totalCost = plan.dailyBudget * selectedDays;
+        if (adRunning || balance < totalCost) return;
         setAdRunning(true);
         try {
-            // 잔고 차감 (로컬 + Supabase)
-            spendBalance(budget);
             const { data: { session } } = await supabase.auth.getSession();
-            if (session?.user) {
-                const { data: prof } = await supabase.from("profiles").select("balance").eq("id", session.user.id).single();
-                if (prof) {
-                    await supabase.from("profiles").update({ balance: Math.max(0, prof.balance - budget) }).eq("id", session.user.id);
-                }
+            if (!session?.user) return;
+
+            // 총 예산 차감 (로컬 + Supabase)
+            spendBalance(totalCost);
+            const { data: prof } = await supabase.from("profiles").select("balance").eq("id", session.user.id).single();
+            if (prof) {
+                await supabase.from("profiles").update({ balance: Math.max(0, prof.balance - totalCost) }).eq("id", session.user.id);
             }
-            // posts 테이블에 ad_budget 저장 (기존 값보다 크면 업데이트)
-            await supabase.from("posts").update({ ad_budget: budget }).eq("id", id);
-            setAdBudget(budget);
+
+            // 기존 active 캠페인 완료 처리
+            if (activeCampaign) {
+                await supabase.from("ad_campaigns").update({ status: "completed" }).eq("id", activeCampaign.id);
+            }
+
+            // 새 캠페인 생성
+            const startDate = new Date();
+            const endDate = new Date(startDate.getTime() + selectedDays * 24 * 60 * 60 * 1000);
+            const { data: newCampaign } = await supabase.from("ad_campaigns").insert({
+                post_id: id,
+                user_id: session.user.id,
+                user_handle: user.handle,
+                total_budget: totalCost,
+                daily_budget: plan.dailyBudget,
+                duration_days: selectedDays,
+                mult: plan.mult,
+                start_date: startDate.toISOString(),
+                end_date: endDate.toISOString(),
+                status: "active",
+                impressions: 0,
+                landing_visits: 0,
+            }).select().single();
+
+            // posts 테이블 ad_budget 동기화
+            await supabase.from("posts").update({ ad_budget: plan.dailyBudget }).eq("id", id);
+
+            setAdBudget(plan.dailyBudget);
+            if (newCampaign) setActiveCampaign(newCampaign);
             setShowAdModal(false);
         } finally {
             setAdRunning(false);
         }
+    };
+
+    // 광고 중단
+    const handleStopAd = async () => {
+        if (!activeCampaign) return;
+        await supabase.from("ad_campaigns").update({ status: "paused" }).eq("id", activeCampaign.id);
+        await supabase.from("posts").update({ ad_budget: 0 }).eq("id", id);
+        setActiveCampaign(null);
+        setAdBudget(null);
+        setShowAdModal(false);
     };
 
     const handleAIAnalyze = async () => {
@@ -929,25 +998,48 @@ export default function FeedCard({ id, user, content, stats, timeAgo, sellingPri
             )}
         </article>
 
-        {/* ─── 광고 집행 모달 ─── */}
-        {showAdModal && (
+        {/* ─── 광고 모달 ─── */}
+        {showAdModal && (() => {
+            const plan = AD_PLANS[selectedPlanIdx];
+            const totalCost = plan.dailyBudget * selectedDays;
+            const canAfford = balance >= totalCost;
+            const totalReach = plan.dailyReach * selectedDays;
+
+            // 진행 중인 캠페인 성과 계산
+            let elapsedDays = 0;
+            let remainDays = 0;
+            let simImpressions = 0;
+            if (activeCampaign) {
+                const now = Date.now();
+                const start = new Date(activeCampaign.start_date).getTime();
+                const end = new Date(activeCampaign.end_date).getTime();
+                elapsedDays = Math.min((now - start) / 86400000, activeCampaign.duration_days);
+                remainDays = Math.max(0, Math.ceil((end - now) / 86400000));
+                const activePlan = AD_PLANS.find(p => p.dailyBudget === activeCampaign.daily_budget) ?? AD_PLANS[0];
+                simImpressions = Math.round(elapsedDays * activePlan.dailyReach * (0.85 + Math.random() * 0.3));
+            }
+
+            return (
             <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center"
-                style={{ background: "rgba(0,0,0,0.5)" }}
+                style={{ background: "rgba(0,0,0,0.6)", backdropFilter: "blur(4px)" }}
                 onClick={(e) => { if (e.target === e.currentTarget) setShowAdModal(false); }}
             >
-                <div className="w-full max-w-sm rounded-t-3xl md:rounded-3xl overflow-hidden"
-                    style={{ background: "var(--surface)" }}>
+                <div className="w-full max-w-sm rounded-t-3xl md:rounded-3xl overflow-y-auto"
+                    style={{ background: "var(--surface)", maxHeight: "90vh" }}>
+
                     {/* 헤더 */}
-                    <div className="px-5 py-4 flex items-center justify-between"
-                        style={{ borderBottom: "1px solid var(--border)" }}>
+                    <div className="px-5 py-4 flex items-center justify-between sticky top-0 z-10"
+                        style={{ borderBottom: "1px solid var(--border)", background: "var(--surface)" }}>
                         <div className="flex items-center gap-2">
                             <div className="w-8 h-8 rounded-xl flex items-center justify-center"
                                 style={{ background: "rgba(217,119,6,0.12)" }}>
                                 <Megaphone size={15} style={{ color: "#D97706" }} />
                             </div>
                             <div>
-                                <p className="text-sm font-black" style={{ color: "var(--foreground)" }}>광고 집행하기</p>
-                                <p className="text-[10px]" style={{ color: "var(--foreground-muted)" }}>내 잔고: ₩{balance.toLocaleString()}</p>
+                                <p className="text-sm font-black" style={{ color: "var(--foreground)" }}>
+                                    {activeCampaign ? "광고 관리" : "광고 집행하기"}
+                                </p>
+                                <p className="text-[10px]" style={{ color: "var(--foreground-muted)" }}>잔고: ₩{balance.toLocaleString()}</p>
                             </div>
                         </div>
                         <button onClick={() => setShowAdModal(false)}
@@ -956,76 +1048,154 @@ export default function FeedCard({ id, user, content, stats, timeAgo, sellingPri
                         </button>
                     </div>
 
-                    {/* 현재 광고 중이면 상태 표시 */}
-                    {adBudget && (
-                        <div className="mx-4 mt-4 p-3 rounded-2xl flex items-center gap-2"
-                            style={{ background: "rgba(217,119,6,0.08)", border: "1px solid rgba(217,119,6,0.25)" }}>
-                            <Zap size={14} style={{ color: "#D97706" }} />
-                            <p className="text-xs font-bold" style={{ color: "#D97706" }}>
-                                현재 ₩{adBudget.toLocaleString()} 광고 집행 중 · 시뮬레이션에서 전환율 ×{AD_PLANS.find(p => p.budget === adBudget)?.mult ?? "?"}배 적용
-                            </p>
-                        </div>
-                    )}
+                    <div className="p-5 flex flex-col gap-5">
 
-                    {/* 광고 플랜 선택 */}
-                    <div className="p-4 flex flex-col gap-3">
-                        <p className="text-[11px] font-bold px-1" style={{ color: "var(--foreground-muted)" }}>
-                            💡 광고비를 쓸수록 AI 가상 고객 노출이 늘고, 시뮬레이션 구매 전환율이 올라가요
-                        </p>
-                        {AD_PLANS.map((plan) => {
-                            const canAfford = balance >= plan.budget;
-                            const isActive = adBudget === plan.budget;
-                            return (
-                                <button
-                                    key={plan.budget}
-                                    onClick={() => !isActive && handleRunAd(plan.budget)}
-                                    disabled={!canAfford || adRunning || isActive}
-                                    className="flex items-center gap-3 p-4 rounded-2xl text-left transition-all"
-                                    style={{
-                                        background: isActive
-                                            ? "rgba(217,119,6,0.10)"
-                                            : canAfford ? "var(--surface-2)" : "var(--surface-2)",
-                                        border: isActive
-                                            ? "2px solid #D97706"
-                                            : "1.5px solid var(--border)",
-                                        opacity: !canAfford && !isActive ? 0.4 : 1,
-                                    }}
-                                >
-                                    <span className="text-2xl">{plan.emoji}</span>
-                                    <div className="flex-1">
-                                        <div className="flex items-center gap-2">
-                                            <span className="text-sm font-black" style={{ color: "var(--foreground)" }}>
-                                                {plan.label}
-                                            </span>
-                                            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full"
-                                                style={{ background: "rgba(217,119,6,0.12)", color: "#D97706" }}>
-                                                {plan.desc}
-                                            </span>
-                                            {isActive && (
-                                                <span className="text-[10px] font-black px-1.5 py-0.5 rounded-full"
-                                                    style={{ background: "#D97706", color: "white" }}>집행 중</span>
-                                            )}
-                                        </div>
-                                        <p className="text-xs mt-0.5" style={{ color: "var(--foreground-muted)" }}>
-                                            시뮬레이션 구매 전환율 ×{plan.mult}배 · ROAS 학습
-                                        </p>
+                        {/* ── 진행 중인 캠페인 성과 ── */}
+                        {activeCampaign && (
+                            <div className="flex flex-col gap-3">
+                                {/* 상태 배너 */}
+                                <div className="flex items-center justify-between p-3 rounded-2xl"
+                                    style={{ background: "rgba(217,119,6,0.08)", border: "1px solid rgba(217,119,6,0.25)" }}>
+                                    <div className="flex items-center gap-2">
+                                        <span className="w-2 h-2 rounded-full bg-orange-500 animate-pulse inline-block" />
+                                        <span className="text-xs font-black" style={{ color: "#D97706" }}>광고 집행 중</span>
                                     </div>
-                                    <span className="text-sm font-black" style={{ color: canAfford ? "#D97706" : "var(--foreground-muted)" }}>
-                                        ₩{plan.budget.toLocaleString()}
+                                    <span className="text-xs font-bold" style={{ color: "#D97706" }}>
+                                        {remainDays > 0 ? `D-${remainDays} 남음` : "오늘 종료"}
                                     </span>
+                                </div>
+
+                                {/* 성과 지표 그리드 */}
+                                <div className="grid grid-cols-2 gap-2">
+                                    {[
+                                        { label: "예상 노출", value: simImpressions.toLocaleString(), sub: "명", color: "var(--secondary)" },
+                                        { label: "랜딩 방문", value: activeCampaign.landing_visits.toLocaleString(), sub: "명", color: "var(--accent)" },
+                                        { label: "집행 예산", value: `₩${activeCampaign.total_budget.toLocaleString()}`, sub: `${activeCampaign.duration_days}일`, color: "#D97706" },
+                                        { label: "전환율 부스트", value: `×${activeCampaign.mult}배`, sub: AD_PLANS.find(p=>p.dailyBudget===activeCampaign.daily_budget)?.label ?? "", color: "var(--primary)" },
+                                    ].map(item => (
+                                        <div key={item.label} className="p-3 rounded-2xl flex flex-col gap-1"
+                                            style={{ background: "var(--surface-2)", border: "1px solid var(--border)" }}>
+                                            <span className="text-[10px] font-bold uppercase" style={{ color: "var(--foreground-muted)" }}>{item.label}</span>
+                                            <span className="text-base font-black" style={{ color: item.color }}>{item.value}</span>
+                                            <span className="text-[10px]" style={{ color: "var(--foreground-muted)" }}>{item.sub}</span>
+                                        </div>
+                                    ))}
+                                </div>
+
+                                {/* 기간 바 */}
+                                <div>
+                                    <div className="flex justify-between text-[10px] font-bold mb-1.5" style={{ color: "var(--foreground-muted)" }}>
+                                        <span>{new Date(activeCampaign.start_date).toLocaleDateString("ko-KR", { month: "short", day: "numeric" })} 시작</span>
+                                        <span>{new Date(activeCampaign.end_date).toLocaleDateString("ko-KR", { month: "short", day: "numeric" })} 종료</span>
+                                    </div>
+                                    <div className="h-2 rounded-full overflow-hidden" style={{ background: "var(--surface-2)" }}>
+                                        <div className="h-full rounded-full transition-all"
+                                            style={{
+                                                width: `${Math.min(100, (elapsedDays / activeCampaign.duration_days) * 100)}%`,
+                                                background: "linear-gradient(90deg, #D97706, #F59E0B)"
+                                            }} />
+                                    </div>
+                                </div>
+
+                                <button
+                                    onClick={handleStopAd}
+                                    className="w-full py-3 rounded-2xl text-sm font-bold transition-all"
+                                    style={{ background: "var(--surface-2)", border: "1px solid var(--border)", color: "var(--foreground-soft)" }}
+                                >
+                                    광고 중단하기
                                 </button>
-                            );
-                        })}
-                        {adRunning && (
-                            <div className="flex items-center justify-center gap-2 py-2">
-                                <Loader2 size={14} className="animate-spin" style={{ color: "#D97706" }} />
-                                <span className="text-xs font-bold" style={{ color: "#D97706" }}>광고 집행 중...</span>
+                                <div className="flex items-center gap-2 my-1">
+                                    <div className="flex-1 h-px" style={{ background: "var(--border)" }} />
+                                    <span className="text-[10px] font-bold" style={{ color: "var(--foreground-muted)" }}>새 광고 집행</span>
+                                    <div className="flex-1 h-px" style={{ background: "var(--border)" }} />
+                                </div>
                             </div>
                         )}
+
+                        {/* ── 플랜 선택 ── */}
+                        <div className="flex flex-col gap-2">
+                            <p className="text-[11px] font-black uppercase tracking-widest" style={{ color: "var(--foreground-muted)" }}>광고 플랜</p>
+                            {AD_PLANS.map((p, idx) => (
+                                <button key={idx} onClick={() => setSelectedPlanIdx(idx)}
+                                    className="flex items-center gap-3 p-3.5 rounded-2xl text-left transition-all"
+                                    style={{
+                                        background: selectedPlanIdx === idx ? "rgba(217,119,6,0.08)" : "var(--surface-2)",
+                                        border: selectedPlanIdx === idx ? "2px solid #D97706" : "1.5px solid var(--border)",
+                                    }}>
+                                    <span className="text-xl">{p.emoji}</span>
+                                    <div className="flex-1">
+                                        <p className="text-sm font-black" style={{ color: "var(--foreground)" }}>{p.label}</p>
+                                        <p className="text-[10px]" style={{ color: "var(--foreground-muted)" }}>
+                                            일 ~{p.dailyReach.toLocaleString()}명 노출 · 전환율 ×{p.mult}배
+                                        </p>
+                                    </div>
+                                    <span className="text-sm font-black" style={{ color: "#D97706" }}>
+                                        ₩{p.dailyBudget.toLocaleString()}<span className="text-[10px] font-bold">/일</span>
+                                    </span>
+                                </button>
+                            ))}
+                        </div>
+
+                        {/* ── 기간 선택 ── */}
+                        <div className="flex flex-col gap-2">
+                            <p className="text-[11px] font-black uppercase tracking-widest" style={{ color: "var(--foreground-muted)" }}>광고 기간</p>
+                            <div className="flex gap-2">
+                                {AD_DURATIONS.map(d => (
+                                    <button key={d} onClick={() => setSelectedDays(d)}
+                                        className="flex-1 py-3 rounded-2xl text-sm font-black transition-all"
+                                        style={{
+                                            background: selectedDays === d ? "#D97706" : "var(--surface-2)",
+                                            color: selectedDays === d ? "white" : "var(--foreground-soft)",
+                                            border: selectedDays === d ? "none" : "1px solid var(--border)",
+                                        }}>
+                                        {d}일
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* ── 예산 요약 ── */}
+                        <div className="p-4 rounded-2xl flex flex-col gap-2"
+                            style={{ background: canAfford ? "rgba(217,119,6,0.06)" : "rgba(239,68,68,0.06)",
+                                border: `1px solid ${canAfford ? "rgba(217,119,6,0.25)" : "rgba(239,68,68,0.25)"}` }}>
+                            <div className="flex justify-between text-sm">
+                                <span style={{ color: "var(--foreground-soft)" }}>총 예산</span>
+                                <span className="font-black" style={{ color: canAfford ? "#D97706" : "#EF4444" }}>
+                                    ₩{totalCost.toLocaleString()}
+                                </span>
+                            </div>
+                            <div className="flex justify-between text-[11px]">
+                                <span style={{ color: "var(--foreground-muted)" }}>예상 총 노출</span>
+                                <span className="font-bold" style={{ color: "var(--foreground-soft)" }}>
+                                    ~{totalReach.toLocaleString()}명
+                                </span>
+                            </div>
+                            {!canAfford && (
+                                <p className="text-[11px] font-bold" style={{ color: "#EF4444" }}>
+                                    잔고 부족 (₩{(totalCost - balance).toLocaleString()} 더 필요)
+                                </p>
+                            )}
+                        </div>
+
+                        {/* ── 집행 버튼 ── */}
+                        <button
+                            onClick={handleRunAd}
+                            disabled={!canAfford || adRunning}
+                            className="w-full py-4 rounded-2xl font-black text-sm text-white flex items-center justify-center gap-2 transition-all hover:opacity-90 disabled:opacity-40"
+                            style={{ background: "linear-gradient(135deg, #D97706, #F59E0B)" }}>
+                            {adRunning
+                                ? <><Loader2 size={16} className="animate-spin" /> 처리 중...</>
+                                : <><Megaphone size={16} /> 광고 집행하기 · ₩{totalCost.toLocaleString()}</>
+                            }
+                        </button>
+                        <p className="text-[10px] text-center -mt-2" style={{ color: "var(--foreground-muted)" }}>
+                            광고 집행 시 즉시 예산이 차감되며 {selectedDays}일 후 자동 종료됩니다
+                        </p>
                     </div>
                 </div>
             </div>
-        )}
+            );
+        })()}
 
         {/* ─── 편집 모달 ─── */}
         {showEditModal && (

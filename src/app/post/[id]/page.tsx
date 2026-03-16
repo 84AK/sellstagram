@@ -86,6 +86,19 @@ export default function PostDetailPage() {
             setLocalLikes(data.likes);
             setLocalSoldCount(data.sold_count ?? 0);
 
+            // 랜딩 페이지 방문 추적 (활성 광고 캠페인이 있으면 landing_visits 증가)
+            const { data: campaign } = await supabase
+                .from("ad_campaigns")
+                .select("id, landing_visits, end_date")
+                .eq("post_id", id)
+                .eq("status", "active")
+                .maybeSingle();
+            if (campaign && new Date(campaign.end_date) > new Date()) {
+                await supabase.from("ad_campaigns")
+                    .update({ landing_visits: (campaign.landing_visits ?? 0) + 1 })
+                    .eq("id", campaign.id);
+            }
+
             const likedIds: string[] = JSON.parse(localStorage.getItem("liked_posts") || "[]");
             const savedIds: string[] = JSON.parse(localStorage.getItem("saved_posts") || "[]");
             setIsLiked(likedIds.includes(id));
