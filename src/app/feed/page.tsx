@@ -39,6 +39,7 @@ function dbPostToStorePost(p: DbPost) {
         createdAt: p.created_at,
         sellingPrice: p.selling_price ?? undefined,
         landingImages: p.landing_images ?? undefined,
+        images: p.images && p.images.length > 0 ? p.images : undefined,
     };
 }
 

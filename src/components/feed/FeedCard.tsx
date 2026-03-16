@@ -17,6 +17,8 @@ import {
     Check,
     Pencil,
     Trash2,
+    ChevronLeft,
+    ChevronRight,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import TermTooltip from "../common/TermTooltip";
@@ -48,9 +50,10 @@ interface FeedCardProps {
     timeAgo: string;
     sellingPrice?: number;
     landingImages?: string[];
+    images?: string[];
 }
 
-export default function FeedCard({ id, user, content, stats, timeAgo, sellingPrice, landingImages }: FeedCardProps) {
+export default function FeedCard({ id, user, content, stats, timeAgo, sellingPrice, landingImages, images }: FeedCardProps) {
     const [isLiked, setIsLiked] = useState(false);
     const [localLikes, setLocalLikes] = useState(stats.likes);
     const [isSaved, setIsSaved] = useState(false);
@@ -75,6 +78,12 @@ export default function FeedCard({ id, user, content, stats, timeAgo, sellingPri
     const [showSimResult, setShowSimResult] = useState(false);
     // AI 반응 제외한 실제 사람 댓글 수
     const [humanCommentCount, setHumanCommentCount] = useState(0);
+    // 이미지 캐러셀
+    const allImages = images && images.length > 0 ? images : (content.image ? [content.image] : []);
+    const [imgIdx, setImgIdx] = useState(0);
+    // 캡션 더보기
+    const CAPTION_LIMIT = 80;
+    const [captionExpanded, setCaptionExpanded] = useState(false);
     // 편집/삭제
     const [showEditModal, setShowEditModal] = useState(false);
     const [editCaption, setEditCaption] = useState(content.caption);
@@ -402,14 +411,50 @@ export default function FeedCard({ id, user, content, stats, timeAgo, sellingPri
                 </div>
             </div>
 
-            {/* ─── 이미지 ─── */}
-            <div className="relative aspect-square w-full" style={{ background: "var(--surface-2)" }}>
-                {content.image ? (
-                    <img src={content.image} alt={content.caption} className="absolute inset-0 w-full h-full object-cover" />
+            {/* ─── 이미지 캐러셀 ─── */}
+            <div className="relative aspect-square w-full overflow-hidden" style={{ background: "var(--surface-2)" }}>
+                {allImages.length > 0 ? (
+                    <img
+                        src={allImages[imgIdx]}
+                        alt={content.caption}
+                        className="absolute inset-0 w-full h-full object-cover transition-opacity duration-200"
+                    />
                 ) : (
                     <div className="absolute inset-0 flex items-center justify-center">
                         <span className="font-black text-8xl italic select-none" style={{ color: "var(--border)" }}>S</span>
                     </div>
+                )}
+                {allImages.length > 1 && (
+                    <>
+                        <button
+                            onClick={() => setImgIdx(i => Math.max(0, i - 1))}
+                            disabled={imgIdx === 0}
+                            className="absolute left-2 top-1/2 -translate-y-1/2 p-1.5 rounded-full bg-black/40 text-white disabled:opacity-20 transition-opacity hover:bg-black/60 z-10"
+                        >
+                            <ChevronLeft size={18} />
+                        </button>
+                        <button
+                            onClick={() => setImgIdx(i => Math.min(allImages.length - 1, i + 1))}
+                            disabled={imgIdx === allImages.length - 1}
+                            className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-full bg-black/40 text-white disabled:opacity-20 transition-opacity hover:bg-black/60 z-10"
+                        >
+                            <ChevronRight size={18} />
+                        </button>
+                        {/* 인디케이터 점 */}
+                        <div className="absolute bottom-2.5 left-0 right-0 flex justify-center gap-1.5 z-10">
+                            {allImages.map((_, i) => (
+                                <button key={i} onClick={() => setImgIdx(i)}
+                                    className="w-1.5 h-1.5 rounded-full transition-all"
+                                    style={{ background: i === imgIdx ? "white" : "rgba(255,255,255,0.5)" }}
+                                />
+                            ))}
+                        </div>
+                        {/* n/n 표시 */}
+                        <div className="absolute top-2.5 right-2.5 px-2 py-0.5 rounded-full text-[11px] font-bold text-white z-10"
+                            style={{ background: "rgba(0,0,0,0.45)" }}>
+                            {imgIdx + 1}/{allImages.length}
+                        </div>
+                    </>
                 )}
             </div>
 
@@ -493,9 +538,19 @@ export default function FeedCard({ id, user, content, stats, timeAgo, sellingPri
             {/* ─── 캡션 + 해시태그 ─── */}
             <div className="px-4 pb-2">
                 <p className="text-[15px] leading-relaxed" style={{ color: "var(--foreground-soft)" }}>
-                    <span className="font-bold" style={{ color: "var(--foreground)" }}>{user.handle} </span>
-                    {content.caption}
+                    {captionExpanded || content.caption.length <= CAPTION_LIMIT
+                        ? content.caption
+                        : content.caption.slice(0, CAPTION_LIMIT) + "..."}
                 </p>
+                {content.caption.length > CAPTION_LIMIT && (
+                    <button
+                        onClick={() => setCaptionExpanded(v => !v)}
+                        className="text-[13px] font-bold mt-0.5 transition-opacity hover:opacity-70"
+                        style={{ color: "var(--foreground-muted)" }}
+                    >
+                        {captionExpanded ? "접기" : "더보기"}
+                    </button>
+                )}
                 {content.tags.length > 0 && (
                     <div className="flex flex-wrap gap-1 mt-1.5">
                         {content.tags.map(tag => (

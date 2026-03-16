@@ -82,9 +82,9 @@ export default function UploadModal() {
     const [showProductPrompt, setShowProductPrompt] = useState(false);
     const [productsLoaded, setProductsLoaded] = useState(false);
 
-    // 이미지 업로드 관련
-    const [selectedFile, setSelectedFile] = useState<File | null>(null);
-    const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+    // 이미지 업로드 관련 (다중)
+    const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+    const [previewUrls, setPreviewUrls] = useState<string[]>([]);
     const [isDragging, setIsDragging] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -150,8 +150,8 @@ export default function UploadModal() {
         setCaption("");
         setTags("");
         setAiPreview("");
-        setSelectedFile(null);
-        setPreviewUrl(null);
+        setSelectedFiles([]);
+        setPreviewUrls([]);
         setShowResult(false);
         setSimResult(null);
         setPersonaReactions([]);
@@ -162,19 +162,24 @@ export default function UploadModal() {
         setProductsLoaded(false);
     };
 
-    const handleFileSelect = (file: File) => {
-        if (!file.type.startsWith("image/")) return;
-        if (file.size > 10 * 1024 * 1024) { alert("10MB 이하 이미지만 업로드 가능해요"); return; }
-        setSelectedFile(file);
-        const url = URL.createObjectURL(file);
-        setPreviewUrl(url);
+    const handleFilesSelect = (incoming: FileList | File[] | null) => {
+        if (!incoming) return;
+        const arr = Array.from(incoming).filter(f => f.type.startsWith("image/") && f.size <= 10 * 1024 * 1024);
+        const merged = [...selectedFiles, ...arr].slice(0, 10);
+        setSelectedFiles(merged);
+        setPreviewUrls(merged.map(f => URL.createObjectURL(f)));
+    };
+
+    const removePostImage = (idx: number) => {
+        const newFiles = selectedFiles.filter((_, i) => i !== idx);
+        setSelectedFiles(newFiles);
+        setPreviewUrls(newFiles.map(f => URL.createObjectURL(f)));
     };
 
     const handleDrop = (e: React.DragEvent) => {
         e.preventDefault();
         setIsDragging(false);
-        const file = e.dataTransfer.files[0];
-        if (file) handleFileSelect(file);
+        handleFilesSelect(e.dataTransfer.files);
     };
 
     const uploadImageToStorage = async (file: File): Promise<string | null> => {
@@ -296,10 +301,15 @@ export default function UploadModal() {
             const userId = session?.user?.id ?? localStorage.getItem("sellstagram_user_id");
             const tagList = uploadType === "post" ? tags.split(",").map(t => t.trim()).filter(Boolean) : [];
 
-            // 이미지 Storage 업로드
+            // 이미지 Storage 업로드 (다중)
             let imageUrl: string | null = null;
-            if (selectedFile && uploadType === "post") {
-                imageUrl = await uploadImageToStorage(selectedFile);
+            const extraImageUrls: string[] = [];
+            if (selectedFiles.length > 0 && uploadType === "post") {
+                imageUrl = await uploadImageToStorage(selectedFiles[0]);
+                for (let i = 1; i < selectedFiles.length; i++) {
+                    const url = await uploadImageToStorage(selectedFiles[i]);
+                    if (url) extraImageUrls.push(url);
+                }
             }
 
             // 랜딩 페이지 상세 이미지 업로드
@@ -329,6 +339,7 @@ export default function UploadModal() {
                 engagement_rate: "0%",
                 sales: uploadType === "post" ? `₩${parsedSellingPrice ?? 10000}` : null,
                 week: currentWeek,
+                images: extraImageUrls,
                 landing_images: landingImageUrls,
                 selling_price: uploadType === "post" && selectedProduct ? parsedSellingPrice : null,
                 seller_user_id: uploadType === "post" && selectedProduct ? (session?.user?.id ?? null) : null,
@@ -384,7 +395,7 @@ export default function UploadModal() {
 
             // 스킬 XP 적립
             addSkillXP("copywriting", isMissionMode ? 20 : 15);
-            addSkillXP("creative", selectedFile ? 20 : 10);
+            addSkillXP("creative", selectedFiles.length > 0 ? 20 : 10);
             if (challengeMode) addSkillXP("analytics", 15);
 
             setIsUploading(false);
@@ -397,7 +408,7 @@ export default function UploadModal() {
             const sim = simulateMarketingEffect({
                 caption,
                 hashtags: tagList2,
-                visualQuality: selectedFile ? 0.9 : 0.6,
+                visualQuality: selectedFiles.length > 0 ? 0.9 : 0.6,
                 baseFollowers: 500,
             }, parsedPrice);
             setSimResult(sim);
@@ -615,23 +626,51 @@ export default function UploadModal() {
                         ref={fileInputRef}
                         type="file"
                         accept="image/*"
+                        multiple
                         className="hidden"
-                        onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFileSelect(f); }}
+                        onChange={(e) => handleFilesSelect(e.target.files)}
                     />
-                    {previewUrl && uploadType === "post" ? (
-                        <div className="relative w-full rounded-2xl overflow-hidden flex-shrink-0 group/preview">
-                            <img src={previewUrl} alt="preview" className="w-full object-cover max-h-[300px]" />
-                            <div className="absolute inset-0 bg-black/0 group-hover/preview:bg-black/30 transition-colors duration-300" />
-                            <button
-                                onClick={() => { setSelectedFile(null); setPreviewUrl(null); if (fileInputRef.current) fileInputRef.current.value = ""; }}
-                                className="absolute top-3 right-3 p-2 bg-black/60 hover:bg-red-500 text-white rounded-full transition-colors opacity-0 group-hover/preview:opacity-100"
-                            >
-                                <Trash2 size={14} />
-                            </button>
-                            <div className="absolute bottom-3 left-3 px-2 py-1 bg-black/50 rounded-lg flex items-center gap-1.5">
-                                <Upload size={10} className="text-white/70" />
-                                <span className="text-[9px] font-bold text-white/70 uppercase tracking-wider">이미지 선택됨</span>
+                    {previewUrls.length > 0 && uploadType === "post" ? (
+                        <div className="flex flex-col gap-2 flex-shrink-0">
+                            {/* 첫 번째 이미지 (메인) */}
+                            <div className="relative w-full rounded-2xl overflow-hidden group/preview aspect-square">
+                                <img src={previewUrls[0]} alt="preview" className="w-full h-full object-cover" />
+                                <button
+                                    onClick={() => removePostImage(0)}
+                                    className="absolute top-3 right-3 p-2 bg-black/60 hover:bg-red-500 text-white rounded-full transition-colors opacity-0 group-hover/preview:opacity-100"
+                                >
+                                    <Trash2 size={14} />
+                                </button>
+                                <div className="absolute bottom-3 left-3 px-2 py-1 bg-black/50 rounded-lg flex items-center gap-1.5">
+                                    <Upload size={10} className="text-white/70" />
+                                    <span className="text-[9px] font-bold text-white/70 uppercase tracking-wider">{previewUrls.length}장 선택됨</span>
+                                </div>
                             </div>
+                            {/* 추가 이미지 썸네일 + 추가 버튼 */}
+                            {(previewUrls.length > 1 || previewUrls.length < 10) && (
+                                <div className="flex gap-1.5">
+                                    {previewUrls.slice(1).map((url, i) => (
+                                        <div key={i} className="relative w-16 h-16 rounded-xl overflow-hidden group/thumb flex-shrink-0">
+                                            <img src={url} alt="" className="w-full h-full object-cover" />
+                                            <button
+                                                onClick={() => removePostImage(i + 1)}
+                                                className="absolute inset-0 bg-black/50 opacity-0 group-hover/thumb:opacity-100 transition-opacity flex items-center justify-center"
+                                            >
+                                                <Trash2 size={12} className="text-white" />
+                                            </button>
+                                        </div>
+                                    ))}
+                                    {previewUrls.length < 10 && (
+                                        <button
+                                            onClick={() => fileInputRef.current?.click()}
+                                            className="w-16 h-16 rounded-xl border-2 border-dashed flex items-center justify-center flex-shrink-0 transition-colors hover:border-primary/50"
+                                            style={{ borderColor: "var(--border)" }}
+                                        >
+                                            <Upload size={16} style={{ color: "var(--foreground-muted)" }} />
+                                        </button>
+                                    )}
+                                </div>
+                            )}
                         </div>
                     ) : (
                         <div
@@ -646,9 +685,9 @@ export default function UploadModal() {
                             </div>
                             <div className="flex flex-col items-center gap-1 z-10">
                                 <span className="text-[10px] font-black text-foreground/40 uppercase tracking-widest">
-                                    {isDragging ? "여기에 놓으세요!" : (uploadType === "post" ? "Upload Marketing Image" : "Upload Vertical Video")}
+                                    {isDragging ? "여기에 놓으세요!" : (uploadType === "post" ? "이미지 업로드 (최대 10장)" : "Upload Vertical Video")}
                                 </span>
-                                <span className="text-[8px] font-bold text-foreground/20 uppercase tracking-tight">Drag and drop or click to browse • Max 10MB</span>
+                                <span className="text-[8px] font-bold text-foreground/20 uppercase tracking-tight">Drag and drop or click to browse • Max 10MB each</span>
                             </div>
                             <div className={`absolute inset-0 bg-primary/5 transition-opacity ${isDragging ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`} />
                         </div>
