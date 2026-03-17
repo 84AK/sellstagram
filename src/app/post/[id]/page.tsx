@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase/client";
 import { useGameStore } from "@/store/useGameStore";
@@ -77,7 +77,10 @@ export default function PostDetailPage() {
     const [editPrice, setEditPrice] = useState("");
     const [editCaption, setEditCaption] = useState("");
     const [editTags, setEditTags] = useState("");
+    const [editLandingImages, setEditLandingImages] = useState<string[]>([]);
+    const [landingUploading, setLandingUploading] = useState(false);
     const [editSaving, setEditSaving] = useState(false);
+    const landingFileRef = useRef<HTMLInputElement>(null);
 
     /* ── 데이터 로드 ── */
     useEffect(() => {
@@ -222,7 +225,33 @@ export default function PostDetailPage() {
         setEditPrice(String(post.selling_price ?? ""));
         setEditCaption(post.caption ?? "");
         setEditTags((post.tags ?? []).join(", "));
+        setEditLandingImages(post.landing_images ?? []);
         setShowEditLanding(true);
+    };
+
+    const uploadLandingImage = async (file: File): Promise<string | null> => {
+        const { data: { session } } = await supabase.auth.getSession();
+        const userId = session?.user?.id || "anon";
+        const ext = file.name.split(".").pop() ?? "jpg";
+        const path = `${userId}/landing_${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
+        const { error } = await supabase.storage.from("posts").upload(path, file, { cacheControl: "3600" });
+        if (error) return null;
+        const { data: { publicUrl } } = supabase.storage.from("posts").getPublicUrl(path);
+        return publicUrl;
+    };
+
+    const handleLandingImageSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const files = Array.from(e.target.files ?? []);
+        if (!files.length) return;
+        setLandingUploading(true);
+        const urls: string[] = [];
+        for (const file of files) {
+            const url = await uploadLandingImage(file);
+            if (url) urls.push(url);
+        }
+        setEditLandingImages(prev => [...prev, ...urls]);
+        setLandingUploading(false);
+        e.target.value = "";
     };
 
     const handleLandingEditSave = async () => {
@@ -235,13 +264,14 @@ export default function PostDetailPage() {
             selling_price: price,
             caption: editCaption.trim(),
             tags: tagList,
+            landing_images: editLandingImages,
         }).eq("id", post.id);
         if (error) {
             alert("저장에 실패했어요. 다시 시도해주세요.");
             setEditSaving(false);
             return;
         }
-        setPost(prev => prev ? { ...prev, selling_price: price, caption: editCaption.trim(), tags: tagList } : prev);
+        setPost(prev => prev ? { ...prev, selling_price: price, caption: editCaption.trim(), tags: tagList, landing_images: editLandingImages } : prev);
         setEditSaving(false);
         setShowEditLanding(false);
     };
@@ -846,7 +876,50 @@ export default function PostDetailPage() {
                             </button>
                         </div>
 
-                        <div className="px-5 py-5 flex flex-col gap-5">
+                        <div className="px-5 py-5 flex flex-col gap-5 overflow-y-auto max-h-[70vh]">
+                            {/* 랜딩 이미지 */}
+                            <div>
+                                <label className="text-[12px] font-bold mb-1.5 block" style={{ color: "var(--foreground-soft)" }}>
+                                    상세 이미지 ({editLandingImages.length}장)
+                                </label>
+                                <div className="flex gap-2 overflow-x-auto pb-1 pt-0.5 items-center">
+                                    {editLandingImages.map((img, idx) => (
+                                        <div key={idx} className="relative shrink-0 group">
+                                            <div className="w-20 h-20 rounded-xl overflow-hidden"
+                                                style={{ border: "1.5px solid var(--border)" }}>
+                                                <img src={img} alt={`상세 ${idx + 1}`} className="w-full h-full object-cover" />
+                                            </div>
+                                            <span className="absolute top-1 left-1 w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-black text-white"
+                                                style={{ background: "rgba(0,0,0,0.5)" }}>
+                                                {idx + 1}
+                                            </span>
+                                            <button
+                                                onClick={() => setEditLandingImages(prev => prev.filter((_, i) => i !== idx))}
+                                                className="absolute top-1 right-1 w-5 h-5 rounded-full flex items-center justify-center text-white opacity-0 group-hover:opacity-100 active:opacity-100 transition-opacity"
+                                                style={{ background: "#EF4444" }}
+                                            >
+                                                <X size={10} />
+                                            </button>
+                                        </div>
+                                    ))}
+                                    <label className="shrink-0 w-20 h-20 rounded-xl flex flex-col items-center justify-center gap-1 cursor-pointer"
+                                        style={{ border: "1.5px dashed var(--border)", background: "var(--surface-2)" }}>
+                                        {landingUploading
+                                            ? <Loader2 size={18} className="animate-spin" style={{ color: "var(--foreground-muted)" }} />
+                                            : <>
+                                                <span className="text-xl font-bold" style={{ color: "var(--foreground-muted)" }}>+</span>
+                                                <span className="text-[9px] font-bold" style={{ color: "var(--foreground-muted)" }}>추가</span>
+                                              </>
+                                        }
+                                        <input ref={landingFileRef} type="file" accept="image/*" multiple className="hidden"
+                                            onChange={handleLandingImageSelect} disabled={landingUploading} />
+                                    </label>
+                                </div>
+                                <p className="text-[11px] mt-1" style={{ color: "var(--foreground-muted)" }}>
+                                    썸네일 위에서 × 버튼으로 삭제할 수 있어요
+                                </p>
+                            </div>
+
                             {/* 판매가격 */}
                             <div>
                                 <label className="text-[12px] font-bold mb-1.5 block" style={{ color: "var(--foreground-soft)" }}>
@@ -890,9 +963,6 @@ export default function PostDetailPage() {
                                     className="w-full px-4 py-3 rounded-xl text-sm font-semibold outline-none"
                                     style={{ background: "var(--surface-2)", border: "1.5px solid var(--border)", color: "var(--foreground)" }}
                                 />
-                                <p className="text-[11px] mt-1" style={{ color: "var(--foreground-muted)" }}>
-                                    이미지 수정은 피드의 게시물 수정에서 할 수 있어요
-                                </p>
                             </div>
 
                             {/* 저장 버튼 */}
