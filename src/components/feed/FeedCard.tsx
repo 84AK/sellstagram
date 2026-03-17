@@ -495,13 +495,20 @@ export default function FeedCard({ id, user, content, stats, timeAgo, sellingPri
         setEditSaving(true);
         const tagList = editTags.split(",").map(t => t.trim()).filter(Boolean);
         const firstImg = editImages[0] ?? "";
-        await supabase.from("posts").update({
+        // images 컬럼은 첫 번째 이미지(image_url)를 제외한 나머지만 저장
+        const extraImages = editImages.slice(1);
+        const { error } = await supabase.from("posts").update({
             caption: editCaption,
             tags: tagList,
-            images: editImages,
             image_url: firstImg,
+            images: extraImages,
             landing_images: editLandingImages,
         }).eq("id", id);
+        if (error) {
+            alert("저장에 실패했어요. 다시 시도해주세요.");
+            setEditSaving(false);
+            return;
+        }
         content.caption = editCaption;
         content.tags = tagList;
         content.image = firstImg;
