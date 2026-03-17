@@ -125,13 +125,14 @@ export default function Sidebar() {
         await supabase.auth.signOut();
     };
 
+    const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
     if (!user.role && !isAdmin) return null;
 
     const level = Math.floor(user.points / 100) + 1;
     const xpProgress = user.points % 100;
 
     const W = sidebarExpanded ? 240 : 72;
-    const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
     // 드로어 열릴 때 body 스크롤 방지
     const closeMobileMenu = () => setMobileMenuOpen(false);

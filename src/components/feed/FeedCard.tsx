@@ -138,7 +138,7 @@ export default function FeedCard({ id, user, content, stats, timeAgo, sellingPri
             .then(({ count }) => setHumanCommentCount(count ?? 0));
     }, [id]);
 
-    // 광고 캠페인 로드 (내 게시물만)
+    // 광고 캠페인 로드 + 경과일 기반 시뮬레이션 실행 (내 게시물만)
     useEffect(() => {
         if (!isMyPost) return;
         supabase
@@ -147,16 +147,66 @@ export default function FeedCard({ id, user, content, stats, timeAgo, sellingPri
             .eq("post_id", id)
             .eq("status", "active")
             .maybeSingle()
-            .then(({ data }) => {
+            .then(async ({ data }) => {
                 if (!data) return;
-                // 종료일이 지났으면 completed로 업데이트
                 const now = new Date();
                 if (data.end_date && new Date(data.end_date) < now) {
                     supabase.from("ad_campaigns").update({ status: "completed" }).eq("id", data.id);
                     setAdBudget(null);
-                } else {
-                    setActiveCampaign(data);
-                    setAdBudget(data.daily_budget);
+                    return;
+                }
+
+                setActiveCampaign(data);
+                setAdBudget(data.daily_budget);
+
+                // 경과일 기반 광고 시뮬레이션
+                const startDate = new Date(data.start_date);
+                const msPerDay = 1000 * 60 * 60 * 24;
+                const daysElapsed = Math.max(1, Math.floor((now.getTime() - startDate.getTime()) / msPerDay) + 1);
+                // AI가 분석한 콘텐츠 품질 점수 (광고 집행 시 1회 Gemini 호출 → DB 저장값)
+                // simulated_revenue 필드에 conversionBoost(0.3~2.5)가 저장되어 있음
+                const contentScore = (data.simulated_revenue && data.simulated_revenue > 0 && data.simulated_revenue <= 2.5)
+                    ? data.simulated_revenue
+                    : 1.0;
+                // 하루 도달 인원 (광고 예산 기반) × AI 콘텐츠 품질 점수
+                const adBaseFollowers = Math.floor(data.daily_budget / 10);
+                const daySim = simulateMarketingEffect(
+                    { caption: content.caption, hashtags: content.tags, visualQuality: Math.min(1, contentScore / 2.5), baseFollowers: adBaseFollowers },
+                    sellingPrice ?? 30000
+                );
+                const expectedImpressions = Math.min(
+                    Math.floor(daySim.impressions * daysElapsed * data.mult),
+                    Math.floor(daySim.impressions * data.duration_days * data.mult)
+                );
+
+                if (data.impressions < expectedImpressions) {
+                    const newImpressions = expectedImpressions - data.impressions;
+                    const newLikes = Math.max(1, Math.floor(newImpressions * (daySim.clicks / Math.max(daySim.impressions, 1)) * 0.4));
+                    const newLandingVisits = Math.floor(newImpressions * 0.05);
+
+                    // 광고 캠페인 통계 업데이트
+                    await supabase.from("ad_campaigns").update({
+                        impressions: expectedImpressions,
+                        landing_visits: (data.landing_visits || 0) + newLandingVisits,
+                    }).eq("id", data.id);
+
+                    // 게시물 좋아요 업데이트 (광고 노출로 인한 AI 반응)
+                    const { data: post } = await supabase.from("posts").select("likes, engagement_rate").eq("id", id).single();
+                    if (post) {
+                        const newLikesTotal = (post.likes || 0) + newLikes;
+                        const newEngagement = parseFloat(((newLikesTotal / 500) * 100).toFixed(2));
+                        await supabase.from("posts").update({
+                            likes: newLikesTotal,
+                            engagement_rate: newEngagement,
+                        }).eq("id", id);
+                        setLocalLikes(newLikesTotal);
+                    }
+
+                    setActiveCampaign(prev => prev ? {
+                        ...prev,
+                        impressions: expectedImpressions,
+                        landing_visits: (prev.landing_visits || 0) + newLandingVisits,
+                    } : null);
                 }
             });
     }, [id, isMyPost]);
@@ -278,7 +328,26 @@ export default function FeedCard({ id, user, content, stats, timeAgo, sellingPri
                 await supabase.from("ad_campaigns").update({ status: "completed" }).eq("id", activeCampaign.id);
             }
 
-            // 새 캠페인 생성
+            // AI로 게시물 콘텐츠 품질 분석 (1회만 호출 — conversionBoost 0.3~2.5)
+            let contentScore = 1.0;
+            try {
+                const aiRes = await fetch("/api/simulate/analyze-post", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        caption: content.caption,
+                        tags: content.tags,
+                        price: sellingPrice ?? 30000,
+                        landingImages: landingImages ?? [],
+                    }),
+                });
+                const aiData = await aiRes.json();
+                if (aiData.ok && aiData.analysis?.conversionBoost) {
+                    contentScore = aiData.analysis.conversionBoost;
+                }
+            } catch { /* AI 실패 시 기본값 1.0 유지 */ }
+
+            // 새 캠페인 생성 (content_score를 simulated_revenue에 저장)
             const startDate = new Date();
             const endDate = new Date(startDate.getTime() + selectedDays * 24 * 60 * 60 * 1000);
             const { data: newCampaign } = await supabase.from("ad_campaigns").insert({
@@ -294,6 +363,7 @@ export default function FeedCard({ id, user, content, stats, timeAgo, sellingPri
                 status: "active",
                 impressions: 0,
                 landing_visits: 0,
+                simulated_revenue: contentScore, // AI 분석 콘텐츠 품질 점수 저장
             }).select().single();
 
             // posts 테이블 ad_budget 동기화
@@ -697,6 +767,19 @@ export default function FeedCard({ id, user, content, stats, timeAgo, sellingPri
                         <span className="text-[13px] font-bold" style={{ color: "var(--primary)" }}>
                             {totalEngagements}회 · {engagementRate}%
                         </span>
+                    </div>
+                )}
+                {isMyPost && activeCampaign && activeCampaign.impressions > 0 && (
+                    <div className="flex items-center gap-2 mt-1">
+                        <span className="text-[12px] font-bold px-1.5 py-0.5 rounded-full"
+                            style={{ background: "var(--primary-light)", color: "var(--primary)" }}>
+                            광고 노출 {activeCampaign.impressions.toLocaleString()}회
+                        </span>
+                        {activeCampaign.landing_visits > 0 && (
+                            <span className="text-[12px]" style={{ color: "var(--foreground-muted)" }}>
+                                방문 {activeCampaign.landing_visits.toLocaleString()}회
+                            </span>
+                        )}
                     </div>
                 )}
             </div>
