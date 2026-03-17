@@ -85,9 +85,11 @@ export async function POST(req: NextRequest) {
 
     if (existingProfile) {
         // ── 기존 유저: 재로그인 ──
-        // 익명(anonymous) 유저였다면 email/password 인증 추가
+        // 팀 로그인용 email/password가 설정되어 있는지 확인
+        // (Google OAuth 등 소셜 가입 유저는 email이 다를 수 있으므로 항상 동기화)
         const { data: authData } = await admin.auth.admin.getUserById(existingProfile.id);
-        if (authData?.user && !authData.user.email) {
+        const alreadyHasTeamEmail = authData?.user?.email === email;
+        if (!alreadyHasTeamEmail) {
             await admin.auth.admin.updateUserById(existingProfile.id, {
                 email,
                 password,
