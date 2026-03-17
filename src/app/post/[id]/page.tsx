@@ -7,7 +7,7 @@ import { useGameStore } from "@/store/useGameStore";
 import {
     ArrowLeft, Heart, MessageCircle, Send, Bookmark,
     MoreHorizontal, Loader2, X, Check, Link2, Grid3x3,
-    ShoppingBag, ChevronLeft, ChevronRight, Sparkles,
+    ShoppingBag, ChevronLeft, ChevronRight, Sparkles, Pencil,
 } from "lucide-react";
 
 interface PostDetail {
@@ -71,6 +71,13 @@ export default function PostDetailPage() {
     const [buyError, setBuyError] = useState("");
     const [localSoldCount, setLocalSoldCount] = useState(0);
     const [showBuyModal, setShowBuyModal] = useState(false);
+
+    // 랜딩페이지 수정
+    const [showEditLanding, setShowEditLanding] = useState(false);
+    const [editPrice, setEditPrice] = useState("");
+    const [editCaption, setEditCaption] = useState("");
+    const [editTags, setEditTags] = useState("");
+    const [editSaving, setEditSaving] = useState(false);
 
     /* ── 데이터 로드 ── */
     useEffect(() => {
@@ -208,6 +215,36 @@ export default function PostDetailPage() {
         return () => { if (ch) supabase.removeChannel(ch); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [post?.seller_user_id]);
+
+    /* ── 랜딩페이지 수정 ── */
+    const openEditLanding = () => {
+        if (!post) return;
+        setEditPrice(String(post.selling_price ?? ""));
+        setEditCaption(post.caption ?? "");
+        setEditTags((post.tags ?? []).join(", "));
+        setShowEditLanding(true);
+    };
+
+    const handleLandingEditSave = async () => {
+        if (!post || editSaving) return;
+        const price = parseInt(editPrice.replace(/[^0-9]/g, ""));
+        if (isNaN(price) || price <= 0) { alert("올바른 가격을 입력해주세요."); return; }
+        setEditSaving(true);
+        const tagList = editTags.split(",").map(t => t.trim()).filter(Boolean);
+        const { error } = await supabase.from("posts").update({
+            selling_price: price,
+            caption: editCaption.trim(),
+            tags: tagList,
+        }).eq("id", post.id);
+        if (error) {
+            alert("저장에 실패했어요. 다시 시도해주세요.");
+            setEditSaving(false);
+            return;
+        }
+        setPost(prev => prev ? { ...prev, selling_price: price, caption: editCaption.trim(), tags: tagList } : prev);
+        setEditSaving(false);
+        setShowEditLanding(false);
+    };
 
     /* ── 구매 ── */
     const handleBuy = async () => {
@@ -552,9 +589,18 @@ export default function PostDetailPage() {
                                     <ShoppingBag size={18} /> 로그인하고 구매하기
                                 </a>
                             ) : isMyPost ? (
-                                <div className="w-full py-4 rounded-2xl flex items-center justify-center gap-2 font-black text-sm"
-                                    style={{ background: "var(--surface-2)", border: "1px solid var(--border)", color: "var(--foreground-muted)" }}>
-                                    <ShoppingBag size={18} /> 내 게시물 · 판매 중
+                                <div className="flex gap-2">
+                                    <div className="flex-1 py-4 rounded-2xl flex items-center justify-center gap-2 font-black text-sm"
+                                        style={{ background: "var(--surface-2)", border: "1px solid var(--border)", color: "var(--foreground-muted)" }}>
+                                        <ShoppingBag size={18} /> 내 게시물 · 판매 중
+                                    </div>
+                                    <button
+                                        onClick={openEditLanding}
+                                        className="px-5 py-4 rounded-2xl flex items-center gap-2 font-black text-sm text-white transition-all hover:opacity-90 active:scale-[0.98]"
+                                        style={{ background: "linear-gradient(135deg, var(--secondary), #6B5CE7)" }}
+                                    >
+                                        <Pencil size={16} /> 수정
+                                    </button>
                                 </div>
                             ) : buyDone ? (
                                 <div className="w-full py-4 rounded-2xl flex items-center justify-center gap-2 font-black text-sm text-white"
@@ -779,6 +825,89 @@ export default function PostDetailPage() {
                     </div>
                 )}
             </div>
+
+            {/* ── 랜딩페이지 수정 모달 ── */}
+            {showEditLanding && (
+                <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center p-4 bg-black/60 backdrop-blur-sm"
+                    onClick={() => !editSaving && setShowEditLanding(false)}>
+                    <div className="w-full max-w-lg rounded-3xl overflow-hidden shadow-2xl"
+                        style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
+                        onClick={e => e.stopPropagation()}>
+
+                        {/* 헤더 */}
+                        <div className="flex items-center justify-between px-5 py-4"
+                            style={{ borderBottom: "1px solid var(--border)" }}>
+                            <h3 className="text-[16px] font-black" style={{ color: "var(--foreground)" }}>
+                                랜딩페이지 수정
+                            </h3>
+                            <button onClick={() => setShowEditLanding(false)} disabled={editSaving}
+                                className="p-1.5 rounded-full" style={{ color: "var(--foreground-muted)" }}>
+                                <X size={18} />
+                            </button>
+                        </div>
+
+                        <div className="px-5 py-5 flex flex-col gap-5">
+                            {/* 판매가격 */}
+                            <div>
+                                <label className="text-[12px] font-bold mb-1.5 block" style={{ color: "var(--foreground-soft)" }}>
+                                    판매 가격 (₩)
+                                </label>
+                                <input
+                                    type="number"
+                                    value={editPrice}
+                                    onChange={e => setEditPrice(e.target.value)}
+                                    placeholder="예: 29000"
+                                    className="w-full px-4 py-3 rounded-xl text-sm font-semibold outline-none"
+                                    style={{ background: "var(--surface-2)", border: "1.5px solid var(--border)", color: "var(--foreground)" }}
+                                />
+                            </div>
+
+                            {/* 상품 설명 */}
+                            <div>
+                                <label className="text-[12px] font-bold mb-1.5 block" style={{ color: "var(--foreground-soft)" }}>
+                                    상품 설명
+                                </label>
+                                <textarea
+                                    value={editCaption}
+                                    onChange={e => setEditCaption(e.target.value)}
+                                    placeholder="상품의 특징, 혜택, 감성적인 설명을 입력하세요"
+                                    rows={4}
+                                    className="w-full px-4 py-3 rounded-xl text-sm leading-relaxed outline-none resize-none"
+                                    style={{ background: "var(--surface-2)", border: "1.5px solid var(--border)", color: "var(--foreground)" }}
+                                />
+                            </div>
+
+                            {/* 해시태그 */}
+                            <div>
+                                <label className="text-[12px] font-bold mb-1.5 block" style={{ color: "var(--foreground-soft)" }}>
+                                    해시태그 (쉼표로 구분)
+                                </label>
+                                <input
+                                    type="text"
+                                    value={editTags}
+                                    onChange={e => setEditTags(e.target.value)}
+                                    placeholder="예: 이어폰, 무선, 노이즈캔슬링"
+                                    className="w-full px-4 py-3 rounded-xl text-sm font-semibold outline-none"
+                                    style={{ background: "var(--surface-2)", border: "1.5px solid var(--border)", color: "var(--foreground)" }}
+                                />
+                                <p className="text-[11px] mt-1" style={{ color: "var(--foreground-muted)" }}>
+                                    이미지 수정은 피드의 게시물 수정에서 할 수 있어요
+                                </p>
+                            </div>
+
+                            {/* 저장 버튼 */}
+                            <button
+                                onClick={handleLandingEditSave}
+                                disabled={editSaving || !editPrice || !editCaption.trim()}
+                                className="w-full py-4 rounded-2xl font-black text-sm text-white transition-all hover:opacity-90 active:scale-[0.98] disabled:opacity-40 flex items-center justify-center gap-2"
+                                style={{ background: "linear-gradient(135deg, var(--secondary), #6B5CE7)" }}
+                            >
+                                {editSaving ? <><Loader2 size={16} className="animate-spin" /> 저장 중...</> : <><Check size={16} /> 저장하기</>}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
