@@ -123,6 +123,7 @@ export default function Sidebar() {
 
     const handleLogout = async () => {
         await supabase.auth.signOut();
+        router.push("/login");
     };
 
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);

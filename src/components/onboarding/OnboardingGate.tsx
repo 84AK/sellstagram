@@ -135,7 +135,7 @@ export default function OnboardingGate({ children }: { children: React.ReactNode
                     missions: [],
                     balance: 100000,
                 });
-                router.push("/");
+                router.push("/login");
             }
         });
 
