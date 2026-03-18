@@ -12,6 +12,7 @@ export interface Activity {
     tip?: string;       // 교사 팁
     aiPrompt?: string;  // Gemini 복사용 프롬프트
     imagePromptGuide?: string; // 이미지 프롬프트 가이드 (Nano Banana 2용)
+    relatedTutorialId?: string; // 연계 튜토리얼 ID (학습 자료 허브)
 }
 
 export interface Session {
@@ -118,6 +119,7 @@ export const CURRICULUM: Session[] = [
                 type: "warmup",
                 tip: "프롬프트 예시를 칠판에 적어두세요: '스마트워치를 홍보하는 인스타그램 광고 카피 3가지 써줘. 20대 타겟.'",
                 aiPrompt: "[상품명]을 홍보하는 인스타그램 광고 카피 3가지를 써줘. 각각 다른 감성으로: 감성적, 유머러스, 정보 중심. 타겟은 20대야.",
+                relatedTutorialId: "copywriting",
             },
             {
                 time: "실습 전",

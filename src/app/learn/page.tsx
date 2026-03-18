@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
+import { useSearchParams, useRouter } from "next/navigation";
 import {
     BookOpen,
     Play,
@@ -513,13 +514,29 @@ function EmptyDetail() {
 ══════════════════════════════════════════════ */
 type OuterTab = "session" | "learn" | "missions";
 
-export default function LearnPage() {
+function LearnPageContent() {
     const { week: currentWeek, setUploadModalOpen } = useGameStore();
     const [outerTab, setOuterTab] = useState<OuterTab>("session");
     const [activeTab, setActiveTab] = useState<Tab>("today");
     const [selected, setSelected] = useState<SelectedItem>(null);
     const [filterDifficulty, setFilterDifficulty] = useState<Difficulty | "전체">("전체");
     const [mobileDetail, setMobileDetail] = useState(false);
+    const searchParams = useSearchParams();
+    const router = useRouter();
+
+    // URL 파라미터로 튜토리얼 자동 선택 (?tutorial=copywriting)
+    useEffect(() => {
+        const tutorialId = searchParams.get("tutorial");
+        if (!tutorialId) return;
+        const tutorial = TUTORIALS.find((t) => t.id === tutorialId);
+        if (!tutorial) return;
+        setOuterTab("learn");
+        setActiveTab("tutorial");
+        setSelected({ type: "tutorial", data: tutorial });
+        setMobileDetail(true);
+        // URL 파라미터 제거 (뒤로가기 시 중복 선택 방지)
+        router.replace("/learn", { scroll: false });
+    }, [searchParams, router]);
 
     const relatedConcepts = CONCEPT_CARDS.filter((c) => c.relatedWeeks.includes(currentWeek));
     const relatedTutorials = TUTORIALS.filter((t) => t.relatedWeeks.includes(currentWeek));
@@ -937,5 +954,13 @@ export default function LearnPage() {
             </div>
         </div>}
         </div>
+    );
+}
+
+export default function LearnPage() {
+    return (
+        <Suspense>
+            <LearnPageContent />
+        </Suspense>
     );
 }

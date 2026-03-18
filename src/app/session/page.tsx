@@ -622,6 +622,23 @@ export function SessionContent({ hideLearnLink }: { hideLearnLink?: boolean } = 
                                             </div>
                                         )}
 
+                                        {/* 연계 튜토리얼 바로가기 버튼 */}
+                                        {activity.relatedTutorialId && (
+                                            <Link
+                                                href={`/learn?tutorial=${activity.relatedTutorialId}`}
+                                                className="w-full py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all hover:opacity-90 active:scale-[0.98]"
+                                                style={{
+                                                    background: "var(--secondary-light)",
+                                                    color: "var(--secondary)",
+                                                    border: "1.5px solid rgba(67,97,238,0.25)",
+                                                }}
+                                            >
+                                                <BookOpen size={15} />
+                                                단계별 실습 가이드 따라하기
+                                                <ChevronRight size={14} />
+                                            </Link>
+                                        )}
+
                                         {/* 실습 타입이면 업로드 버튼 (+XP 표시) */}
                                         {(activity.type === "practice" || activity.type === "wrap") && isCurrentSession && (
                                             <button
