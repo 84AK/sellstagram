@@ -11,6 +11,7 @@ import AIReportModal from "@/components/feed/AIReportModal";
 import { ThemeProvider } from "@/components/common/ThemeProvider";
 import OnboardingGate from "@/components/onboarding/OnboardingGate";
 import MissionCompleteToast from "@/components/common/MissionCompleteToast";
+import PrivacyProvider from "@/components/layout/PrivacyProvider";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -65,13 +66,15 @@ export default function RootLayout({
       >
         <ThemeProvider attribute="data-theme" defaultTheme="light" enableSystem>
           <OnboardingGate>
-            <div className="flex min-h-screen bg-background text-foreground transition-colors duration-300 w-full overflow-x-hidden">
-              {/* Sidebar will show on MD+ screens */}
-              <Sidebar />
+            <PrivacyProvider>
+              <div className="flex min-h-screen bg-background text-foreground transition-colors duration-300 w-full overflow-x-hidden">
+                {/* Sidebar will show on MD+ screens */}
+                <Sidebar />
 
-              {/* Main Content Area */}
-              <ClientLayout>{children}</ClientLayout>
-            </div>
+                {/* Main Content Area */}
+                <ClientLayout>{children}</ClientLayout>
+              </div>
+            </PrivacyProvider>
             <UploadModal />
             <AIReportModal />
             <GuideModal />
