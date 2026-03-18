@@ -432,6 +432,25 @@ function TutorialDetail({
                 ))}
             </div>
 
+            {tutorial.promptTemplate && (
+                <div>
+                    <p className="text-sm font-black mb-2 flex items-center gap-2" style={{ color: "var(--foreground)" }}>
+                        <Sparkles size={14} style={{ color: tutorial.color }} />
+                        이 프롬프트를 복사해서 바로 써보세요!
+                    </p>
+                    <div
+                        className="p-4 rounded-xl text-sm font-mono leading-relaxed whitespace-pre-wrap"
+                        style={{
+                            background: "var(--surface-2)",
+                            color: "var(--foreground)",
+                            borderLeft: `4px solid ${tutorial.color}`,
+                        }}
+                    >
+                        {tutorial.promptTemplate}
+                    </div>
+                </div>
+            )}
+
             <div className="flex items-center gap-2 flex-wrap">
                 <span className="text-sm font-semibold" style={{ color: "var(--foreground-muted)" }}>
                     관련 수업:
