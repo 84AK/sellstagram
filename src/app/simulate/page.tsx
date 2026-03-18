@@ -330,9 +330,11 @@ export default function SimulatePage() {
     const [dbPosts, setDbPosts] = useState<DbPost[]>([]);
     const [aiAnalysis, setAiAnalysis] = useState<SimAnalysisResult | null>(null);
     const [isAnalyzing, setIsAnalyzing] = useState(false);
+    const [celebration, setCelebration] = useState<{ show: boolean; message: string; emoji: string }>({ show: false, message: "", emoji: "" });
     const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
     const eventFeedRef = useRef<HTMLDivElement>(null);
     const lastVisibleCountRef = useRef(0);
+    const milestonesHitRef = useRef<Set<string>>(new Set());
 
     // DB에서 내 게시물 로드
     useEffect(() => {
@@ -478,6 +480,48 @@ export default function SimulatePage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [simState.active, simState.startedAt, durationMs]);
 
+    // allEvents가 처음 세팅될 때 즉시 현재 시각 기준으로 이벤트 표시 (페이지 진입 시 빈 화면 방지)
+    useEffect(() => {
+        if (!simState.active || allEvents.length === 0 || !simState.startedAt) return;
+        const currentElapsed = Date.now() - new Date(simState.startedAt).getTime();
+        const shouldShow = allEvents.filter(e => e.realMs <= currentElapsed);
+        if (shouldShow.length > 0) {
+            setVisibleEvents(shouldShow);
+            lastVisibleCountRef.current = shouldShow.length;
+            setElapsedMs(currentElapsed);
+        }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [allEvents]);
+
+    // 마일스톤 체크 → 폭죽 트리거
+    const checkMilestones = (events: SimEvent[]) => {
+        const likes     = events.filter(e => e.type === "like").length;
+        const shares    = events.filter(e => e.type === "share").length;
+        const purchases = events.filter(e => e.type === "purchase").length;
+
+        const milestones: [string, string, string][] = [
+            [`like-10`,     "좋아요 10개 돌파!",  "❤️"],
+            [`like-30`,     "좋아요 30개 폭발!",  "🔥"],
+            [`share-5`,     "바이럴 시작!",       "🔗"],
+            [`share-10`,    "공유 10회 달성!",    "🚀"],
+            [`purchase-1`,  "첫 구매 발생!",      "🛍️"],
+            [`purchase-3`,  "판매 3건 돌파!",     "💰"],
+            [`purchase-5`,  "판매 5건 달성!",     "🎯"],
+        ];
+
+        for (const [key, message, emoji] of milestones) {
+            if (milestonesHitRef.current.has(key)) continue;
+            const [type, threshold] = key.split("-");
+            const count = type === "like" ? likes : type === "share" ? shares : purchases;
+            if (count >= parseInt(threshold)) {
+                milestonesHitRef.current.add(key);
+                setCelebration({ show: true, message, emoji });
+                setTimeout(() => setCelebration(prev => ({ ...prev, show: false })), 2500);
+                break; // 한 번에 하나씩만
+            }
+        }
+    };
+
     // 이벤트 순차 표시
     useEffect(() => {
         if (!simState.active || allEvents.length === 0) return;
@@ -491,8 +535,9 @@ export default function SimulatePage() {
             if (eventFeedRef.current) {
                 eventFeedRef.current.scrollTop = eventFeedRef.current.scrollHeight;
             }
+            checkMilestones(shouldShow);
         }
-    }, [elapsedMs, allEvents, simState.active]);
+    }, [elapsedMs, allEvents, simState.active]); // eslint-disable-line react-hooks/exhaustive-deps
 
     // 게시물 자동 선택 (DB 로드 시 처리됨, 이 useEffect 불필요)
 
@@ -577,6 +622,42 @@ export default function SimulatePage() {
 
     return (
         <div className="max-w-2xl mx-auto px-4 py-6 pb-28 flex flex-col gap-5">
+
+            {/* 폭죽 축하 오버레이 */}
+            {celebration.show && (
+                <div className="fixed inset-0 z-[500] pointer-events-none flex items-center justify-center">
+                    {/* 파티클 */}
+                    {Array.from({ length: 24 }).map((_, i) => (
+                        <div
+                            key={i}
+                            className="absolute w-3 h-3 rounded-full"
+                            style={{
+                                background: ["#FF6B35","#4361EE","#06D6A0","#FFC233","#FF4081","#7C3AED"][i % 6],
+                                left: `${Math.random() * 100}%`,
+                                top: `${Math.random() * 60 + 20}%`,
+                                animation: `confetti-fall ${0.8 + Math.random() * 1.2}s ease-out forwards`,
+                                animationDelay: `${Math.random() * 0.4}s`,
+                                transform: `rotate(${Math.random() * 360}deg)`,
+                                borderRadius: i % 3 === 0 ? "0" : "50%",
+                                width: i % 2 === 0 ? "10px" : "14px",
+                                height: i % 2 === 0 ? "10px" : "6px",
+                            }}
+                        />
+                    ))}
+                    {/* 메시지 배너 */}
+                    <div
+                        className="px-8 py-5 rounded-3xl text-center shadow-2xl"
+                        style={{
+                            background: "linear-gradient(135deg, #FF6B35, #FFC233)",
+                            animation: "celebration-pop 0.4s cubic-bezier(0.34,1.56,0.64,1) forwards",
+                        }}
+                    >
+                        <div className="text-4xl mb-2">{celebration.emoji}</div>
+                        <p className="text-white font-black text-xl">{celebration.message}</p>
+                    </div>
+                </div>
+            )}
+
             {/* 헤더 */}
             <div className="flex items-center gap-3">
                 <Link href="/feed" className="p-2 rounded-xl" style={{ background: "var(--surface-2)", color: "var(--foreground-soft)" }}>
