@@ -46,6 +46,7 @@ const TYPE_FEATURE_MAP: Record<Activity["type"], AppFeatureKey[]> = {
     practice: ["upload", "ai_coach", "feed"],
     present:  ["feed", "insights"],
     wrap:     ["profile", "missions"],
+    kit:      ["ai_coach", "learn", "upload"],
 };
 
 /* ─── 키워드 기반 추가 기능 추론 ─── */
@@ -81,6 +82,7 @@ const ACTIVITY_TYPE_META: Record<Activity["type"], { label: string; color: strin
     practice: { label: "실습",  color: "#8B5CF6", icon: PenSquare },
     present:  { label: "발표",  color: "#D97706", icon: Users },
     wrap:     { label: "마무리", color: "#06D6A0", icon: Star },
+    kit:      { label: "AI 키트", color: "#0891B2", icon: Target },
 };
 
 function AppFeatureBadge({ featureKey }: { featureKey: AppFeatureKey }) {

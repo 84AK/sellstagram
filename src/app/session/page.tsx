@@ -24,6 +24,8 @@ import {
     PenLine,
     Copy,
     Check,
+    FileText,
+    Image,
 } from "lucide-react";
 import {
     CURRICULUM,
@@ -42,6 +44,7 @@ export function SessionContent() {
     const [showCurriculumMap, setShowCurriculumMap] = useState(false);
     const [showReport, setShowReport] = useState(false);
     const [promptCopied, setPromptCopied] = useState<number | null>(null);
+    const [imagePromptCopied, setImagePromptCopied] = useState<number | null>(null);
     const [teamMembers, setTeamMembers] = useState<{ name: string; avatar: string }[]>([]);
     const [loadingTeam, setLoadingTeam] = useState(true);
     const [unlockedWeeks, setUnlockedWeeks] = useState<number[]>([]);
@@ -81,6 +84,13 @@ export function SessionContent() {
         navigator.clipboard.writeText(text).then(() => {
             setPromptCopied(index);
             setTimeout(() => setPromptCopied(null), 2000);
+        });
+    };
+
+    const copyImagePrompt = (text: string, index: number) => {
+        navigator.clipboard.writeText(text).then(() => {
+            setImagePromptCopied(index);
+            setTimeout(() => setImagePromptCopied(null), 2000);
         });
     };
 
@@ -417,6 +427,8 @@ export function SessionContent() {
                         const isExpanded = expandedActivity === i;
                         const iconEmoji = ACTIVITY_ICONS[activity.type];
                         const isCopied = promptCopied === i;
+                        const isImageCopied = imagePromptCopied === i;
+                        const isKit = activity.type === "kit";
 
                         return (
                             <div
@@ -424,19 +436,36 @@ export function SessionContent() {
                                 className="rounded-2xl overflow-hidden transition-all"
                                 style={{
                                     background: "var(--surface)",
-                                    border: isExpanded ? `1.5px solid ${themeStyle.color}55` : "1px solid var(--border)",
-                                    boxShadow: isExpanded ? `0 4px 20px ${themeStyle.color}11` : "none",
+                                    border: isExpanded
+                                        ? isKit
+                                            ? "1.5px solid var(--secondary)"
+                                            : `1.5px solid ${themeStyle.color}55`
+                                        : "1px solid var(--border)",
+                                    boxShadow: isExpanded
+                                        ? isKit
+                                            ? "0 4px 20px rgba(67,97,238,0.12)"
+                                            : `0 4px 20px ${themeStyle.color}11`
+                                        : "none",
                                 }}
                             >
                                 {/* 활동 헤더 */}
                                 <button
                                     onClick={() => setExpandedActivity(isExpanded ? null : i)}
                                     className="w-full flex items-center gap-4 p-5 text-left"
+                                    style={
+                                        isKit && isExpanded
+                                            ? { background: "linear-gradient(135deg, var(--secondary-light), var(--accent-light))" }
+                                            : {}
+                                    }
                                 >
                                     <div
                                         className="w-11 h-11 rounded-xl flex items-center justify-center text-xl shrink-0"
                                         style={{
-                                            background: isExpanded ? themeStyle.bg : "var(--surface-2)",
+                                            background: isExpanded
+                                                ? isKit
+                                                    ? "linear-gradient(135deg, var(--secondary), var(--accent))"
+                                                    : themeStyle.bg
+                                                : "var(--surface-2)",
                                         }}
                                     >
                                         {iconEmoji}
@@ -446,7 +475,7 @@ export function SessionContent() {
                                         <p className="text-xs font-bold mb-1" style={{ color: "var(--foreground-muted)" }}>
                                             ⏱ {activity.time}
                                         </p>
-                                        <p className="text-base font-bold truncate" style={{ color: "var(--foreground)" }}>
+                                        <p className="text-base font-bold truncate" style={{ color: isKit && isExpanded ? "var(--secondary)" : "var(--foreground)" }}>
                                             {activity.title}
                                         </p>
                                     </div>
@@ -463,8 +492,85 @@ export function SessionContent() {
                                             {activity.desc}
                                         </p>
 
-                                        {/* Gemini 프롬프트 복사 블록 */}
-                                        {activity.aiPrompt && (
+                                        {/* Kit 타입: 텍스트 프롬프트 + 이미지 프롬프트 블록 */}
+                                        {isKit && (
+                                            <>
+                                                {/* 텍스트 프롬프트 */}
+                                                {activity.aiPrompt && (
+                                                    <div
+                                                        className="rounded-xl overflow-hidden"
+                                                        style={{ border: "1.5px solid rgba(67,97,238,0.3)" }}
+                                                    >
+                                                        <div
+                                                            className="flex items-center justify-between px-4 py-2.5"
+                                                            style={{ background: "var(--secondary-light)" }}
+                                                        >
+                                                            <div className="flex items-center gap-2">
+                                                                <FileText size={13} style={{ color: "var(--secondary)" }} />
+                                                                <span className="text-xs font-black" style={{ color: "var(--secondary)" }}>
+                                                                    📝 텍스트 프롬프트
+                                                                </span>
+                                                            </div>
+                                                            <button
+                                                                onClick={() => copyPrompt(activity.aiPrompt!, i)}
+                                                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-black transition-all"
+                                                                style={{
+                                                                    background: isCopied ? "var(--accent)" : "var(--secondary)",
+                                                                    color: "white",
+                                                                }}
+                                                            >
+                                                                {isCopied ? <Check size={11} /> : <Copy size={11} />}
+                                                                {isCopied ? "복사됨!" : "복사"}
+                                                            </button>
+                                                        </div>
+                                                        <div className="px-4 py-3" style={{ background: "var(--surface-2)" }}>
+                                                            <p className="text-sm font-medium leading-relaxed whitespace-pre-line" style={{ color: "var(--foreground-soft)", fontFamily: "monospace" }}>
+                                                                {activity.aiPrompt}
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                )}
+
+                                                {/* 이미지 프롬프트 */}
+                                                {activity.imagePromptGuide && (
+                                                    <div
+                                                        className="rounded-xl overflow-hidden"
+                                                        style={{ border: "1.5px solid rgba(6,214,160,0.3)" }}
+                                                    >
+                                                        <div
+                                                            className="flex items-center justify-between px-4 py-2.5"
+                                                            style={{ background: "var(--accent-light)" }}
+                                                        >
+                                                            <div className="flex items-center gap-2">
+                                                                <Image size={13} style={{ color: "var(--accent)" }} />
+                                                                <span className="text-xs font-black" style={{ color: "var(--accent)" }}>
+                                                                    🎨 이미지 프롬프트 (Nano Banana 2)
+                                                                </span>
+                                                            </div>
+                                                            <button
+                                                                onClick={() => copyImagePrompt(activity.imagePromptGuide!, i)}
+                                                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-black transition-all"
+                                                                style={{
+                                                                    background: isImageCopied ? "var(--secondary)" : "var(--accent)",
+                                                                    color: "white",
+                                                                }}
+                                                            >
+                                                                {isImageCopied ? <Check size={11} /> : <Copy size={11} />}
+                                                                {isImageCopied ? "복사됨!" : "복사"}
+                                                            </button>
+                                                        </div>
+                                                        <div className="px-4 py-3" style={{ background: "var(--surface-2)" }}>
+                                                            <p className="text-sm font-medium leading-relaxed whitespace-pre-line" style={{ color: "var(--foreground-soft)", fontFamily: "monospace" }}>
+                                                                {activity.imagePromptGuide}
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </>
+                                        )}
+
+                                        {/* Non-kit: Gemini 프롬프트 복사 블록 */}
+                                        {!isKit && activity.aiPrompt && (
                                             <div
                                                 className="rounded-xl overflow-hidden"
                                                 style={{ border: `1.5px solid ${themeStyle.color}33` }}
