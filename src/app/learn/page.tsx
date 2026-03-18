@@ -790,7 +790,7 @@ export default function LearnPage() {
             </div>
 
             {/* 오늘의 수업 탭 */}
-            {outerTab === "session" && <SessionContent />}
+            {outerTab === "session" && <SessionContent hideLearnLink />}
 
             {/* 미션 센터 탭 */}
             {outerTab === "missions" && (

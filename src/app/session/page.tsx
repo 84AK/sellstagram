@@ -37,7 +37,7 @@ import {
 import { useGameStore } from "@/store/useGameStore";
 import WeeklyReportModal from "@/components/feed/WeeklyReportModal";
 
-export function SessionContent() {
+export function SessionContent({ hideLearnLink }: { hideLearnLink?: boolean } = {}) {
     const { week: currentWeek, setUploadModalOpen, user } = useGameStore();
     const [viewWeek, setViewWeek] = useState(currentWeek);
     const [expandedActivity, setExpandedActivity] = useState<number | null>(0);
@@ -668,7 +668,8 @@ export function SessionContent() {
             </div>
 
             {/* ── 수업 전후 학습 자료 CTA ── */}
-            <div className="grid grid-cols-2 gap-3">
+            <div className={`grid gap-3 ${hideLearnLink ? "grid-cols-1" : "grid-cols-2"}`}>
+                {!hideLearnLink && (
                 <Link
                     href="/learn"
                     className="rounded-2xl p-5 flex flex-col gap-2.5 transition-all hover:scale-[1.02]"
@@ -682,6 +683,7 @@ export function SessionContent() {
                         마케팅 개념 + AI 도구 가이드
                     </p>
                 </Link>
+                )}
 
                 <Link
                     href="/missions"
