@@ -179,7 +179,7 @@ function checkMissionAchieved(mission: Mission, posts: Post[]): boolean {
 }
 
 export const useGameStore = create<GameState>((set) => ({
-    balance: 100000,
+    balance: 500000,
     inventory: [],
     campaigns: [],
     missionCompletionQueue: [],

@@ -74,7 +74,7 @@ export default function OnboardingGate({ children }: { children: React.ReactNode
                     .select("initial_balance")
                     .eq("id", 1)
                     .single();
-                balance = gs?.initial_balance ?? 100000;
+                balance = gs?.initial_balance ?? 500000;
             }
 
             updateProfile({
@@ -133,7 +133,7 @@ export default function OnboardingGate({ children }: { children: React.ReactNode
                     posts: [],
                     insights: [],
                     missions: [],
-                    balance: 100000,
+                    balance: 500000,
                 });
                 router.push("/login");
             }

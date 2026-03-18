@@ -70,6 +70,7 @@ export default function FeedPage() {
     const [activeMission, setActiveMission] = useState<{ title: string; description: string } | null>(null);
     const [feedTab, setFeedTab] = useState<"simulation" | "channel">("simulation");
     const [channelModalOpen, setChannelModalOpen] = useState(false);
+    const [isLoading, setIsLoading] = useState(true);
 
     const sortedPosts = feedFilter === "hot"
         ? [...posts].sort((a, b) => {
@@ -83,6 +84,7 @@ export default function FeedPage() {
 
     useEffect(() => {
         const loadPosts = async () => {
+            setIsLoading(true);
             const { data, error } = await supabase
                 .from("posts")
                 .select("*")
@@ -91,6 +93,7 @@ export default function FeedPage() {
             if (!error && data && data.length > 0) {
                 useGameStore.setState({ posts: data.map(dbPostToStorePost) });
             }
+            setIsLoading(false);
         };
 
         const loadGameState = async () => {
@@ -356,7 +359,37 @@ export default function FeedPage() {
 
                 {/* 피드 목록 */}
                 <div className="flex flex-col gap-6 pb-24">
-                    {sortedPosts.map((post) =>
+                    {isLoading ? (
+                        // 스켈레톤 로딩 카드
+                        Array.from({ length: 3 }).map((_, i) => (
+                            <div key={i} className="max-w-md mx-auto w-full rounded-2xl overflow-hidden animate-pulse"
+                                style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
+                                {/* 이미지 스켈레톤 */}
+                                <div className="w-full h-56" style={{ background: "var(--surface-2)" }} />
+                                <div className="p-4 flex flex-col gap-3">
+                                    {/* 유저 정보 */}
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-9 h-9 rounded-full" style={{ background: "var(--surface-3)" }} />
+                                        <div className="flex flex-col gap-1.5">
+                                            <div className="h-3 w-24 rounded-full" style={{ background: "var(--surface-3)" }} />
+                                            <div className="h-2.5 w-16 rounded-full" style={{ background: "var(--surface-2)" }} />
+                                        </div>
+                                    </div>
+                                    {/* 캡션 */}
+                                    <div className="flex flex-col gap-2">
+                                        <div className="h-3 w-full rounded-full" style={{ background: "var(--surface-2)" }} />
+                                        <div className="h-3 w-4/5 rounded-full" style={{ background: "var(--surface-2)" }} />
+                                        <div className="h-3 w-3/5 rounded-full" style={{ background: "var(--surface-2)" }} />
+                                    </div>
+                                    {/* 태그 */}
+                                    <div className="flex gap-2">
+                                        <div className="h-6 w-20 rounded-full" style={{ background: "var(--surface-2)" }} />
+                                        <div className="h-6 w-16 rounded-full" style={{ background: "var(--surface-2)" }} />
+                                    </div>
+                                </div>
+                            </div>
+                        ))
+                    ) : sortedPosts.map((post) =>
                         post.type === "video" ? (
                             <div key={post.id} className="w-full max-w-sm mx-auto">
                                 <VideoPlayer {...(post as any)} />
