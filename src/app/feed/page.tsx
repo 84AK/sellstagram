@@ -17,6 +17,8 @@ import FeedCard from "@/components/feed/FeedCard";
 import VideoPlayer from "@/components/feed/VideoPlayer";
 import DailyChallenge from "@/components/feed/DailyChallenge";
 import Insights from "@/components/dashboard/Insights";
+import MyChannelFeed from "@/components/feed/MyChannelFeed";
+import MyChannelUploadModal from "@/components/feed/MyChannelUploadModal";
 import { useGameStore } from "@/store/useGameStore";
 import { supabase, DbPost } from "@/lib/supabase/client";
 
@@ -66,6 +68,8 @@ export default function FeedPage() {
     const [feedFilter, setFeedFilter] = useState<"latest" | "hot">("latest");
     const [classActive, setClassActive] = useState(false);
     const [activeMission, setActiveMission] = useState<{ title: string; description: string } | null>(null);
+    const [feedTab, setFeedTab] = useState<"simulation" | "channel">("simulation");
+    const [channelModalOpen, setChannelModalOpen] = useState(false);
 
     const sortedPosts = feedFilter === "hot"
         ? [...posts].sort((a, b) => {
@@ -187,6 +191,39 @@ export default function FeedPage() {
                         </button>
                     </div>
                 </header>
+
+                {/* 탭 전환 */}
+                <div
+                    className="flex gap-1 p-1 rounded-2xl"
+                    style={{ background: "var(--surface-2)" }}
+                >
+                    {(["simulation", "channel"] as const).map((tab) => (
+                        <button
+                            key={tab}
+                            onClick={() => setFeedTab(tab)}
+                            className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-sm font-bold transition-all"
+                            style={{
+                                background: feedTab === tab ? "var(--surface)" : "transparent",
+                                color: feedTab === tab ? "var(--foreground)" : "var(--foreground-muted)",
+                                boxShadow: feedTab === tab ? "var(--shadow-sm)" : "none",
+                            }}
+                        >
+                            {tab === "simulation" ? (
+                                <><span>🎮</span><span>시뮬레이션</span></>
+                            ) : (
+                                <><span>📡</span><span>내 채널</span></>
+                            )}
+                        </button>
+                    ))}
+                </div>
+
+                {/* 내 채널 탭 */}
+                {feedTab === "channel" && (
+                    <MyChannelFeed onOpenUpload={() => setChannelModalOpen(true)} />
+                )}
+
+                {/* ── 시뮬레이션 탭 콘텐츠 ── */}
+                {feedTab === "simulation" && (<>
 
                 {/* 수업 진행 배너 — 선생님이 수업 시작 눌렀을 때만 표시 */}
                 {classActive ? (
@@ -331,6 +368,8 @@ export default function FeedPage() {
                         )
                     )}
                 </div>
+
+                </>)}
             </div>
 
             {/* ── 사이드 대시보드 (LG+) ── */}
@@ -357,17 +396,27 @@ export default function FeedPage() {
 
             {/* 모바일 FAB */}
             <button
-                onClick={() => setUploadModalOpen(true)}
-                className="fixed bottom-24 right-5 w-13 h-13 rounded-2xl flex items-center justify-center lg:hidden z-40 transition-all hover:scale-110 active:scale-95"
+                onClick={() => feedTab === "channel" ? setChannelModalOpen(true) : setUploadModalOpen(true)}
+                className="fixed bottom-24 right-5 rounded-2xl flex items-center justify-center lg:hidden z-40 transition-all hover:scale-110 active:scale-95"
                 style={{
                     width: "52px",
                     height: "52px",
-                    background: "linear-gradient(135deg, var(--primary), #FF9A72)",
-                    boxShadow: "0 6px 20px var(--primary-glow)",
+                    background: feedTab === "channel"
+                        ? "linear-gradient(135deg, var(--secondary), #6B8FFF)"
+                        : "linear-gradient(135deg, var(--primary), #FF9A72)",
+                    boxShadow: feedTab === "channel"
+                        ? "0 6px 20px rgba(67,97,238,0.4)"
+                        : "0 6px 20px var(--primary-glow)",
                 }}
             >
                 <Plus size={24} className="text-white" />
             </button>
+
+            {/* 내 채널 업로드 모달 */}
+            <MyChannelUploadModal
+                isOpen={channelModalOpen}
+                onClose={() => setChannelModalOpen(false)}
+            />
         </div>
     );
 }
