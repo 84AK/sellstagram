@@ -11,7 +11,7 @@ const supabaseAnonKey = rawKey.length > 10 ? rawKey : "not-configured";
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     auth: {
-        flowType: "implicit", // PKCE 대신 implicit 방식 사용 (교실 환경에 적합)
+        flowType: "pkce", // implicit → PKCE: URL fragment 토큰 노출 방지 + iOS/iPad 안정성 향상
     },
 });
 

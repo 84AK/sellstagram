@@ -38,7 +38,12 @@ const navItems = [
 export default function Sidebar() {
     const pathname = usePathname();
     const router = useRouter();
-    const { setUploadModalOpen, user, week, setWeek, sidebarExpanded, setSidebarExpanded } = useGameStore();
+    const user = useGameStore(s => s.user);
+    const week = useGameStore(s => s.week);
+    const sidebarExpanded = useGameStore(s => s.sidebarExpanded);
+    const setUploadModalOpen = useGameStore(s => s.setUploadModalOpen);
+    const setWeek = useGameStore(s => s.setWeek);
+    const setSidebarExpanded = useGameStore(s => s.setSidebarExpanded);
     const [isAdmin, setIsAdmin] = useState(false);
     const [adminChecked, setAdminChecked] = useState(false);
     const [unreadMessages, setUnreadMessages] = useState(0);

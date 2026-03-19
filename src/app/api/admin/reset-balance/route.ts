@@ -1,7 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { verifyTeacherOrAdmin } from "@/lib/auth/verifyTeacher";
 
 export async function POST(request: NextRequest) {
+    if (!(await verifyTeacherOrAdmin(request))) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const { balance } = await request.json();
 
     if (typeof balance !== "number" || isNaN(balance) || balance < 0) {

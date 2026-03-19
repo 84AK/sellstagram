@@ -22,6 +22,7 @@ import {
   MessageCircle,
   RefreshCw,
 } from "lucide-react";
+import { TEAM_META } from "@/lib/constants/game";
 
 interface Product {
   id: string;
@@ -40,14 +41,6 @@ interface TeamRank {
   score: number;
 }
 
-const TEAM_META: Record<string, {emoji: string; color: string}> = {
-  A팀: {emoji: "🔥", color: "#FF6B35"},
-  B팀: {emoji: "⚡", color: "#4361EE"},
-  C팀: {emoji: "🌊", color: "#06D6A0"},
-  D팀: {emoji: "🌿", color: "#8B5CF6"},
-  E팀: {emoji: "🦁", color: "#FFC233"},
-  F팀: {emoji: "🚀", color: "#EF4444"},
-};
 
 const DEMO_POSTS = [
   {

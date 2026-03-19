@@ -66,5 +66,5 @@ export async function POST(request: NextRequest) {
             .eq("id", userId);
     }
 
-    return NextResponse.json({ ok: true, id: data?.id });
+    return NextResponse.json({ ok: true, id: (data as { id?: string } | null)?.id });
 }

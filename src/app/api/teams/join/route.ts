@@ -9,7 +9,7 @@ export async function GET(request: NextRequest) {
     const admin = createAdminClient();
     const { data, error } = await admin
         .from("teams")
-        .select("id, name, emoji, color, join_code")
+        .select("id, name, emoji, color")
         .eq("join_code", code)
         .single();
 

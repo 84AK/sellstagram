@@ -82,10 +82,13 @@ export default function ProfilePage() {
         setIsSavingCard(true);
         try {
             const blob = await captureCard();
+            const url = URL.createObjectURL(blob);
             const link = document.createElement("a");
             link.download = `sellstagram-${user.handle ?? "card"}.png`;
-            link.href = URL.createObjectURL(blob);
+            link.href = url;
             link.click();
+            // ObjectURL은 사용 후 즉시 해제 (메모리 누수 방지)
+            URL.revokeObjectURL(url);
             setCardSaved(true);
             setTimeout(() => setCardSaved(false), 2500);
         } catch (err) {
@@ -105,10 +108,12 @@ export default function ProfilePage() {
                 await navigator.share({ files: [file], title: "나의 마케터 ID 카드", text: `@${user.handle} · Sellstagram` });
             } else {
                 // 공유 미지원 시 다운로드 fallback
+                const url = URL.createObjectURL(blob);
                 const link = document.createElement("a");
                 link.download = file.name;
-                link.href = URL.createObjectURL(blob);
+                link.href = url;
                 link.click();
+                URL.revokeObjectURL(url);
             }
         } catch (err) {
             console.error("카드 공유 실패:", err);

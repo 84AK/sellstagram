@@ -7,15 +7,16 @@ import {
     Zap, Loader2, Users, CheckCircle2, ChevronRight,
     Palette, BarChart2, Megaphone, Lightbulb, UserCheck, AlertCircle, ArrowLeft,
 } from "lucide-react";
+import { MARKETING_TYPE_DATA, AVATAR_OPTIONS } from "@/lib/constants/game";
 
-const MARKETING_TYPES = [
-    { id: "creator",     icon: <Palette size={18} />,   title: "크리에이터", color: "#FF6B35", bg: "#FFF0EB", badge: "🎨 콘텐츠 창작자" },
-    { id: "analyst",     icon: <BarChart2 size={18} />,  title: "분석가",     color: "#4361EE", bg: "#EEF1FD", badge: "📊 데이터 전략가" },
-    { id: "storyteller", icon: <Megaphone size={18} />,  title: "스토리텔러", color: "#8B5CF6", bg: "#F3EEFF", badge: "✍️ 브랜드 스토리텔러" },
-    { id: "innovator",   icon: <Lightbulb size={18} />,  title: "이노베이터", color: "#06D6A0", bg: "#E6FBF5", badge: "💡 트렌드 개척자" },
-];
+const ICON_MAP_SM: Record<string, React.ReactNode> = {
+    creator: <Palette size={18} />,
+    analyst: <BarChart2 size={18} />,
+    storyteller: <Megaphone size={18} />,
+    innovator: <Lightbulb size={18} />,
+};
 
-const AVATAR_OPTIONS = ["🦊", "🐺", "🦋", "🐬", "🦄", "🐉", "🦅", "🦁", "🐙", "🌟"];
+const MARKETING_TYPES = MARKETING_TYPE_DATA.map(t => ({ ...t, icon: ICON_MAP_SM[t.id] }));
 
 type Tab = "social" | "teamcode";
 // 이름 확인 결과

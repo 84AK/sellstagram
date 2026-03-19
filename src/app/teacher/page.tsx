@@ -39,16 +39,7 @@ import {
 import { useGameStore } from "@/store/useGameStore";
 import { getSessionByWeek, THEME_COLORS } from "@/lib/curriculum/sessions";
 import { supabase, DbPost, DbProfile, DbMission } from "@/lib/supabase/client";
-
-
-const TEAM_META: Record<string, { emoji: string; color: string }> = {
-    "A팀": { emoji: "🔥", color: "#FF6B35" },
-    "B팀": { emoji: "⚡", color: "#4361EE" },
-    "C팀": { emoji: "🌊", color: "#06D6A0" },
-    "D팀": { emoji: "🌿", color: "#8B5CF6" },
-    "E팀": { emoji: "🦁", color: "#FFC233" },
-    "F팀": { emoji: "🚀", color: "#EF4444" },
-};
+import { TEAM_META } from "@/lib/constants/game";
 
 interface TeamStat {
     id: string;
@@ -105,7 +96,6 @@ function PinScreen({ onAuth }: { onAuth: () => void }) {
                     body: JSON.stringify({ pin: next }),
                 });
                 if (res.ok) {
-                    localStorage.setItem("sellstagram_teacher_auth", "true");
                     onAuth();
                 } else {
                     setError(true);
@@ -330,9 +320,13 @@ function Dashboard({ onLogout }: { onLogout: () => void }) {
     // 미션 삭제 (admin API 경유 — RLS 우회)
     const handleDeleteMission = async (missionId: string) => {
         setDeletingId(missionId);
+        const { data: { session } } = await supabase.auth.getSession();
         const res = await fetch("/api/missions/delete", {
             method: "DELETE",
-            headers: { "Content-Type": "application/json" },
+            headers: {
+                "Content-Type": "application/json",
+                ...(session?.access_token ? { "Authorization": `Bearer ${session.access_token}` } : {}),
+            },
             body: JSON.stringify({ id: missionId }),
         });
         if (res.ok) {

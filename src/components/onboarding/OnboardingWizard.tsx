@@ -10,29 +10,25 @@ import {
     Users, CheckCircle2, Zap, GraduationCap, Shield,
     Loader2,
 } from "lucide-react";
+import { MARKETING_TYPE_DATA, AVATAR_OPTIONS, TEAM_EMOJIS } from "@/lib/constants/game";
 
-/* ── 마케터 포지션 타입 ── */
+/* ── 마케터 포지션 타입 (아이콘은 크기가 달라 여기서 주입) ── */
 interface MarketingType {
     id: string; icon: React.ReactNode; title: string;
     subtitle: string; desc: string; color: string; bg: string; badge: string;
 }
 
-const MARKETING_TYPES: MarketingType[] = [
-    { id: "creator", icon: <Palette size={28} />, title: "크리에이터", subtitle: "Creator",
-      desc: "비주얼과 감성으로 사람들의 마음을 움직이는 타입. 콘텐츠로 말해요!", color: "#FF6B35", bg: "#FFF0EB", badge: "🎨 콘텐츠 창작자" },
-    { id: "analyst", icon: <BarChart2 size={28} />, title: "분석가", subtitle: "Analyst",
-      desc: "데이터와 숫자로 정확하게 전략을 세우는 타입. 근거 있는 마케팅!", color: "#4361EE", bg: "#EEF1FD", badge: "📊 데이터 전략가" },
-    { id: "storyteller", icon: <Megaphone size={28} />, title: "스토리텔러", subtitle: "Storyteller",
-      desc: "이야기로 브랜드를 살아있게 만드는 타입. 공감과 감동의 마케팅!", color: "#8B5CF6", bg: "#F3EEFF", badge: "✍️ 브랜드 스토리텔러" },
-    { id: "innovator", icon: <Lightbulb size={28} />, title: "이노베이터", subtitle: "Innovator",
-      desc: "항상 새롭고 독특한 아이디어를 내는 타입. 남들이 안 한 것을 해요!", color: "#06D6A0", bg: "#E6FBF5", badge: "💡 트렌드 개척자" },
-];
-
-const TEAM_EMOJIS: Record<string, string> = {
-    "A팀": "🔥", "B팀": "⚡", "C팀": "🌊", "D팀": "🌿", "E팀": "🦁", "F팀": "🚀",
+const ICON_MAP: Record<string, React.ReactNode> = {
+    creator: <Palette size={28} />,
+    analyst: <BarChart2 size={28} />,
+    storyteller: <Megaphone size={28} />,
+    innovator: <Lightbulb size={28} />,
 };
 
-const AVATAR_OPTIONS = ["🦊", "🐺", "🦋", "🐬", "🦄", "🐉", "🦅", "🦁", "🐙", "🌟"];
+const MARKETING_TYPES: MarketingType[] = MARKETING_TYPE_DATA.map(t => ({
+    ...t,
+    icon: ICON_MAP[t.id],
+}));
 
 
 type Role = "student" | "teacher" | null;
@@ -178,7 +174,7 @@ export default function OnboardingWizard({ onComplete }: { onComplete?: () => vo
 
     const handleEnter = () => {
         if (onComplete) onComplete();
-        else window.location.reload();
+        else router.replace("/feed");
     };
 
     // ── 완료 화면 ──

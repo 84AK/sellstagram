@@ -14,6 +14,9 @@ type Status = "loading" | "needs-onboarding" | "ready";
 
 export default function OnboardingGate({ children }: { children: React.ReactNode }) {
     const [status, setStatus] = useState<Status>("loading");
+    // stale closure 방지: useEffect 내 async 함수에서 status를 읽을 때 최신값 보장
+    const statusRef = useRef<Status>("loading");
+    const setStatusSafe = (s: Status) => { statusRef.current = s; setStatus(s); };
     // 초기 인증 체크 완료 여부를 추적 — 토큰 갱신 시 SIGNED_IN 재실행 방지
     const initializedRef = useRef(false);
     // 잔액 실시간 구독 채널 ref
@@ -32,9 +35,12 @@ export default function OnboardingGate({ children }: { children: React.ReactNode
         // 단, 공개 페이지를 떠날 때(cleanup) initializedRef를 리셋해
         // 보호 페이지로 돌아오면 프로필을 다시 로드하도록 함
         if (isPublicPath) {
-            setStatus("ready");
+            setStatusSafe("ready");
             return () => {
+                // 공개 경로를 벗어날 때 상태 초기화 — 신규 유저가 보호 경로 진입 시
+                // 온보딩 체크가 다시 실행되도록 함 (역할 선택 팝업 미표시 버그 수정)
                 initializedRef.current = false;
+                setStatusSafe("loading");
             };
         }
 
@@ -47,8 +53,8 @@ export default function OnboardingGate({ children }: { children: React.ReactNode
             const { data: { session } } = await supabase.auth.getSession();
 
             if (!session) {
-                // 이미 ready 상태라면 세션 일시 불가 상황 — 리다이렉트 하지 않음
-                if (status !== "ready") router.push("/");
+                // statusRef로 최신 상태 읽기 (stale closure 방지)
+                if (statusRef.current !== "ready") router.push("/");
                 return;
             }
 
@@ -61,8 +67,9 @@ export default function OnboardingGate({ children }: { children: React.ReactNode
             // 프로필이 없거나, 이름/역할이 미설정된 신규 유저 → 온보딩 필요
             const isNewUser = !profile || !profile.name?.trim() || !profile.role;
             if (error || isNewUser) {
-                // 이미 ready 상태인 사용자를 다시 온보딩으로 보내지 않음
-                setStatus(prev => prev === "ready" ? "ready" : "needs-onboarding");
+                // checkAuthAndProfile은 initializedRef.current = false 일 때만 실행되므로
+                // 항상 온보딩 상태로 전환 (OAuth 신규 가입 후 역할 선택 팝업 미표시 버그 수정)
+                setStatusSafe("needs-onboarding");
                 return;
             }
 
@@ -113,7 +120,7 @@ export default function OnboardingGate({ children }: { children: React.ReactNode
                 .subscribe();
 
             initializedRef.current = true;
-            setStatus("ready");
+            setStatusSafe("ready");
         };
 
         // onAuthStateChange의 INITIAL_SESSION을 통해 초기 인증 체크
@@ -123,19 +130,24 @@ export default function OnboardingGate({ children }: { children: React.ReactNode
             // SIGNED_IN: OAuth 콜백 직후 세션 확립 시 발생
             if ((event === "INITIAL_SESSION" || event === "SIGNED_IN") && !initializedRef.current) checkAuthAndProfile();
             if (event === "SIGNED_OUT") {
-                initializedRef.current = false;
-                if (balanceChannelRef.current) {
-                    supabase.removeChannel(balanceChannelRef.current);
-                    balanceChannelRef.current = null;
-                }
-                useGameStore.setState({
-                    user: { name: "", handle: "", avatar: "", rank: "Beginner", team: "", points: 0, role: "", skillXP: { copywriting: 0, analytics: 0, creative: 0 } },
-                    posts: [],
-                    insights: [],
-                    missions: [],
-                    balance: 500000,
+                // iOS/iPad Chrome에서 토큰 갱신 중 spurious SIGNED_OUT이 발생할 수 있으므로
+                // 세션을 한 번 더 확인 후 실제로 로그아웃된 경우에만 처리
+                supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
+                    if (currentSession) return; // 세션 복구됨 — 무시
+                    initializedRef.current = false;
+                    if (balanceChannelRef.current) {
+                        supabase.removeChannel(balanceChannelRef.current);
+                        balanceChannelRef.current = null;
+                    }
+                    useGameStore.setState({
+                        user: { name: "", handle: "", avatar: "", rank: "Beginner", team: "", points: 0, role: "", skillXP: { copywriting: 0, analytics: 0, creative: 0 } },
+                        posts: [],
+                        insights: [],
+                        missions: [],
+                        balance: 500000,
+                    });
+                    router.push("/login");
                 });
-                router.push("/login");
             }
         });
 

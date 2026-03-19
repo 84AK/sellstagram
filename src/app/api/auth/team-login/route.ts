@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@supabase/supabase-js";
+import { checkRateLimit, getClientIP } from "@/lib/auth/rateLimit";
 
 const BADGE_MAP: Record<string, string> = {
     creator: "🎨 콘텐츠 창작자",
@@ -14,7 +15,10 @@ const BADGE_MAP: Record<string, string> = {
  * 실제 이메일이 아닌 내부 식별자로만 사용
  */
 function makeCredentials(name: string, teamCode: string) {
-    const secret = process.env.TEAM_LOGIN_SECRET ?? "sellstagram_internal_2025";
+    const secret = process.env.TEAM_LOGIN_SECRET;
+    if (!secret) {
+        throw new Error("TEAM_LOGIN_SECRET 환경변수가 설정되지 않았습니다. .env.local을 확인하세요.");
+    }
 
     // 이름+팀코드 해시 → 이메일 (충돌 최소화)
     let h1 = 5381;
@@ -48,19 +52,34 @@ function makeCredentials(name: string, teamCode: string) {
  *   response: { session }
  */
 export async function POST(req: NextRequest) {
-    const body = await req.json();
-    const { name, teamCode, type, avatar } = body as {
-        name: string;
-        teamCode: string;
-        type?: string;
-        avatar?: string;
-    };
+    // Rate limiting: IP당 분당 10회 이하
+    const ip = getClientIP(req);
+    if (!checkRateLimit(`teamlogin:${ip}`, 10, 60_000)) {
+        return NextResponse.json(
+            { error: "너무 많은 요청입니다. 1분 후 다시 시도해주세요." },
+            { status: 429 }
+        );
+    }
+
+    let body: { name?: string; teamCode?: string; type?: string; avatar?: string };
+    try {
+        body = await req.json();
+    } catch {
+        return NextResponse.json({ error: "잘못된 요청입니다." }, { status: 400 });
+    }
+
+    const { name, teamCode, type, avatar } = body;
 
     if (!name?.trim() || !teamCode?.trim()) {
         return NextResponse.json({ error: "이름과 팀 코드를 입력해주세요" }, { status: 400 });
     }
 
-    const admin = createAdminClient();
+    let admin: ReturnType<typeof createAdminClient>;
+    try {
+        admin = createAdminClient();
+    } catch {
+        return NextResponse.json({ error: "서버 설정 오류입니다." }, { status: 500 });
+    }
 
     // 1. 팀 코드 검증
     const { data: team, error: teamError } = await admin
@@ -81,7 +100,13 @@ export async function POST(req: NextRequest) {
         .eq("team", team.name)
         .single();
 
-    const { email, password } = makeCredentials(name, teamCode);
+    let credentials: { email: string; password: string };
+    try {
+        credentials = makeCredentials(name, teamCode);
+    } catch {
+        return NextResponse.json({ error: "서버 설정 오류입니다. 관리자에게 문의하세요." }, { status: 500 });
+    }
+    const { email, password } = credentials;
 
     if (existingProfile) {
         // ── 기존 유저: 재로그인 ──

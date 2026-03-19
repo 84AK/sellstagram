@@ -10,18 +10,27 @@ export default function PrivacyProvider({ children }: { children: React.ReactNod
   const [isPolicyModalOpen, setIsPolicyModalOpen] = useState(false);
 
   useEffect(() => {
-    const hideUntil = localStorage.getItem("hidePrivacyModalUntil");
-    if (!hideUntil || new Date(hideUntil) < new Date()) {
+    try {
+      const hideUntil = localStorage.getItem("hidePrivacyModalUntil");
+      if (!hideUntil || new Date(hideUntil) < new Date()) {
+        setIsPrivacyModalOpen(true);
+      }
+    } catch {
+      // localStorage 접근 불가 (iPad Chrome 개인정보 설정 등) — 팝업 표시
       setIsPrivacyModalOpen(true);
     }
   }, []);
 
   const handleToggleDoNotShowToday = (checked: boolean) => {
     if (checked) {
-      const tomorrow = new Date();
-      tomorrow.setDate(tomorrow.getDate() + 1);
-      tomorrow.setHours(0, 0, 0, 0);
-      localStorage.setItem("hidePrivacyModalUntil", tomorrow.toISOString());
+      try {
+        const tomorrow = new Date();
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        tomorrow.setHours(0, 0, 0, 0);
+        localStorage.setItem("hidePrivacyModalUntil", tomorrow.toISOString());
+      } catch {
+        // localStorage 쓰기 불가 — 무시
+      }
     }
   };
 

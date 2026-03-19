@@ -70,6 +70,10 @@ interface Post {
     };
     timeAgo: string;
     createdAt?: string;
+    sellingPrice?: number;
+    landingImages?: string[];
+    images?: string[];
+    adBudget?: number;
 }
 
 interface AIInsight {
