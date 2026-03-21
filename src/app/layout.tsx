@@ -12,6 +12,7 @@ import { ThemeProvider } from "@/components/common/ThemeProvider";
 import OnboardingGate from "@/components/onboarding/OnboardingGate";
 import MissionCompleteToast from "@/components/common/MissionCompleteToast";
 import PrivacyProvider from "@/components/layout/PrivacyProvider";
+import PageTransitionLoader from "@/components/common/PageTransitionLoader";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -79,6 +80,7 @@ export default function RootLayout({
             <AIReportModal />
             <GuideModal />
             <MissionCompleteToast />
+            <PageTransitionLoader />
           </OnboardingGate>
         </ThemeProvider>
       </body>
