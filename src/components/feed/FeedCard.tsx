@@ -82,6 +82,7 @@ export default function FeedCard({ id, user, content, stats, timeAgo, sellingPri
     const [sendingMsg, setSendingMsg] = useState(false);
     const [msgSent, setMsgSent] = useState(false);
     const [linkCopied, setLinkCopied] = useState(false);
+    const [lightboxOpen, setLightboxOpen] = useState(false);
     const shareSearchRef = useRef<HTMLInputElement>(null);
     const [showMenu, setShowMenu] = useState(false);
     const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -559,7 +560,7 @@ export default function FeedCard({ id, user, content, stats, timeAgo, sellingPri
                     </div>
                     <div className="flex flex-col items-start min-w-0 flex-1">
                         <div className="flex items-center gap-1.5 leading-none min-w-0 w-full">
-                            <span className="text-[15px] font-bold truncate" style={{ color: "var(--foreground)" }}>
+                            <span className="text-[15px] font-bold truncate cursor-pointer hover:underline" style={{ color: "var(--foreground)" }}>
                                 {user.name}
                             </span>
                             {adBudget && (
@@ -661,7 +662,8 @@ export default function FeedCard({ id, user, content, stats, timeAgo, sellingPri
                     <img
                         src={allImages[imgIdx]}
                         alt={content.caption}
-                        className="absolute inset-0 w-full h-full object-cover transition-opacity duration-200"
+                        className="absolute inset-0 w-full h-full object-cover transition-opacity duration-200 cursor-zoom-in"
+                        onClick={() => setLightboxOpen(true)}
                     />
                 ) : (
                     <div className="absolute inset-0 flex items-center justify-center">
@@ -1446,6 +1448,64 @@ export default function FeedCard({ id, user, content, stats, timeAgo, sellingPri
                         </button>
                     </div>
                 </div>
+            </div>
+        )}
+
+        {/* ─── 라이트박스 ─── */}
+        {lightboxOpen && allImages.length > 0 && (
+            <div
+                className="fixed inset-0 z-[99998] flex items-center justify-center"
+                style={{ background: "rgba(0,0,0,0.92)", backdropFilter: "blur(6px)" }}
+                onClick={() => setLightboxOpen(false)}
+            >
+                {/* 닫기 버튼 */}
+                <button
+                    className="absolute top-4 right-4 w-10 h-10 rounded-full flex items-center justify-center text-white transition-opacity hover:opacity-70 z-10"
+                    style={{ background: "rgba(255,255,255,0.12)" }}
+                    onClick={() => setLightboxOpen(false)}
+                >
+                    <X size={20} />
+                </button>
+
+                {/* 이미지 */}
+                <img
+                    src={allImages[imgIdx]}
+                    alt={content.caption}
+                    className="max-w-[92vw] max-h-[88vh] object-contain rounded-xl select-none"
+                    style={{ boxShadow: "0 24px 80px rgba(0,0,0,0.5)" }}
+                    onClick={e => e.stopPropagation()}
+                />
+
+                {/* 멀티 이미지 이전/다음 */}
+                {allImages.length > 1 && (
+                    <>
+                        <button
+                            className="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full flex items-center justify-center text-white disabled:opacity-20 transition-opacity hover:opacity-70"
+                            style={{ background: "rgba(255,255,255,0.15)" }}
+                            disabled={imgIdx === 0}
+                            onClick={e => { e.stopPropagation(); setImgIdx(i => Math.max(0, i - 1)); }}
+                        >
+                            <ChevronLeft size={20} />
+                        </button>
+                        <button
+                            className="absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full flex items-center justify-center text-white disabled:opacity-20 transition-opacity hover:opacity-70"
+                            style={{ background: "rgba(255,255,255,0.15)" }}
+                            disabled={imgIdx === allImages.length - 1}
+                            onClick={e => { e.stopPropagation(); setImgIdx(i => Math.min(allImages.length - 1, i + 1)); }}
+                        >
+                            <ChevronRight size={20} />
+                        </button>
+                        <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-1.5">
+                            {allImages.map((_, i) => (
+                                <button key={i}
+                                    className="w-1.5 h-1.5 rounded-full transition-all"
+                                    style={{ background: i === imgIdx ? "white" : "rgba(255,255,255,0.4)" }}
+                                    onClick={e => { e.stopPropagation(); setImgIdx(i); }}
+                                />
+                            ))}
+                        </div>
+                    </>
+                )}
             </div>
         )}
         </>
