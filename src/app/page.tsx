@@ -4,6 +4,7 @@ import {useEffect, useState} from "react";
 import {useRouter} from "next/navigation";
 import Link from "next/link";
 import {supabase} from "@/lib/supabase/client";
+import {useGameStore} from "@/store/useGameStore";
 import {
   Zap,
   Sparkles,
@@ -21,6 +22,7 @@ import {
   BarChart2,
   MessageCircle,
   RefreshCw,
+  LogOut,
 } from "lucide-react";
 import { TEAM_META } from "@/lib/constants/game";
 
@@ -145,7 +147,9 @@ const CATEGORY_COLORS: Record<string, string> = {
 
 export default function HomePage() {
   const router = useRouter();
+  const storeUser = useGameStore(s => s.user);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [teamCount, setTeamCount] = useState<number>(0);
   const [products, setProducts] = useState<Product[]>([]);
   const [teamRanks, setTeamRanks] = useState<TeamRank[]>([]);
   const [loading, setLoading] = useState(true);
@@ -163,7 +167,7 @@ export default function HomePage() {
       } = await supabase.auth.getSession();
       setIsLoggedIn(!!session);
 
-      const [{data: prods}, {data: profiles}] = await Promise.all([
+      const [{data: prods}, {data: profiles}, {count: tCount}] = await Promise.all([
         supabase
           .from("products")
           .select("id,name,price,cost,category,image_url,xp_bonus")
@@ -172,7 +176,9 @@ export default function HomePage() {
           .order("created_at")
           .limit(4),
         supabase.from("profiles").select("team, points"),
+        supabase.from("teams").select("id", { count: "exact", head: true }),
       ]);
+      if (tCount !== null) setTeamCount(tCount);
 
       setProducts(prods ?? []);
 
@@ -298,37 +304,56 @@ export default function HomePage() {
             `}</style>
 
       <div className="min-h-screen" style={{background: "var(--background)"}}>
-        {/* ── Nav (비로그인 시만 표시) ── */}
-        {!isLoggedIn && (
-          <nav className="flex items-center justify-between px-6 py-4 max-w-7xl mx-auto">
-            <div className="flex items-center gap-2">
-              <div
-                className="w-8 h-8 rounded-xl flex items-center justify-center"
-                style={{
-                  background: "linear-gradient(135deg, #FF6B35, #FF9A72)",
-                }}
-              >
-                <Zap size={16} className="text-white" />
-              </div>
-              <span
-                className="font-black text-lg tracking-tight font-outfit"
-                style={{color: "var(--foreground)"}}
-              >
-                Sellstagram
-              </span>
+        {/* ── Nav ── */}
+        <nav className="flex items-center justify-between px-6 py-4 max-w-7xl mx-auto">
+          <div className="flex items-center gap-2">
+            <div
+              className="w-8 h-8 rounded-xl flex items-center justify-center"
+              style={{background: "linear-gradient(135deg, #FF6B35, #FF9A72)"}}
+            >
+              <Zap size={16} className="text-white" />
             </div>
+            <span
+              className="font-black text-lg tracking-tight font-outfit"
+              style={{color: "var(--foreground)"}}
+            >
+              Sellstagram
+            </span>
+          </div>
+          {isLoggedIn ? (
+            <div className="flex items-center gap-3">
+              {/* 유저 정보 */}
+              {storeUser.name && (
+                <div className="flex items-center gap-2">
+                  <span className="text-xl leading-none">{storeUser.avatar}</span>
+                  <div className="hidden sm:block">
+                    <p className="text-sm font-bold leading-tight" style={{color: "var(--foreground)"}}>{storeUser.name}</p>
+                    <p className="text-xs leading-tight" style={{color: "var(--foreground-muted)"}}>{storeUser.rank} · {storeUser.team}</p>
+                  </div>
+                </div>
+              )}
+              <button
+                onClick={async () => {
+                  await supabase.auth.signOut();
+                  router.push("/login");
+                }}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-bold transition-all hover:opacity-80"
+                style={{background: "var(--surface-2)", color: "var(--foreground-muted)"}}
+              >
+                <LogOut size={14} />
+                <span className="hidden sm:inline">로그아웃</span>
+              </button>
+            </div>
+          ) : (
             <Link
               href="/login"
               className="px-4 py-2 rounded-xl text-sm font-bold transition-all hover:scale-[1.02]"
-              style={{
-                background: "var(--surface-2)",
-                color: "var(--foreground)",
-              }}
+              style={{background: "var(--surface-2)", color: "var(--foreground)"}}
             >
               로그인
             </Link>
-          </nav>
-        )}
+          )}
+        </nav>
 
         {/* ── Bento Grid ── */}
         <div className="bento-grid px-4 md:px-6 max-w-7xl mx-auto mt-4">
@@ -466,7 +491,7 @@ export default function HomePage() {
                 color: "#4361EE",
               },
               {
-                value: "6팀",
+                value: `${teamCount || "-"}팀`,
                 label: "팀 경쟁 시스템",
                 icon: Trophy,
                 color: "#FFC233",
