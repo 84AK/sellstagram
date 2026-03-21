@@ -148,7 +148,7 @@ export default function PostDetailPage() {
         })();
     }, [id]);
 
-    /* ── 댓글 실시간 ── */
+    /* ── 댓글 실시간 (낙관적 업데이트와 중복 방지) ── */
     useEffect(() => {
         if (!id) return;
         const ch = supabase
@@ -158,7 +158,35 @@ export default function PostDetailPage() {
                 filter: `post_id=eq.${id}`,
             }, (payload) => {
                 const c = payload.new as Comment & { is_ai_reaction?: boolean };
-                if (!c.is_ai_reaction) setComments(prev => [...prev, c]);
+                if (!c.is_ai_reaction) {
+                    setComments(prev => {
+                        // 낙관적으로 추가한 임시 댓글이 있으면 실제 데이터로 교체
+                        const tempIdx = prev.findIndex(p =>
+                            p.id.startsWith("temp-") && p.text === c.text && p.user_name === c.user_name
+                        );
+                        if (tempIdx >= 0) {
+                            const next = [...prev];
+                            next[tempIdx] = c;
+                            return next;
+                        }
+                        return [...prev, c];
+                    });
+                }
+            })
+            .subscribe();
+        return () => { supabase.removeChannel(ch); };
+    }, [id]);
+
+    /* ── 좋아요 · sold_count 실시간 (다른 사용자 액션 반영) ── */
+    useEffect(() => {
+        if (!id) return;
+        const ch = supabase
+            .channel(`post-stats-${id}`)
+            .on("postgres_changes", {
+                event: "UPDATE", schema: "public", table: "posts", filter: `id=eq.${id}`,
+            }, (payload) => {
+                if (typeof payload.new.likes === "number") setLocalLikes(payload.new.likes);
+                if (typeof payload.new.sold_count === "number") setLocalSoldCount(payload.new.sold_count ?? 0);
             })
             .subscribe();
         return () => { supabase.removeChannel(ch); };
@@ -196,6 +224,16 @@ export default function PostDetailPage() {
         const name = isLoggedIn
             ? (me.name || "익명")
             : (anonymousName.trim() || RANDOM_NAMES[Math.floor(Math.random() * RANDOM_NAMES.length)]);
+
+        // 낙관적 업데이트: DB 응답 기다리지 않고 즉시 화면에 표시
+        const tempComment: Comment = {
+            id: `temp-${Date.now()}`,
+            user_name: name,
+            text,
+            created_at: new Date().toISOString(),
+        };
+        setComments(prev => [...prev, tempComment]);
+
         await supabase.from("comments").insert({
             post_id: id,
             user_name: name,
