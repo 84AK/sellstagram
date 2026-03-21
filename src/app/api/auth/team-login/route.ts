@@ -110,16 +110,16 @@ export async function POST(req: NextRequest) {
 
     if (existingProfile) {
         // ── 기존 유저: 재로그인 ──
-        // 팀 로그인용 email/password가 설정되어 있는지 확인
-        // (Google OAuth 등 소셜 가입 유저는 email이 다를 수 있으므로 항상 동기화)
-        const { data: authData } = await admin.auth.admin.getUserById(existingProfile.id);
-        const alreadyHasTeamEmail = authData?.user?.email === email;
-        if (!alreadyHasTeamEmail) {
-            await admin.auth.admin.updateUserById(existingProfile.id, {
-                email,
-                password,
-                email_confirm: true,
-            });
+        // 항상 팀 로그인 이메일/비밀번호로 업데이트 (소셜 가입 유저 포함)
+        const { error: updateError } = await admin.auth.admin.updateUserById(existingProfile.id, {
+            email,
+            password,
+            email_confirm: true,
+        });
+
+        if (updateError) {
+            console.error("[team-login] updateUserById 실패:", updateError.message);
+            return NextResponse.json({ error: "계정 업데이트에 실패했어요. 관리자에게 문의하세요." }, { status: 500 });
         }
 
         // 로그인 (anon key 클라이언트로 호출해야 정상 JWT 발급)
@@ -130,6 +130,7 @@ export async function POST(req: NextRequest) {
         );
         const { data: signInData, error: signInError } = await anonClient.auth.signInWithPassword({ email, password });
         if (signInError) {
+            console.error("[team-login] signInWithPassword 실패:", signInError.message);
             return NextResponse.json({ error: "로그인 실패. 선생님께 문의해주세요." }, { status: 400 });
         }
         return NextResponse.json({ session: signInData.session });
