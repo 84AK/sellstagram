@@ -348,7 +348,11 @@ export default function HomePage() {
               {/* 유저 정보 */}
               {storeUser.name && (
                 <div className="flex items-center gap-2">
-                  <span className="text-xl leading-none">{storeUser.avatar}</span>
+                  {storeUser.avatar?.startsWith("http") ? (
+                    <img src={storeUser.avatar} alt="avatar" className="w-8 h-8 rounded-full object-cover" />
+                  ) : (
+                    <span className="text-xl leading-none">{storeUser.avatar}</span>
+                  )}
                   <div className="hidden sm:block">
                     <p className="text-sm font-bold leading-tight" style={{color: "var(--foreground)"}}>{storeUser.name}</p>
                     <p className="text-xs leading-tight" style={{color: "var(--foreground-muted)"}}>{storeUser.rank} · {storeUser.team}</p>
