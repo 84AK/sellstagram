@@ -419,7 +419,7 @@ export default function HomePage() {
                 ) : (
                   <>
                     <button
-                      onClick={() => handleOAuth("google")}
+                      onClick={() => router.push("/login")}
                       className="flex items-center gap-2.5 px-5 py-3 rounded-2xl font-bold text-sm transition-all hover:scale-[1.02] active:scale-[0.97]"
                       style={{
                         background: "white",
@@ -449,7 +449,7 @@ export default function HomePage() {
                       Google로 시작
                     </button>
                     <button
-                      onClick={() => handleOAuth("kakao")}
+                      onClick={() => router.push("/login")}
                       className="flex items-center gap-2.5 px-5 py-3 rounded-2xl font-bold text-sm transition-all hover:scale-[1.02] active:scale-[0.97]"
                       style={{background: "#FEE500", color: "#3C1E1E"}}
                     >
@@ -1362,7 +1362,7 @@ export default function HomePage() {
                 </div>
                 <div className="flex flex-wrap gap-3 justify-center">
                   <button
-                    onClick={() => handleOAuth("google")}
+                    onClick={() => router.push("/login")}
                     className="flex items-center gap-2.5 px-7 py-3.5 rounded-2xl font-bold text-sm transition-all hover:scale-[1.02]"
                     style={{
                       background: "white",
@@ -1392,7 +1392,7 @@ export default function HomePage() {
                     Google로 시작하기
                   </button>
                   <button
-                    onClick={() => handleOAuth("kakao")}
+                    onClick={() => router.push("/login")}
                     className="flex items-center gap-2.5 px-7 py-3.5 rounded-2xl font-bold text-sm transition-all hover:scale-[1.02]"
                     style={{background: "#FEE500", color: "#3C1E1E"}}
                   >
