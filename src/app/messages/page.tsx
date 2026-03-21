@@ -67,6 +67,8 @@ function Avatar({ avatar, name, size = 44 }: { avatar: string; name: string; siz
 export default function MessagesPage() {
     const router = useRouter();
     const { user } = useGameStore();
+    const storeUnreadCount = useGameStore(s => s.unreadCount);
+    const setUnreadCount = useGameStore(s => s.setUnreadCount);
 
     // 뷰 상태
     const [view, setView] = useState<View>("inbox");
@@ -104,7 +106,8 @@ export default function MessagesPage() {
                     post:posts(id, caption, image_url)
                 `)
                 .eq("receiver_id", authUser.id)
-                .order("created_at", { ascending: false });
+                .order("created_at", { ascending: false })
+                .limit(30);
 
             setMessages((data as unknown as Message[]) ?? []);
             setLoadingInbox(false);
@@ -168,6 +171,8 @@ export default function MessagesPage() {
         if (!msg.read) {
             await supabase.from("messages").update({ read: true }).eq("id", msg.id);
             setMessages(prev => prev.map(m => m.id === msg.id ? { ...m, read: true } : m));
+            // 스토어 즉시 업데이트 → Sidebar 배지 즉시 반영
+            setUnreadCount(Math.max(0, storeUnreadCount - 1));
         }
     };
 

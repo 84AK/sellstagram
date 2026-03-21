@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
 import {
     Bell,
@@ -63,6 +63,8 @@ function calcStreak(posts: Array<{ user: { handle: string }; createdAt?: string 
     return streak;
 }
 
+const PAGE_SIZE = 10;
+
 export default function FeedPage() {
     // 셀렉터로 필요한 필드만 구독 → 무관한 store 변경(balance 등)에 리렌더링 방지
     const posts = useGameStore(s => s.posts);
@@ -79,6 +81,10 @@ export default function FeedPage() {
     const [channelModalOpen, setChannelModalOpen] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
     const [loadError, setLoadError] = useState(false);
+    const [dbOffset, setDbOffset] = useState(PAGE_SIZE);
+    const [hasMore, setHasMore] = useState(true);
+    const [loadingMore, setLoadingMore] = useState(false);
+    const sentinelRef = useRef<HTMLDivElement>(null);
 
     const sortedPosts = feedFilter === "hot"
         ? [...posts].sort((a, b) => {
@@ -89,6 +95,37 @@ export default function FeedPage() {
         : posts;
 
     const streak = calcStreak(posts, user.handle);
+
+    const loadMorePosts = useCallback(async () => {
+        if (loadingMore || !hasMore) return;
+        setLoadingMore(true);
+        const { data, error } = await supabase
+            .from("posts")
+            .select("*")
+            .order("created_at", { ascending: false })
+            .range(dbOffset, dbOffset + PAGE_SIZE - 1);
+        if (!error && data) {
+            setHasMore(data.length === PAGE_SIZE);
+            setDbOffset(prev => prev + data.length);
+            if (data.length > 0) {
+                useGameStore.setState(state => ({
+                    posts: [...state.posts, ...data.map(dbPostToStorePost)],
+                }));
+            }
+        }
+        setLoadingMore(false);
+    }, [loadingMore, hasMore, dbOffset]);
+
+    useEffect(() => {
+        const sentinel = sentinelRef.current;
+        if (!sentinel) return;
+        const observer = new IntersectionObserver(
+            (entries) => { if (entries[0].isIntersecting) loadMorePosts(); },
+            { threshold: 0.1 }
+        );
+        observer.observe(sentinel);
+        return () => observer.disconnect();
+    }, [loadMorePosts]);
 
     useEffect(() => {
         // 초기 데이터 4개 쿼리를 병렬로 실행 (순차 실행 대비 ~3배 빠름)
@@ -101,15 +138,18 @@ export default function FeedPage() {
         setIsLoading(true);
         setLoadError(false);
         Promise.all([
-            supabase.from("posts").select("*").order("created_at", { ascending: false }).limit(50),
+            supabase.from("posts").select("*").order("created_at", { ascending: false }).limit(PAGE_SIZE),
             supabase.from("game_state").select("week").eq("id", 1).single(),
             supabase.from("app_settings").select("class_active").eq("id", 1).single(),
             supabase.from("missions").select("title, description").eq("is_active", true)
                 .order("created_at", { ascending: true }).limit(1).single(),
         ]).then(([postsRes, gameRes, settingsRes, missionRes]) => {
             if (postsRes.error) { setLoadError(true); setIsLoading(false); return; }
-            if (postsRes.data && postsRes.data.length > 0) {
-                useGameStore.setState({ posts: postsRes.data.map(dbPostToStorePost) });
+            if (postsRes.data) {
+                setHasMore(postsRes.data.length === PAGE_SIZE);
+                if (postsRes.data.length > 0) {
+                    useGameStore.setState({ posts: postsRes.data.map(dbPostToStorePost) });
+                }
             }
             if (gameRes.data) setWeek(gameRes.data.week);
             if (settingsRes.data) setClassActive(settingsRes.data.class_active);
@@ -339,7 +379,7 @@ export default function FeedPage() {
                 </div>
 
                 {/* 피드 목록 */}
-                <div className="flex flex-col gap-6 pb-24">
+                <div className="flex flex-col gap-6 pb-8">
                     {isLoading ? (
                         // 스켈레톤 로딩 카드
                         Array.from({ length: 3 }).map((_, i) => (
@@ -419,6 +459,22 @@ export default function FeedPage() {
                                 />
                             </div>
                         ) : null
+                    )}
+
+                    {/* 무한 스크롤 sentinel + 로딩 */}
+                    {!isLoading && !loadError && (
+                        <div ref={sentinelRef} className="flex justify-center py-4 pb-24">
+                            {loadingMore ? (
+                                <div className="flex items-center gap-2" style={{ color: "var(--foreground-muted)" }}>
+                                    <Loader2 size={16} className="animate-spin" />
+                                    <span className="text-xs font-medium">피드 불러오는 중...</span>
+                                </div>
+                            ) : !hasMore && sortedPosts.length > 0 ? (
+                                <p className="text-xs font-medium" style={{ color: "var(--foreground-muted)" }}>
+                                    모든 게시물을 봤어요 ✓
+                                </p>
+                            ) : null}
+                        </div>
                     )}
                 </div>
 

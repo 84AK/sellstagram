@@ -46,16 +46,14 @@ export default function Sidebar() {
     const setSidebarExpanded = useGameStore(s => s.setSidebarExpanded);
     const [isAdmin, setIsAdmin] = useState(false);
     const [adminChecked, setAdminChecked] = useState(false);
-    const [unreadMessages, setUnreadMessages] = useState(0);
+    const unreadMessages = useGameStore(s => s.unreadCount);
+    const setUnreadMessages = useGameStore(s => s.setUnreadCount);
 
-    // 읽지 않은 메시지 수 로드 + 실시간 구독
+    // 읽지 않은 메시지 수 로드 + 실시간 구독 (새 메시지 알림용)
     useEffect(() => {
-        let userId: string | null = null;
-
         const load = async () => {
             const { data: { user: authUser } } = await supabase.auth.getUser();
             if (!authUser) return;
-            userId = authUser.id;
 
             const { count } = await supabase
                 .from("messages")
@@ -69,7 +67,7 @@ export default function Sidebar() {
                 .channel("sidebar-unread-messages")
                 .on(
                     "postgres_changes",
-                    { event: "*", schema: "public", table: "messages", filter: `receiver_id=eq.${authUser.id}` },
+                    { event: "INSERT", schema: "public", table: "messages", filter: `receiver_id=eq.${authUser.id}` },
                     async () => {
                         const { count: newCount } = await supabase
                             .from("messages")
@@ -88,6 +86,7 @@ export default function Sidebar() {
         load().then(ch => { if (ch) channel = ch; });
 
         return () => { if (channel) supabase.removeChannel(channel); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     useEffect(() => {

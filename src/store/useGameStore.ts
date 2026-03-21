@@ -137,6 +137,9 @@ interface GameState {
 
     sidebarExpanded: boolean;
     setSidebarExpanded: (expanded: boolean) => void;
+
+    unreadCount: number;
+    setUnreadCount: (count: number) => void;
 }
 
 // 미션 조건 충족 여부 판단
@@ -193,6 +196,7 @@ export const useGameStore = create<GameState>((set) => ({
     isUploadModalOpen: false,
     isGuideModalOpen: false,
     sidebarExpanded: false,
+    unreadCount: 0,
     isAIReportModalOpen: false,
     activeInsight: null,
     uploadContext: "general",
@@ -324,4 +328,5 @@ export const useGameStore = create<GameState>((set) => ({
     setWeek: (week) => set({ week: Math.max(1, Math.min(29, week)) }),
     resetPosts: () => set({ posts: [] }),
     setSidebarExpanded: (expanded) => set({ sidebarExpanded: expanded }),
+    setUnreadCount: (count) => set({ unreadCount: count }),
 }));
