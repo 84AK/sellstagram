@@ -59,6 +59,13 @@ export default function PostDetailPage() {
     useEffect(() => { setCanGoBack(window.history.length > 1); }, []);
 
     const [anonymousName, setAnonymousName] = useState("");
+    const [anonymousBuyerName, setAnonymousBuyerName] = useState("");
+
+    const RANDOM_BUYER_NAMES = [
+        "김민준", "이서연", "박지호", "최수아", "정우진",
+        "강예린", "윤도현", "한소희", "임현우", "오지은",
+        "조민서", "신태양", "황채원", "류성민", "배하은",
+    ];
 
     const [isLiked, setIsLiked] = useState(false);
     const [localLikes, setLocalLikes] = useState(0);
@@ -292,45 +299,54 @@ export default function PostDetailPage() {
         setBuyError("");
         const price = post.selling_price;
 
-        if (balance < price) {
-            setBuyError(`잔액이 부족해요. (보유: ₩${balance.toLocaleString()})`);
-            return;
-        }
-
         setBuying(true);
         try {
             const { data: { session } } = await supabase.auth.getSession();
-            if (!session?.user) { setBuyError("로그인이 필요해요."); setBuying(false); return; }
-
-            const buyerId = session.user.id;
             const sellerId = post.seller_user_id;
 
-            // 1. 구매자 잔액 차감 (Zustand + DB)
-            addFunds(-price);
-            const { data: buyerProf } = await supabase.from("profiles").select("balance").eq("id", buyerId).single();
-            const newBuyerBal = (buyerProf?.balance ?? 0) - price;
-            await supabase.from("profiles").update({ balance: newBuyerBal }).eq("id", buyerId);
+            if (session?.user) {
+                // ── 로그인 사용자: 기존 잔액 차감 로직 ──
+                const buyerId = session.user.id;
 
-            // 2. 판매자 잔액 증가
-            if (sellerId) {
-                const { data: sellerProf } = await supabase.from("profiles").select("balance").eq("id", sellerId).single();
-                const newSellerBal = (sellerProf?.balance ?? 0) + price;
-                await supabase.from("profiles").update({ balance: newSellerBal }).eq("id", sellerId);
-                // 판매자가 현재 사용자이면 Zustand도 업데이트
-                if (sellerId === buyerId) {
-                    addFunds(price); // 차감한 것 복구 후 판매금 추가는 아니므로 net 0, 구매 차감이 이미 됐으므로 추가만
+                if (balance < price) {
+                    setBuyError(`잔액이 부족해요. (보유: ₩${balance.toLocaleString()})`);
+                    setBuying(false);
+                    return;
                 }
+
+                addFunds(-price);
+                const { data: buyerProf } = await supabase.from("profiles").select("balance").eq("id", buyerId).single();
+                const newBuyerBal = (buyerProf?.balance ?? 0) - price;
+                await supabase.from("profiles").update({ balance: newBuyerBal }).eq("id", buyerId);
+
+                if (sellerId) {
+                    const { data: sellerProf } = await supabase.from("profiles").select("balance").eq("id", sellerId).single();
+                    const newSellerBal = (sellerProf?.balance ?? 0) + price;
+                    await supabase.from("profiles").update({ balance: newSellerBal }).eq("id", sellerId);
+                    if (sellerId === buyerId) addFunds(price);
+                }
+
+                await supabase.from("virtual_sales").insert({
+                    post_id: id, seller_id: sellerId ?? null, buyer_id: buyerId, amount: price,
+                }).then(() => {});
+
+            } else {
+                // ── 익명 체험 구매: 판매자 잔액 반영 + 랜덤 구매자 기록 ──
+                const randomName = RANDOM_BUYER_NAMES[Math.floor(Math.random() * RANDOM_BUYER_NAMES.length)];
+                setAnonymousBuyerName(randomName);
+
+                if (sellerId) {
+                    const { data: sellerProf } = await supabase.from("profiles").select("balance").eq("id", sellerId).single();
+                    const newSellerBal = (sellerProf?.balance ?? 0) + price;
+                    await supabase.from("profiles").update({ balance: newSellerBal }).eq("id", sellerId);
+                }
+
+                await supabase.from("virtual_sales").insert({
+                    post_id: id, seller_id: sellerId ?? null, buyer_id: null, amount: price,
+                }).then(() => {});
             }
 
-            // 3. 거래 기록 (virtual_sales 테이블 없어도 진행)
-            await supabase.from("virtual_sales").insert({
-                post_id: id,
-                seller_id: sellerId ?? null,
-                buyer_id: buyerId,
-                amount: price,
-            }).then(() => {/* 무시 */});
-
-            // 4. sold_count 증가
+            // sold_count 증가 (로그인/익명 공통)
             const newSoldCount = localSoldCount + 1;
             setLocalSoldCount(newSoldCount);
             await supabase.from("posts").update({ sold_count: newSoldCount }).eq("id", id);
@@ -339,7 +355,7 @@ export default function PostDetailPage() {
             setShowBuyModal(true);
         } catch {
             setBuyError("구매 처리 중 오류가 발생했어요. 다시 시도해주세요.");
-            addFunds(post.selling_price); // 롤백
+            if (isLoggedIn) addFunds(post.selling_price);
         } finally {
             setBuying(false);
         }
@@ -606,7 +622,10 @@ export default function PostDetailPage() {
                                                 <span className="font-black" style={{ color: "var(--primary)" }}>₩{post.selling_price!.toLocaleString()}</span>이 구매 처리되었어요.
                                             </p>
                                             <p className="text-[12px] mt-1" style={{ color: "var(--foreground-muted)" }}>
-                                                판매자 <span className="font-semibold">@{post.user_handle}</span>의 잔액에 즉시 입금됩니다.
+                                                {!isLoggedIn
+                                                    ? <><span className="font-semibold" style={{ color: "var(--secondary)" }}>{anonymousBuyerName}</span>님으로 실습 데이터에 반영됐어요 🎓</>
+                                                    : <>판매자 <span className="font-semibold">@{post.user_handle}</span>의 잔액에 즉시 입금됩니다.</>
+                                                }
                                             </p>
                                         </div>
                                         <div className="w-full rounded-2xl px-4 py-3 flex items-center justify-between"
@@ -626,6 +645,20 @@ export default function PostDetailPage() {
                             </div>
                         )}
 
+                        {/* ── 실습 안내 배너 ── */}
+                        {!isLoggedIn && (
+                        <div className="mx-4 mt-4 rounded-2xl px-4 py-3.5 flex items-start gap-3"
+                            style={{ background: "linear-gradient(135deg, rgba(67,97,238,0.08), rgba(6,214,160,0.08))", border: "1.5px solid rgba(67,97,238,0.2)" }}>
+                            <span className="text-xl shrink-0 mt-0.5">🎓</span>
+                            <div>
+                                <p className="text-[13px] font-black mb-0.5" style={{ color: "var(--secondary)" }}>실습용 마케팅 피드예요!</p>
+                                <p className="text-[12px] leading-relaxed" style={{ color: "var(--foreground-soft)" }}>
+                                    이 게시물은 학교 마케팅 수업을 위한 실습 피드입니다. 아래 버튼을 누르면 <span className="font-bold" style={{ color: "var(--accent)" }}>실제 결제 없이</span> 셀스타그램 실습 데이터에 반영돼요. 마케팅 효과를 직접 확인해보세요! 🚀
+                                </p>
+                            </div>
+                        </div>
+                        )}
+
                         {/* ── 하단 구매 버튼 ── */}
                         <div className="sticky bottom-0 z-20 px-4 py-4"
                             style={{ background: "var(--surface)", borderTop: "1px solid var(--border)" }}>
@@ -633,11 +666,14 @@ export default function PostDetailPage() {
                                 <p className="text-[12px] font-bold text-center mb-2" style={{ color: "var(--primary)" }}>{buyError}</p>
                             )}
                             {!isLoggedIn ? (
-                                <a href="/login"
-                                    className="w-full py-4 rounded-2xl flex items-center justify-center gap-2 font-black text-sm text-white transition-all hover:opacity-90"
-                                    style={{ background: "linear-gradient(135deg, var(--secondary), #6B8EFF)" }}>
-                                    <ShoppingBag size={18} /> 로그인하고 구매하기
-                                </a>
+                                <button
+                                    onClick={handleBuy}
+                                    disabled={buying || buyDone}
+                                    className="w-full py-4 rounded-2xl flex items-center justify-center gap-2 font-black text-sm text-white transition-all hover:opacity-90 active:scale-[0.98] disabled:opacity-50"
+                                    style={{ background: "linear-gradient(135deg, var(--secondary), #6B8EFF)", boxShadow: "0 4px 20px rgba(67,97,238,0.3)" }}>
+                                    {buying ? <Loader2 size={18} className="animate-spin" /> : <ShoppingBag size={18} />}
+                                    {buying ? "처리 중..." : buyDone ? "✓ 구매 완료!" : `🎓 체험 구매하기 · ₩${post.selling_price!.toLocaleString()}`}
+                                </button>
                             ) : isMyPost ? (
                                 <div className="flex gap-2">
                                     <div className="flex-1 py-4 rounded-2xl flex items-center justify-center gap-2 font-black text-sm"
@@ -669,7 +705,10 @@ export default function PostDetailPage() {
                                 </button>
                             )}
                             <p className="text-[11px] text-center mt-1.5" style={{ color: "var(--foreground-muted)" }}>
-                                {!isLoggedIn ? "셀스타그램에 로그인하면 구매할 수 있어요" : isMyPost ? `누적 판매 ${localSoldCount}건` : `내 잔액: ₩${balance.toLocaleString()} · 구매 시 즉시 판매자에게 전달`}
+                                {!isLoggedIn
+                                    ? (buyDone ? `${anonymousBuyerName}님으로 구매 완료! 실습 데이터에 반영됐어요 🎉` : "로그인 없이 체험 구매 가능 · 실습 데이터에만 반영돼요")
+                                    : isMyPost ? `누적 판매 ${localSoldCount}건`
+                                    : `내 잔액: ₩${balance.toLocaleString()} · 구매 시 즉시 판매자에게 전달`}
                             </p>
                         </div>
                     </div>
