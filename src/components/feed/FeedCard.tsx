@@ -152,6 +152,7 @@ export default function FeedCard({ id, user, content, stats, timeAgo, sellingPri
                 const now = new Date();
                 if (data.end_date && new Date(data.end_date) < now) {
                     supabase.from("ad_campaigns").update({ status: "completed" }).eq("id", data.id);
+                    supabase.from("posts").update({ ad_budget: null }).eq("id", id);
                     setAdBudget(null);
                     return;
                 }

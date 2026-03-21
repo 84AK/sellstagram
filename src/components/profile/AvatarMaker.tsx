@@ -277,7 +277,7 @@ export default function AvatarMaker({ seed, onSave, onClose }: AvatarMakerProps)
                 </div>
 
                 {/* Body */}
-                <div className="flex-1 overflow-hidden">
+                <div className="flex-1 overflow-hidden min-h-0">
 
                     {/* ── 스타일 선택 뷰 ── */}
                     {view === "styles" && (

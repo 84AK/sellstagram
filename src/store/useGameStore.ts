@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { SkillXP, DEFAULT_SKILL_XP, SkillKey } from "@/lib/skills/skillTree";
 import type { AvatarConfig } from "@/lib/avatar/types";
+import { supabase } from "@/lib/supabase/client";
 
 interface Product {
     id: string;
@@ -277,15 +278,24 @@ export const useGameStore = create<GameState>((set) => ({
         user: { ...state.user, avatarConfig: config },
     })),
 
-    addSkillXP: (skill, amount) => set((state) => ({
-        user: {
-            ...state.user,
-            skillXP: {
+    addSkillXP: (skill, amount) => {
+        set((state) => {
+            const newSkillXP = {
                 ...state.user.skillXP,
                 [skill]: (state.user.skillXP[skill] ?? 0) + amount,
-            },
-        },
-    })),
+            };
+            // Supabase에 비동기 저장 (fire-and-forget)
+            supabase.auth.getSession().then(({ data: { session } }) => {
+                if (session?.user?.id) {
+                    supabase.from("profiles")
+                        .update({ skill_xp: newSkillXP })
+                        .eq("id", session.user.id)
+                        .then(() => {});
+                }
+            });
+            return { user: { ...state.user, skillXP: newSkillXP } };
+        });
+    },
 
     clearMissionCompletionQueue: () => set({ missionCompletionQueue: [] }),
 

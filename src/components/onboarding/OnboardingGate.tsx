@@ -60,7 +60,7 @@ export default function OnboardingGate({ children }: { children: React.ReactNode
 
             const { data: profile, error } = await supabase
                 .from("profiles")
-                .select("id, name, handle, avatar, marketer_type, team, points, rank, role, balance")
+                .select("id, name, handle, avatar, marketer_type, team, points, rank, role, balance, skill_xp")
                 .eq("id", session.user.id)
                 .single();
 
@@ -85,6 +85,7 @@ export default function OnboardingGate({ children }: { children: React.ReactNode
                 balance = gs?.initial_balance ?? 500000;
             }
 
+            const savedSkillXP = profile.skill_xp as { copywriting?: number; analytics?: number; creative?: number } | null;
             updateProfile({
                 name: profile.name,
                 handle: profile.handle,
@@ -93,6 +94,11 @@ export default function OnboardingGate({ children }: { children: React.ReactNode
                 team: profile.team,
                 points: profile.points ?? 0,
                 role: profile.role ?? "student",
+                skillXP: {
+                    copywriting: savedSkillXP?.copywriting ?? 0,
+                    analytics: savedSkillXP?.analytics ?? 0,
+                    creative: savedSkillXP?.creative ?? 0,
+                },
             });
             useGameStore.setState({ balance });
 

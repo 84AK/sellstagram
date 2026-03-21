@@ -66,8 +66,25 @@ export function SessionContent({ hideLearnLink }: { hideLearnLink?: boolean } = 
     }, [user.team]);
 
     useEffect(() => {
+        // 초기 로드
         supabase.from("app_settings").select("unlocked_weeks").eq("id", 1).single()
             .then(({ data }) => { if (Array.isArray(data?.unlocked_weeks)) setUnlockedWeeks(data.unlocked_weeks); });
+
+        // 관리자가 잠금 해제하면 실시간 반영
+        const channel = supabase
+            .channel("app_settings_unlocked_weeks")
+            .on("postgres_changes", {
+                event: "UPDATE",
+                schema: "public",
+                table: "app_settings",
+                filter: "id=eq.1",
+            }, (payload) => {
+                const weeks = (payload.new as { unlocked_weeks?: number[] }).unlocked_weeks;
+                if (Array.isArray(weeks)) setUnlockedWeeks(weeks);
+            })
+            .subscribe();
+
+        return () => { supabase.removeChannel(channel); };
     }, []);
 
     const isLocked = !unlockedWeeks.includes(viewWeek);

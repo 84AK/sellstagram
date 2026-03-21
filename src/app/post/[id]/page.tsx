@@ -56,7 +56,11 @@ export default function PostDetailPage() {
     const [notFound, setNotFound] = useState(false);
 
     const [canGoBack, setCanGoBack] = useState(false);
-    useEffect(() => { setCanGoBack(window.history.length > 1); }, []);
+    useEffect(() => {
+        // 같은 도메인에서 넘어온 경우에만 뒤로가기 표시
+        const ref = document.referrer;
+        setCanGoBack(!!ref && ref.startsWith(window.location.origin));
+    }, []);
 
     const [anonymousName, setAnonymousName] = useState("");
     const [anonymousBuyerName, setAnonymousBuyerName] = useState("");
@@ -343,7 +347,7 @@ export default function PostDetailPage() {
             const sellerId = post.seller_user_id;
 
             if (session?.user) {
-                // ── 로그인 사용자: 기존 잔액 차감 로직 ──
+                // ── 로그인 사용자: 잔액 차감 후 API로 판매자 정산 ──
                 const buyerId = session.user.id;
 
                 if (balance < price) {
@@ -355,33 +359,34 @@ export default function PostDetailPage() {
                 addFunds(-price);
                 const { data: buyerProf } = await supabase.from("profiles").select("balance").eq("id", buyerId).single();
                 const newBuyerBal = (buyerProf?.balance ?? 0) - price;
-                await supabase.from("profiles").update({ balance: newBuyerBal }).eq("id", buyerId);
 
-                if (sellerId) {
-                    const { data: sellerProf } = await supabase.from("profiles").select("balance").eq("id", sellerId).single();
-                    const newSellerBal = (sellerProf?.balance ?? 0) + price;
-                    await supabase.from("profiles").update({ balance: newSellerBal }).eq("id", sellerId);
-                    if (sellerId === buyerId) addFunds(price);
-                }
-
-                await supabase.from("virtual_sales").insert({
-                    post_id: id, seller_id: sellerId ?? null, buyer_id: buyerId, amount: price,
-                }).then(() => {});
+                await fetch("/api/purchases", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        post_id: id,
+                        seller_id: sellerId ?? null,
+                        buyer_id: buyerId,
+                        amount: price,
+                        buyer_balance_after: newBuyerBal,
+                    }),
+                });
 
             } else {
-                // ── 익명 체험 구매: 판매자 잔액 반영 + 랜덤 구매자 기록 ──
+                // ── 익명 체험 구매: API로 판매자 정산 ──
                 const randomName = RANDOM_BUYER_NAMES[Math.floor(Math.random() * RANDOM_BUYER_NAMES.length)];
                 setAnonymousBuyerName(randomName);
 
-                if (sellerId) {
-                    const { data: sellerProf } = await supabase.from("profiles").select("balance").eq("id", sellerId).single();
-                    const newSellerBal = (sellerProf?.balance ?? 0) + price;
-                    await supabase.from("profiles").update({ balance: newSellerBal }).eq("id", sellerId);
-                }
-
-                await supabase.from("virtual_sales").insert({
-                    post_id: id, seller_id: sellerId ?? null, buyer_id: null, amount: price,
-                }).then(() => {});
+                await fetch("/api/purchases", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        post_id: id,
+                        seller_id: sellerId ?? null,
+                        buyer_id: null,
+                        amount: price,
+                    }),
+                });
             }
 
             // sold_count 증가 (로그인/익명 공통)
