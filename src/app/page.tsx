@@ -148,6 +148,7 @@ const CATEGORY_COLORS: Record<string, string> = {
 export default function HomePage() {
   const router = useRouter();
   const storeUser = useGameStore(s => s.user);
+  const updateProfile = useGameStore(s => s.updateProfile);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [teamCount, setTeamCount] = useState<number>(0);
   const [products, setProducts] = useState<Product[]>([]);
@@ -166,6 +167,28 @@ export default function HomePage() {
         data: {session},
       } = await supabase.auth.getSession();
       setIsLoggedIn(!!session);
+
+      // 로그인된 유저 프로필 로드 (홈은 PUBLIC_PATH라 OnboardingGate가 로드 안 함)
+      if (session?.user) {
+        supabase
+          .from("profiles")
+          .select("name, handle, avatar, rank, team, points, role")
+          .eq("id", session.user.id)
+          .single()
+          .then(({ data: prof }) => {
+            if (prof) {
+              updateProfile({
+                name: prof.name,
+                handle: prof.handle,
+                avatar: prof.avatar,
+                rank: prof.rank,
+                team: prof.team,
+                points: prof.points ?? 0,
+                role: prof.role ?? "student",
+              });
+            }
+          });
+      }
 
       const [{data: prods}, {data: profiles}, {count: tCount}] = await Promise.all([
         supabase
