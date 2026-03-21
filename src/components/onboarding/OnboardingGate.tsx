@@ -64,8 +64,9 @@ export default function OnboardingGate({ children }: { children: React.ReactNode
                 .eq("id", session.user.id)
                 .single();
 
-            // 프로필이 없거나, 이름/역할이 미설정된 신규 유저 → 온보딩 필요
-            const isNewUser = !profile || !profile.name?.trim() || !profile.role;
+            // 프로필이 없거나 이름이 미설정된 신규 유저만 온보딩 필요
+            // role이 null이어도 이름이 있으면 기존 사용자 → 온보딩 스킵
+            const isNewUser = !profile || !profile.name?.trim();
             if (error || isNewUser) {
                 // checkAuthAndProfile은 initializedRef.current = false 일 때만 실행되므로
                 // 항상 온보딩 상태로 전환 (OAuth 신규 가입 후 역할 선택 팝업 미표시 버그 수정)
