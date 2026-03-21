@@ -55,6 +55,11 @@ export default function PostDetailPage() {
     const [loading, setLoading] = useState(true);
     const [notFound, setNotFound] = useState(false);
 
+    const [canGoBack, setCanGoBack] = useState(false);
+    useEffect(() => { setCanGoBack(window.history.length > 1); }, []);
+
+    const [anonymousName, setAnonymousName] = useState("");
+
     const [isLiked, setIsLiked] = useState(false);
     const [localLikes, setLocalLikes] = useState(0);
     const [isSaved, setIsSaved] = useState(false);
@@ -174,15 +179,20 @@ export default function PostDetailPage() {
         ));
     };
 
+    const RANDOM_NAMES = ["익명의 팬", "호기심 쇼퍼", "비밀 고객", "궁금한 이웃", "익명 구매자", "지나가는 팬", "익명 마케터", "몰래 온 고객", "호기심 학생"];
+
     const handleComment = async () => {
         const text = commentInput.trim();
         if (!text || submitting) return;
         setSubmitting(true);
         setCommentInput("");
+        const name = isLoggedIn
+            ? (me.name || "익명")
+            : (anonymousName.trim() || RANDOM_NAMES[Math.floor(Math.random() * RANDOM_NAMES.length)]);
         await supabase.from("comments").insert({
             post_id: id,
-            user_name: me.name || "익명",
-            user_handle: me.handle || "unknown",
+            user_name: name,
+            user_handle: isLoggedIn ? (me.handle || "unknown") : "guest",
             text,
             is_ai_reaction: false,
         });
@@ -369,6 +379,7 @@ export default function PostDetailPage() {
         <div className="min-h-screen pb-4" style={{ background: "var(--background)" }}>
 
             {/* ── 모바일 헤더 ── */}
+            {canGoBack && (
             <div className="flex items-center gap-3 px-4 py-3 md:hidden sticky top-0 z-10" style={{ borderBottom: "1px solid var(--border)", background: "var(--surface)" }}>
                 <button onClick={() => router.back()} className="p-1.5 rounded-full" style={{ color: "var(--foreground)" }}>
                     <ArrowLeft size={22} />
@@ -383,8 +394,10 @@ export default function PostDetailPage() {
                     </span>
                 )}
             </div>
+            )}
 
             {/* ── 데스크탑 뒤로가기 ── */}
+            {canGoBack && (
             <div className="hidden md:flex items-center gap-3 px-6 py-4 max-w-5xl mx-auto">
                 <button
                     onClick={() => router.back()}
@@ -394,6 +407,7 @@ export default function PostDetailPage() {
                     <ArrowLeft size={18} /> 뒤로가기
                 </button>
             </div>
+            )}
 
             <div className="max-w-2xl mx-auto">
 
@@ -538,34 +552,40 @@ export default function PostDetailPage() {
                             {comments.length === 0 && (
                                 <p className="text-[12px] text-center py-2" style={{ color: "var(--foreground-muted)" }}>첫 댓글을 남겨보세요!</p>
                             )}
-                            {/* 댓글 입력 */}
-                            {isLoggedIn ? (
-                            <div className="flex items-center gap-2 pt-2" style={{ borderTop: "1px solid var(--border)" }}>
-                                <div className="w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold text-white shrink-0"
-                                    style={{ background: "linear-gradient(135deg, var(--secondary), var(--accent))" }}>
-                                    {(me.name?.[0] ?? "?").toUpperCase()}
+                            {/* 댓글 입력 - 로그인 없이도 가능 */}
+                            <div className="flex flex-col gap-2 pt-2" style={{ borderTop: "1px solid var(--border)" }}>
+                                {!isLoggedIn && (
+                                    <input
+                                        type="text"
+                                        value={anonymousName}
+                                        onChange={e => setAnonymousName(e.target.value)}
+                                        placeholder="이름 (비워두면 랜덤 이름으로 등록)"
+                                        className="text-[12px] px-3 py-2 rounded-xl outline-none"
+                                        style={{ background: "var(--surface-2)", color: "var(--foreground)", border: "1px solid var(--border)" }}
+                                    />
+                                )}
+                                <div className="flex items-center gap-2">
+                                    <div className="w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold text-white shrink-0"
+                                        style={{ background: isLoggedIn ? "linear-gradient(135deg, var(--secondary), var(--accent))" : "linear-gradient(135deg, #94a3b8, #64748b)" }}>
+                                        {isLoggedIn ? (me.name?.[0] ?? "?").toUpperCase() : (anonymousName?.[0]?.toUpperCase() ?? "?")}
+                                    </div>
+                                    <input
+                                        type="text"
+                                        value={commentInput}
+                                        onChange={e => setCommentInput(e.target.value)}
+                                        onKeyDown={e => e.key === "Enter" && handleComment()}
+                                        placeholder="댓글 달기..."
+                                        className="flex-1 text-[13px] outline-none bg-transparent"
+                                        style={{ color: "var(--foreground)" }}
+                                        disabled={submitting}
+                                    />
+                                    {submitting
+                                        ? <Loader2 size={14} className="animate-spin" style={{ color: "var(--foreground-muted)" }} />
+                                        : <button onClick={handleComment} disabled={!commentInput.trim()}
+                                            className="text-[13px] font-bold disabled:opacity-30" style={{ color: "var(--secondary)" }}>게시</button>
+                                    }
                                 </div>
-                                <input
-                                    type="text"
-                                    value={commentInput}
-                                    onChange={e => setCommentInput(e.target.value)}
-                                    onKeyDown={e => e.key === "Enter" && handleComment()}
-                                    placeholder="댓글 달기..."
-                                    className="flex-1 text-[13px] outline-none bg-transparent"
-                                    style={{ color: "var(--foreground)" }}
-                                    disabled={submitting}
-                                />
-                                {submitting
-                                    ? <Loader2 size={14} className="animate-spin" style={{ color: "var(--foreground-muted)" }} />
-                                    : <button onClick={handleComment} disabled={!commentInput.trim()}
-                                        className="text-[13px] font-bold disabled:opacity-30" style={{ color: "var(--secondary)" }}>게시</button>
-                                }
                             </div>
-                            ) : (
-                            <div className="pt-2 text-center text-[12px]" style={{ borderTop: "1px solid var(--border)", color: "var(--foreground-muted)" }}>
-                                <a href="/login" className="font-bold" style={{ color: "var(--secondary)" }}>로그인</a>하고 댓글을 달아보세요
-                            </div>
-                            )}
                         </div>
 
                                         {/* ── 구매 완료 모달 ── */}
