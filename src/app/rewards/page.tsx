@@ -15,6 +15,7 @@ import {
     Package,
 } from "lucide-react";
 import GlassCard from "@/components/common/GlassCard";
+import BrandLoader from "@/components/common/BrandLoader";
 import { useGameStore } from "@/store/useGameStore";
 import { supabase } from "@/lib/supabase/client";
 
@@ -202,9 +203,7 @@ export function RewardsContent() {
 
             {/* 아이템 목록 */}
             {loading ? (
-                <div className="flex justify-center py-20">
-                    <Loader2 size={28} className="animate-spin" style={{ color: "var(--primary)" }} />
-                </div>
+                <BrandLoader variant="section" />
             ) : filtered.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-20 gap-3">
                     <Gift size={40} style={{ color: "var(--foreground-muted)" }} />

@@ -5,7 +5,7 @@ import { useRouter, usePathname } from "next/navigation";
 import { supabase } from "@/lib/supabase/client";
 import { useGameStore } from "@/store/useGameStore";
 import OnboardingWizard from "./OnboardingWizard";
-import { Loader2 } from "lucide-react";
+import BrandLoader from "@/components/common/BrandLoader";
 
 // 인증 체크를 건너뛸 페이지 (홈, 로그인, 콜백, 교사 대시보드, 관리자, 게시물 공유)
 const PUBLIC_PATHS = ["/login", "/auth/callback", "/teacher", "/admin", "/post/"];
@@ -172,12 +172,7 @@ export default function OnboardingGate({ children }: { children: React.ReactNode
     if (isPublicPath) return <>{children}</>;
 
     if (status === "loading") {
-        return (
-            <div className="min-h-screen flex items-center justify-center"
-                style={{ background: "var(--background)" }}>
-                <Loader2 size={28} className="animate-spin" style={{ color: "var(--primary)" }} />
-            </div>
-        );
+        return <BrandLoader />;
     }
 
     if (status === "needs-onboarding") {

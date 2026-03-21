@@ -3,6 +3,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import GlassCard from "@/components/common/GlassCard";
+import BrandLoader from "@/components/common/BrandLoader";
 import EditProfileModal from "@/components/profile/EditProfileModal";
 import SkillTree from "@/components/profile/SkillTree";
 import IDCard from "@/components/profile/IDCard";
@@ -510,9 +511,7 @@ export default function ProfilePage() {
                             </div>
 
                             {loadingMyPosts ? (
-                                <div className="flex justify-center py-20">
-                                    <Loader2 size={28} className="animate-spin" style={{ color: "var(--foreground-muted)" }} />
-                                </div>
+                                <BrandLoader variant="section" />
                             ) : myPosts.length === 0 ? (
                                 <div className="flex flex-col items-center justify-center py-24 gap-4 rounded-3xl"
                                     style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
@@ -692,9 +691,7 @@ export default function ProfilePage() {
                                 </div>
                             </div>
                             {loadingBookmarks ? (
-                                <div className="flex justify-center py-20">
-                                    <Loader2 size={28} className="animate-spin" style={{ color: "var(--foreground-muted)" }} />
-                                </div>
+                                <BrandLoader variant="section" />
                             ) : bookmarkedPosts.length === 0 ? (
                                 <div className="flex flex-col items-center justify-center py-24 gap-4"
                                     style={{ background: "var(--surface)", borderRadius: 24, border: "1px solid var(--border)" }}>
@@ -767,9 +764,7 @@ export default function ProfilePage() {
                                 </h3>
 
                                 {loadingTeam ? (
-                                    <div className="flex items-center justify-center py-12">
-                                        <Loader2 size={24} className="animate-spin" style={{ color: "var(--foreground-muted)" }} />
-                                    </div>
+                                    <BrandLoader variant="section" />
                                 ) : teamMembers.length === 0 ? (
                                     <div className="flex flex-col items-center justify-center py-12 gap-3 text-center">
                                         <Users size={32} style={{ color: "var(--foreground-muted)", opacity: 0.4 }} />

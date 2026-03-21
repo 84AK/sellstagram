@@ -5,6 +5,7 @@ import {useRouter} from "next/navigation";
 import Link from "next/link";
 import {supabase} from "@/lib/supabase/client";
 import {useGameStore} from "@/store/useGameStore";
+import BrandLoader from "@/components/common/BrandLoader";
 import {
   Zap,
   Sparkles,
@@ -720,11 +721,7 @@ export default function HomePage() {
 
             {loading ? (
               <div className="flex-1 flex items-center justify-center">
-                <Loader2
-                  size={24}
-                  className="animate-spin"
-                  style={{color: "#06D6A0"}}
-                />
+                <BrandLoader variant="section" />
               </div>
             ) : products.length === 0 ? (
               <div className="flex-1 flex flex-col items-center justify-center gap-2 py-6">
@@ -816,11 +813,7 @@ export default function HomePage() {
 
             {loading ? (
               <div className="flex-1 flex items-center justify-center">
-                <Loader2
-                  size={20}
-                  className="animate-spin"
-                  style={{color: "#FFC233"}}
-                />
+                <BrandLoader variant="section" />
               </div>
             ) : teamRanks.length === 0 ? (
               <div className="flex-1 flex flex-col items-center justify-center gap-2 py-4">

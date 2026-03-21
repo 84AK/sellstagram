@@ -32,6 +32,7 @@ import {
     addUnlockedStyle,
 } from "@/lib/avatar/styles";
 import { RewardsContent } from "@/app/rewards/page";
+import BrandLoader from "@/components/common/BrandLoader";
 
 interface Product {
     id: string;
@@ -489,9 +490,7 @@ export default function ShopPage() {
 
             {/* 상품 목록 */}
             {loading ? (
-                <div className="flex justify-center py-20">
-                    <Loader2 size={28} className="animate-spin" style={{ color: "var(--primary)" }} />
-                </div>
+                <BrandLoader variant="section" />
             ) : filtered.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-20 gap-3">
                     <Package size={40} style={{ color: "var(--foreground-muted)" }} />

@@ -8,6 +8,7 @@ import {
     Palette, BarChart2, Megaphone, Lightbulb, UserCheck, AlertCircle, ArrowLeft,
 } from "lucide-react";
 import { MARKETING_TYPE_DATA, AVATAR_OPTIONS } from "@/lib/constants/game";
+import BrandLoader from "@/components/common/BrandLoader";
 
 const ICON_MAP_SM: Record<string, React.ReactNode> = {
     creator: <Palette size={18} />,
@@ -494,10 +495,7 @@ export default function LoginPage() {
 
                         {/* 로딩 중 (반환 유저 로그인 처리) */}
                         {loading && nameStatus !== "available" && (
-                            <div className="flex items-center justify-center gap-2 py-2">
-                                <Loader2 size={16} className="animate-spin" style={{ color: "var(--primary)" }} />
-                                <span className="text-sm font-semibold" style={{ color: "var(--foreground-soft)" }}>로그인 중...</span>
-                            </div>
+                            <BrandLoader variant="section" text="로그인 중..." />
                         )}
 
                         <p className="text-xs text-center" style={{ color: "var(--foreground-muted)" }}>
