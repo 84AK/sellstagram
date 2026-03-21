@@ -80,6 +80,8 @@ export default function PostDetailPage() {
 
     // 랜딩 페이지 슬라이더
     const [slideIdx, setSlideIdx] = useState(0);
+    // 이미지 라이트박스
+    const [lightboxOpen, setLightboxOpen] = useState(false);
 
     // 구매 관련
     const [buying, setBuying] = useState(false);
@@ -765,7 +767,7 @@ export default function PostDetailPage() {
                         {/* 좌측: 이미지 */}
                         <div className="md:w-[55%] aspect-square md:aspect-auto md:min-h-[520px] relative flex-shrink-0" style={{ background: "var(--surface-2)" }}>
                             {post.image_url ? (
-                                <img src={post.image_url} alt={post.caption ?? ""} className="absolute inset-0 w-full h-full object-cover" />
+                                <img src={post.image_url} alt={post.caption ?? ""} className="absolute inset-0 w-full h-full object-cover cursor-zoom-in" onClick={() => setLightboxOpen(true)} />
                             ) : (
                                 <div className="absolute inset-0 flex items-center justify-center">
                                     <span className="font-black text-8xl italic select-none" style={{ color: "var(--border)" }}>S</span>
@@ -1078,6 +1080,30 @@ export default function PostDetailPage() {
                             </button>
                         </div>
                     </div>
+                </div>
+            )}
+
+            {/* ─── 이미지 라이트박스 ─── */}
+            {lightboxOpen && post.image_url && (
+                <div
+                    className="fixed inset-0 z-[99998] flex items-center justify-center"
+                    style={{ background: "rgba(0,0,0,0.92)", backdropFilter: "blur(6px)" }}
+                    onClick={() => setLightboxOpen(false)}
+                >
+                    <button
+                        className="absolute top-4 right-4 w-10 h-10 rounded-full flex items-center justify-center text-white transition-opacity hover:opacity-70"
+                        style={{ background: "rgba(255,255,255,0.12)" }}
+                        onClick={() => setLightboxOpen(false)}
+                    >
+                        <X size={20} />
+                    </button>
+                    <img
+                        src={post.image_url}
+                        alt={post.caption ?? ""}
+                        className="max-w-[92vw] max-h-[88vh] object-contain rounded-xl select-none"
+                        style={{ boxShadow: "0 24px 80px rgba(0,0,0,0.5)" }}
+                        onClick={e => e.stopPropagation()}
+                    />
                 </div>
             )}
         </div>
