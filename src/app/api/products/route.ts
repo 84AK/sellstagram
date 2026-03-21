@@ -55,7 +55,12 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    return NextResponse.json({ data: data ?? [] });
+    return NextResponse.json({ data: data ?? [] }, {
+        headers: {
+            // 30초 엣지 캐시 + 60초 stale-while-revalidate (상품 목록은 자주 안 바뀜)
+            "Cache-Control": "public, s-maxage=30, stale-while-revalidate=60",
+        },
+    });
 }
 
 // POST /api/products — 상품 생성

@@ -101,20 +101,22 @@ export default function ShopPage() {
     // 상품 + 내 구매 목록 로드
     useEffect(() => {
         const load = async () => {
-            // API 라우트를 통해 products 조회 (RLS SELECT 정책 없어도 동작)
-            const [prodsRes, { data: { session } }] = await Promise.all([
+            // session은 로컬 캐시에서 빠르게 조회 후 products + purchases 동시 실행
+            const { data: { session } } = await supabase.auth.getSession();
+            const userId = session?.user?.id;
+
+            const [prodsRes, purchasesRes] = await Promise.all([
                 fetch("/api/products").then(r => r.json()),
-                supabase.auth.getSession(),
+                userId
+                    ? supabase.from("purchases").select("product_id, quantity, sold_quantity").eq("user_id", userId)
+                    : Promise.resolve({ data: null }),
             ]);
+
             setProducts(prodsRes.data ?? []);
 
-            if (session?.user?.id) {
-                const { data: bought } = await supabase
-                    .from("purchases")
-                    .select("product_id, quantity, sold_quantity")
-                    .eq("user_id", session.user.id);
+            if (purchasesRes.data) {
                 const inv = new Map<string, { quantity: number; sold_quantity: number }>();
-                (bought ?? []).forEach((b: { product_id: string; quantity: number; sold_quantity: number }) => {
+                (purchasesRes.data as { product_id: string; quantity: number; sold_quantity: number }[]).forEach(b => {
                     inv.set(b.product_id, { quantity: b.quantity ?? 1, sold_quantity: b.sold_quantity ?? 0 });
                 });
                 setOwnedInventory(inv);
