@@ -127,13 +127,9 @@ export default function PostDetailPage() {
             setIsLiked(likedIds.includes(id));
             setIsSaved(savedIds.includes(id));
 
-            const { data: cmts } = await supabase
-                .from("comments")
-                .select("id, user_name, text, created_at")
-                .eq("post_id", id)
-                .eq("is_ai_reaction", false)
-                .order("created_at", { ascending: true });
-            if (cmts) setComments(cmts);
+            // admin API 라우트로 조회 → RLS 우회, 비로그인도 댓글 표시
+            const cmtsRes = await fetch(`/api/comments?postId=${id}`).then(r => r.json());
+            if (cmtsRes.data) setComments(cmtsRes.data);
 
             const { data: others } = await supabase
                 .from("posts")
@@ -234,12 +230,16 @@ export default function PostDetailPage() {
         };
         setComments(prev => [...prev, tempComment]);
 
-        await supabase.from("comments").insert({
-            post_id: id,
-            user_name: name,
-            user_handle: isLoggedIn ? (me.handle || "unknown") : "guest",
-            text,
-            is_ai_reaction: false,
+        // admin API 라우트로 저장 → RLS 우회, 비로그인도 저장 가능
+        await fetch("/api/comments", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                post_id: id,
+                user_name: name,
+                user_handle: isLoggedIn ? (me.handle || "unknown") : "guest",
+                text,
+            }),
         });
         setSubmitting(false);
     };
