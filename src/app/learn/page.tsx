@@ -20,6 +20,7 @@ import {
     GraduationCap,
     Target,
 } from "lucide-react";
+import ReactMarkdown from "react-markdown";
 import {
     CONCEPT_CARDS,
     AI_TOOL_GUIDES,
@@ -169,14 +170,13 @@ function ConceptDetail({
                     </p>
                 </div>
             </div>
-
             <div className="p-4 rounded-2xl" style={{ background: card.bg }}>
                 <p className="text-xs font-bold mb-2" style={{ color: card.color }}>
                     {card.subtitle}
                 </p>
-                <p className="text-sm leading-relaxed" style={{ color: "var(--foreground)" }}>
-                    {card.body}
-                </p>
+                <div className="text-sm leading-relaxed react-markdown" style={{ color: "var(--foreground)" }}>
+                    <ReactMarkdown>{card.body}</ReactMarkdown>
+                </div>
             </div>
 
             <div>
@@ -414,18 +414,18 @@ function TutorialDetail({
                             <p className="text-sm font-bold" style={{ color: "var(--foreground)" }}>
                                 {step.title}
                             </p>
-                            <p className="text-sm leading-relaxed" style={{ color: "var(--foreground-soft)" }}>
-                                {step.desc}
-                            </p>
+                            <div className="text-sm leading-relaxed react-markdown" style={{ color: "var(--foreground-soft)" }}>
+                                <ReactMarkdown>{step.desc}</ReactMarkdown>
+                            </div>
                             {step.tip && (
                                 <div
                                     className="flex items-start gap-2 mt-1 p-2.5 rounded-xl"
                                     style={{ background: "var(--highlight-light)" }}
                                 >
                                     <span>💡</span>
-                                    <span className="text-sm" style={{ color: "#D97706" }}>
-                                        {step.tip}
-                                    </span>
+                                    <div className="text-sm react-markdown" style={{ color: "#D97706" }}>
+                                        <ReactMarkdown>{step.tip}</ReactMarkdown>
+                                    </div>
                                 </div>
                             )}
                         </div>
