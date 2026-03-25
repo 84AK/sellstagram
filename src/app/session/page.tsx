@@ -1,6 +1,8 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase/client";
 import {
@@ -505,9 +507,11 @@ export function SessionContent({ hideLearnLink }: { hideLearnLink?: boolean } = 
                                 {/* 활동 상세 */}
                                 {isExpanded && (
                                     <div className="px-5 pb-5 flex flex-col gap-4">
-                                        <p className="text-base leading-relaxed" style={{ color: "var(--foreground-soft)" }}>
-                                            {activity.desc}
-                                        </p>
+                                        <div className="react-markdown text-base leading-relaxed" style={{ color: "var(--foreground-soft)" }}>
+                                            <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                                                {activity.desc}
+                                            </ReactMarkdown>
+                                        </div>
 
                                         {/* Kit 타입: 텍스트 프롬프트 + 이미지 프롬프트 블록 */}
                                         {isKit && (
@@ -632,9 +636,11 @@ export function SessionContent({ hideLearnLink }: { hideLearnLink?: boolean } = 
                                                     <p className="text-xs font-black mb-1" style={{ color: "var(--highlight-dark)" }}>
                                                         선생님 팁
                                                     </p>
-                                                    <p className="text-sm font-medium leading-relaxed" style={{ color: "var(--foreground-soft)" }}>
-                                                        {activity.tip}
-                                                    </p>
+                                                    <div className="react-markdown text-sm font-medium leading-relaxed" style={{ color: "var(--foreground-soft)" }}>
+                                                        <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                                                            {activity.tip}
+                                                        </ReactMarkdown>
+                                                    </div>
                                                 </div>
                                             </div>
                                         )}
