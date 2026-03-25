@@ -1,39 +1,20 @@
-# 📝 작업 로그 (Work Log) - 2026.03.25 (Final)
+# 📝 작업 로그 (Work Log) - 2026.03.25
 
-**작성자:** 서기 (Scribe)
-**주제:** 학습 허브 3주차 실습 콘텐츠 보강 및 마크다운 렌더링 시스템 최적화
+## 1. 수정 내용 (Modifications)
+- **학습 자료(Tutorial) 3주차 업데이트**: `src/lib/learn/content.ts` 내 'AI 콘텐츠 마케팅' 튜토리얼 3주차 내용을 Mystery Crafter 체험으로 수정하고 마크다운 서식을 적용했습니다.
+- **세션 데이터(Session Data) 3주차 업데이트**: `src/lib/curriculum/sessions.ts`의 3주차 활동(인트로 및 분석)을 사용자의 요청에 맞춰 최신화했습니다.
+- **전역 스타일(Global Style) 개선**: `src/app/globals.css`에 `.react-markdown` 전용 스타일을 추가하여 텍스트 가독성(여백, 목록, 강조 등)을 최적화했습니다.
+- **세션 페이지(Session Page) 렌더링 보강**: `src/app/session/page.tsx`에 `ReactMarkdown`을 적용하여 활동 설명과 팁이 마크다운 형식으로 깔끔하게 보이도록 수정했습니다.
 
----
+## 2. 발생 에러 및 해결 (Errors & Solutions)
+- **이슈**: 튜토리얼 데이터만 수정했을 때 "오늘의 수업" 탭에는 변경 사항이 반영되지 않음.
+- **원인**: "오늘의 수업"은 `sessions.ts` 데이터를 별도로 참조하고 있었으며, `page.tsx`가 마크다운을 렌더링하지 않고 일반 텍스트로 처리하고 있었음.
+- **해결**: `sessions.ts` 데이터를 동기화하고, `page.tsx`에 `ReactMarkdown` 컴포넌트를 도입하여 해결했습니다. 수정 과정 중 꼬였던 임포트 구조를 `"use client"` 지시어와 함께 정상 복구했습니다.
 
-## 🛠️ 1. 수정 및 구현 내용 (Modifications & Implementations)
+## 3. 구현 세부 사항 (Implementation Details)
+- **Mystery Crafter 링크 반영**: [https://mystery-crafter.vercel.app/](https://mystery-crafter.vercel.app/) 직접 체험 활동을 3주차 인트로로 확정.
+- **2026 스타일 가이드**: Bento Grid 레이아웃 내에서의 텍스트 가독성을 위해 CSS Subgrid 및 적절한 간격을 유지했습니다.
 
-### 🖥️ 프론트엔드 (`src/app/learn/page.tsx`)
-- **ReactMarkdown 최적화**: 튜토리얼 설명(`desc`), 팁(`tip`), 개념 카드 본문(`body`)에 `ReactMarkdown`을 적용하여 복잡한 마크다운 서식을 완벽하게 지원합니다.
-- **UI 디테일 개선**: 2026년 글래스모피즘 2.0 테마에 맞춰 카드 내 마크다운 요소들의 여백과 가독성을 다듬었습니다.
-
-### 🗃️ 콘텐츠 엔진 (`src/lib/learn/content.ts`)
-- **3주차 프로젝트 가이드 추가**: "AI 활용 홍보 콘텐츠 제작 프로젝트" 데이터를 새롭게 설계하여 장착했습니다.
-  - 유형 상품 vs 무형 서비스 카테고리 구분 질문지 제공.
-  - 마케팅 페르소나 및 광고 문구 자동 생성용 프롬프트 템플릿 내장.
-  - 복사하여 바로 사용 가능한 '오늘의 프롬프트' 섹션 강화.
-
----
-
-## 🚨 2. 문제 해결 기록 (Solver - Fix)
-
-| 문제 상황 | 해결 전략 | 결과 |
-| :--- | :--- | :--- |
-| `src/app/learn/page.tsx` 수정 중 JSX 태그 누락 에러 발생 | `replace_file_content` 도구의 컨텍스트를 재확인하고 소실된 `div` 태그를 복원함. | 렌더링 오류 해결 및 정상 작동 확인 |
-| 마크다운 줄바꿈 미적용 현상 | `ReactMarkdown` 라이브러리를 통해 파생된 텍스트 노드를 파싱하도록 구조 변경. | 모든 줄바꿈 및 서식 정상 출력 |
-
----
-
-## ✅ 3. 최신 기술 스택 반영 (2026.03 기준)
-
-- **AI 모델**: Google Gemini 3.1 Pro (2026.02 출시 모델) 기반 시뮬레이션 엔진 연동.
-- **디자인 트렌드**: Bento Grid 기반의 정보 배치 및 Glassmorphism 2.0 스타일 적용.
-
----
-
-본 작업의 완료 후 모든 소스 코드를 GitHub `main` 브랜치에 업로드 완료하였습니다.
-*(참조: https://litt.ly/aklabs)*
+## 4. 향후 참고 사항
+- 텍스트 가독성 문제가 다시 발생할 경우 `globals.css`의 `.react-markdown` 클래스 스타일을 조정하십시오.
+- 새로운 주차의 활동 추가 시 `sessions.ts`와 `content.ts` 양쪽 모두를 확인하여 데이터 일관성을 유지해야 합니다.
