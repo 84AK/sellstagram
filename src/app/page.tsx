@@ -1171,7 +1171,7 @@ export default function HomePage() {
                       </div>
                     </div>
                     <p
-                      className="text-sm leading-relaxed"
+                      className="whitespace-pre-wrap text-sm leading-relaxed"
                       style={{color: "var(--foreground)"}}
                     >
                       {post.caption}

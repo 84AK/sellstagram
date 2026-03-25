@@ -933,7 +933,7 @@ export default function ProfilePage() {
                             {/* 캡션 */}
                             {activePost.caption && (
                                 <div className="px-5 py-3" style={{ borderBottom: "1px solid var(--border)" }}>
-                                    <p className="text-sm leading-relaxed" style={{ color: "var(--foreground)" }}>
+                                    <p className="whitespace-pre-wrap text-sm leading-relaxed" style={{ color: "var(--foreground)" }}>
                                         {activePost.caption}
                                     </p>
                                 </div>

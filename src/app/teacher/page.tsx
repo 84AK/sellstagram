@@ -1097,13 +1097,13 @@ function Dashboard({ onLogout }: { onLogout: () => void }) {
 
                                         {/* 캡션 */}
                                         {post.caption && (
-                                            <p className="text-sm leading-relaxed mb-4"
+                                            <p className="whitespace-pre-wrap text-sm leading-relaxed mb-4"
                                                 style={{ color: "var(--foreground-soft)" }}>
                                                 {post.caption}
                                             </p>
                                         )}
                                         {post.description && (
-                                            <p className="text-sm leading-relaxed mb-4"
+                                            <p className="whitespace-pre-wrap text-sm leading-relaxed mb-4"
                                                 style={{ color: "var(--foreground-soft)" }}>
                                                 {post.description}
                                             </p>

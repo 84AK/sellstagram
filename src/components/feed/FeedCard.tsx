@@ -796,7 +796,7 @@ export default function FeedCard({ id, user, content, stats, timeAgo, sellingPri
 
             {/* ─── 캡션 + 해시태그 ─── */}
             <div className="px-4 pb-2">
-                <p className="text-[15px] leading-relaxed" style={{ color: "var(--foreground-soft)" }}>
+                <p className="whitespace-pre-wrap text-[15px] leading-relaxed" style={{ color: "var(--foreground-soft)" }}>
                     {captionExpanded || content.caption.length <= CAPTION_LIMIT
                         ? content.caption
                         : content.caption.slice(0, CAPTION_LIMIT) + "..."}

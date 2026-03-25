@@ -132,7 +132,7 @@ export default function OnboardingWizard({ onComplete }: { onComplete?: () => vo
                     points: 0, rank: "Teacher", role: "teacher",
                 });
                 if (error) console.error("Profile upsert error:", error.message);
-                updateProfile({ name: teacherName, handle, avatar: "👨‍🏫", rank: "Teacher", team: "교사" });
+                updateProfile({ name: teacherName, handle, avatar: "👨‍🏫", rank: "Teacher", team: "교사", role: "teacher" });
             }
             router.push("/teacher");
         } catch (e) {
@@ -166,7 +166,7 @@ export default function OnboardingWizard({ onComplete }: { onComplete?: () => vo
             localStorage.setItem("sellstagram_user_id", session.user.id);
         }
 
-        updateProfile({ name: name.trim(), handle, avatar: selectedAvatar, rank: selectedType.badge, team: assignedTeam });
+        updateProfile({ name: name.trim(), handle, avatar: selectedAvatar, rank: selectedType.badge, team: assignedTeam, role: "student" });
 
         setSaving(false);
         setIsComplete(true);
