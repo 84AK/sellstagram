@@ -337,3 +337,46 @@ body {
   0%   { transform: scale(0.5); opacity: 0; }
   100% { transform: scale(1);   opacity: 1; }
 }
+
+/* ═══ 마크다운 스타일 보강 ═══ */
+.react-markdown p {
+  margin-bottom: 0.75rem;
+}
+.react-markdown p:last-child {
+  margin-bottom: 0;
+}
+.react-markdown ul {
+  list-style-type: disc;
+  margin-bottom: 0.75rem;
+  padding-left: 1.25rem;
+}
+.react-markdown ol {
+  list-style-type: decimal;
+  margin-bottom: 0.75rem;
+  padding-left: 1.25rem;
+}
+.react-markdown li {
+  margin-bottom: 0.35rem;
+}
+.react-markdown li:last-child {
+  margin-bottom: 0;
+}
+.react-markdown blockquote {
+  border-left: 3px solid var(--primary-light);
+  padding-left: 1rem;
+  color: var(--foreground-soft);
+  font-style: italic;
+  margin: 1rem 0;
+}
+.react-markdown strong {
+  font-weight: 800;
+  color: var(--foreground);
+}
+.react-markdown a {
+  color: var(--secondary);
+  text-decoration: underline;
+  font-weight: 700;
+}
+.react-markdown a:hover {
+  opacity: 0.8;
+}
