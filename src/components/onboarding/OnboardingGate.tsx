@@ -62,14 +62,18 @@ export default function OnboardingGate({ children }: { children: React.ReactNode
                 .from("profiles")
                 .select("id, name, handle, avatar, marketer_type, team, points, rank, role, balance, skill_xp")
                 .eq("id", session.user.id)
-                .single();
+                .maybeSingle(); // .single() 대신 .maybeSingle() 사용하여 결과 없을 때 에러 방지
+
+            if (error) {
+                console.error("Profile fetch error:", error);
+                // 네트워크 오류 등으로 인한 실패 시 온보딩으로 보내지 않고 대기
+                // 또는 에러 상태를 보여주는 것이 안전함
+                return;
+            }
 
             // 프로필이 없거나 이름이 미설정된 신규 유저만 온보딩 필요
-            // role이 null이어도 이름이 있으면 기존 사용자 → 온보딩 스킵
             const isNewUser = !profile || !profile.name?.trim();
-            if (error || isNewUser) {
-                // checkAuthAndProfile은 initializedRef.current = false 일 때만 실행되므로
-                // 항상 온보딩 상태로 전환 (OAuth 신규 가입 후 역할 선택 팝업 미표시 버그 수정)
+            if (isNewUser) {
                 setStatusSafe("needs-onboarding");
                 return;
             }
@@ -172,7 +176,7 @@ export default function OnboardingGate({ children }: { children: React.ReactNode
     if (isPublicPath) return <>{children}</>;
 
     if (status === "loading") {
-        return <BrandLoader />;
+        return <BrandLoader text="프로필 정보를 확인하고 있어요..." />;
     }
 
     if (status === "needs-onboarding") {
