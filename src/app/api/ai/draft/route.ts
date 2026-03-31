@@ -1,8 +1,12 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { askGemini, GeminiError } from "@/lib/ai/gemini";
 import { AI_PROMPTS } from "@/lib/ai/prompts";
+import { rateLimit } from "@/lib/security/rateLimit";
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
+    // 🚦 Rate Limiting
+    const limitResponse = await rateLimit(request);
+    if (limitResponse) return limitResponse;
     try {
         const { productName, targetAudience, strategy, tone } = await request.json();
 

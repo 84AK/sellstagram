@@ -234,6 +234,22 @@ function Dashboard({ onLogout }: { onLogout: () => void }) {
     // handle → team 매핑 (팀별 집계용)
     const [handleToTeam, setHandleToTeam] = useState<Record<string, string>>({});
 
+    // 🔒 시스템 업데이트 공통 함수 (전용 API 경유)
+    const callTeacherApi = async (action: "update" | "delete_all_posts", table: string, id: any, data?: any) => {
+        try {
+            const res = await fetch("/api/teacher/system", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ action, table, id, data }),
+            });
+            if (!res.ok) throw new Error(`API Error: ${res.statusText}`);
+            return await res.json();
+        } catch (err) {
+            console.error("[Teacher API Client Error]:", err);
+            return { error: err };
+        }
+    };
+
     // Supabase: 팀 현황 로드 (profiles + posts)
     const loadTeamStats = async () => {
         setIsLoadingTeams(true);
@@ -339,49 +355,46 @@ function Dashboard({ onLogout }: { onLogout: () => void }) {
         setDeletingId(null);
     };
 
-    // Supabase: 주차 변경 동기화
+    // Supabase: 주차 변경 동기화 (API 경유)
     const syncWeek = async (newWeek: number) => {
-        await supabase.from("game_state").update({ week: newWeek, updated_at: new Date().toISOString() }).eq("id", 1);
+        await callTeacherApi("update", "game_state", 1, { week: newWeek });
     };
 
     const handlePrevWeek = () => { prevWeek(); syncWeek(Math.max(1, week - 1)); };
     const handleNextWeek = () => { nextWeek(); syncWeek(Math.min(29, week + 1)); };
     const handleSetWeek = (w: number) => { setWeek(w); syncWeek(w); };
 
-    // Supabase: 미션 토글 동기화
+    // Supabase: 미션 토글 동기화 (API 경유)
     const handleToggleMission = async (missionId: string) => {
         const mission = missions.find(m => m.id === missionId);
         if (!mission) return;
         toggleMissionActive(missionId);
-        await supabase.from("missions").update({ is_active: !mission.isActive }).eq("id", missionId);
+        await callTeacherApi("update", "missions", missionId, { is_active: !mission.isActive });
     };
 
-    // Supabase: 게시물 강조 동기화
+    // Supabase: 게시물 강조 동기화 (API 경유)
     const handleHighlight = async (postId: string, highlighted: boolean) => {
         setHighlightedPost(highlighted ? postId : null);
-        await supabase.from("posts").update({ highlighted }).eq("id", postId);
+        await callTeacherApi("update", "posts", postId, { highlighted });
     };
 
-    // Supabase: 피드 초기화
+    // Supabase: 피드 초기화 (API 경유)
     const handleResetPosts = async () => {
         resetPosts();
-        await supabase.from("posts").delete().neq("id", "00000000-0000-0000-0000-000000000000"); // 전체 삭제
+        await callTeacherApi("delete_all_posts", "posts", null);
         setShowResetConfirm(false);
     };
 
-    // 수업 상태 토글 (Supabase 저장)
+    // 수업 상태 토글 (API 경유)
     const handleClassToggle = async () => {
         setClassActiveLoading(true);
         const next = !classActive;
-        const { error } = await supabase
-            .from("app_settings")
-            .update({ class_active: next, updated_at: new Date().toISOString() })
-            .eq("id", 1);
-        if (!error) setClassActive(next);
+        const result = await callTeacherApi("update", "app_settings", 1, { class_active: next });
+        if (!result.error) setClassActive(next);
         setClassActiveLoading(false);
     };
 
-    // 마켓 시뮬레이션 토글
+    // 마켓 시뮬레이션 토글 (API 경유)
     const handleSimToggle = async () => {
         setSimLoading(true);
         const next = !simActive;
@@ -395,11 +408,8 @@ function Dashboard({ onLogout }: { onLogout: () => void }) {
                 sim_active: false,
                 sim_started_at: null,
               };
-        const { error } = await supabase
-            .from("app_settings")
-            .update(updatePayload)
-            .eq("id", 1);
-        if (!error) {
+        const result = await callTeacherApi("update", "app_settings", 1, updatePayload);
+        if (!result.error) {
             setSimActive(next);
             setSimStartedAt(next ? new Date().toISOString() : null);
         }

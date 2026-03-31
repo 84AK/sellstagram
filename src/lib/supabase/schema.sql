@@ -138,38 +138,37 @@ alter publication supabase_realtime add table public.simulation_results;
 -- 교실 환경이므로 간단하게 설정
 -- =====================================================
 
--- profiles: 누구나 읽기, 본인만 쓰기
+-- profiles: 누구나 읽기, 본인만 쓰기/수정 (Rule 3 준수)
 alter table public.profiles enable row level security;
 create policy "profiles_read" on public.profiles for select using (true);
 create policy "profiles_insert" on public.profiles for insert with check (auth.uid() = id);
 create policy "profiles_update" on public.profiles for update using (auth.uid() = id);
+create policy "profiles_delete" on public.profiles for delete using (auth.uid() = id);
 
--- posts: 누구나 읽기, 로그인한 사용자만 쓰기
+-- posts: 누구나 읽기, 등록은 로그인한 사용자만, 수정/삭제는 본인만 (Rule 3 강화)
 alter table public.posts enable row level security;
 create policy "posts_read" on public.posts for select using (true);
 create policy "posts_insert" on public.posts for insert with check (auth.uid() is not null);
-create policy "posts_update" on public.posts for update using (true);
-create policy "posts_delete" on public.posts for delete using (true);
+create policy "posts_update" on public.posts for update using (auth.uid() = user_id);
+create policy "posts_delete" on public.posts for delete using (auth.uid() = user_id);
 
--- missions: 누구나 읽기, 쓰기는 서비스 키로만 (교사 대시보드)
+-- missions: 누구나 읽기, 쓰기는 API(service_role)로만 제한 (Public Update 차단)
 alter table public.missions enable row level security;
 create policy "missions_read" on public.missions for select using (true);
-create policy "missions_update" on public.missions for update using (true);
+-- update/insert/delete 정책을 명시적으로 추가하지 않음 (service_role만 가능)
 
 -- mission_completions: 누구나 읽기/쓰기
 alter table public.mission_completions enable row level security;
 create policy "completions_read" on public.mission_completions for select using (true);
 create policy "completions_insert" on public.mission_completions for insert with check (auth.uid() is not null);
 
--- game_state: 누구나 읽기, 쓰기 허용 (교사 PIN으로 별도 보호)
+-- game_state: 누구나 읽기, 수정은 API(service_role)로만 제한 (교사 대시보드 전용)
 alter table public.game_state enable row level security;
 create policy "game_state_read" on public.game_state for select using (true);
-create policy "game_state_update" on public.game_state for update using (true);
 
--- products: 누구나 읽기, 쓰기는 관리(교사)
+-- products: 누구나 읽기, 수정은 API(service_role)로만 제한 (교사용)
 alter table public.products enable row level security;
 create policy "products_read" on public.products for select using (true);
-create policy "products_write" on public.products for all using (true);
 
 -- purchases: 본인 기록 읽기/쓰기
 alter table public.purchases enable row level security;
@@ -224,9 +223,10 @@ create table if not exists public.simulation_results (
     created_at timestamptz default now()
 );
 
+-- simulation_results: 누구나 읽기, 저장은 로그인 사용자만
 alter table public.simulation_results enable row level security;
 create policy "sim_results_read" on public.simulation_results for select using (true);
-create policy "sim_results_insert" on public.simulation_results for insert with check (true);
+create policy "sim_results_insert" on public.simulation_results for insert with check (auth.uid() is not null);
 
 -- =====================================================
 -- app_settings: 수업 상태 관리 (선생님이 수업 시작/종료 제어)
@@ -241,7 +241,6 @@ create table if not exists public.app_settings (
 insert into public.app_settings (id, class_active) values (1, false)
 on conflict (id) do nothing;
 
--- RLS: 누구나 읽기 가능, 쓰기는 제한 없음 (관리자/선생님은 쿠키/role로 앱에서 제어)
+-- app_settings: 누구나 읽기, 수정은 API(service_role)로 전면 제한
 alter table public.app_settings enable row level security;
 create policy "app_settings_read" on public.app_settings for select using (true);
-create policy "app_settings_write" on public.app_settings for update using (true);

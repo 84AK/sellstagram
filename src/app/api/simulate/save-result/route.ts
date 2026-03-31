@@ -1,8 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@supabase/supabase-js";
+import { rateLimit } from "@/lib/security/rateLimit";
 
 export async function POST(request: NextRequest) {
+    // 🚦 Rate Limiting
+    const limitResponse = await rateLimit(request);
+    if (limitResponse) return limitResponse;
     const authHeader = request.headers.get("Authorization");
     const token = authHeader?.replace("Bearer ", "");
 
