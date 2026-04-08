@@ -51,8 +51,9 @@ export default function MyChannelUploadModal({ isOpen, onClose }: Props) {
     const [content,   setContent]   = useState("");
     const [images,    setImages]    = useState<{ url: string; name: string }[]>([]);
     const [previewMd, setPreviewMd] = useState(false);
-    const [useAI,     setUseAI]     = useState(false);
+    const [useAI,          setUseAI]          = useState(false);
     const { hasAccess: hasAIAccess } = useAIAccess();
+    const [showAILockToast, setShowAILockToast] = useState(false);
     const [showHints, setShowHints] = useState(false);
 
     // ── AI 변환 상태 ───────────────────────────────────────────────
@@ -195,6 +196,18 @@ export default function MyChannelUploadModal({ isOpen, onClose }: Props) {
     const canPost    = content.trim().length > 0;
 
     return (
+        <>
+        {/* AI 잠금 토스트 */}
+        {showAILockToast && (
+            <div className="fixed top-6 left-1/2 -translate-x-1/2 z-[300] flex items-center gap-2.5 px-4 py-3 rounded-2xl shadow-xl animate-in fade-in slide-in-from-top-2 duration-200"
+                style={{ background: "var(--surface)", border: "1.5px solid #8B5CF644", boxShadow: "0 8px 32px rgba(139,92,246,0.18)", minWidth: 260 }}>
+                <Lock size={14} style={{ color: "#8B5CF6" }} />
+                <div>
+                    <p className="text-xs font-black" style={{ color: "#8B5CF6" }}>AI 기능은 팀 배정 후 이용 가능해요</p>
+                    <p className="text-[10px]" style={{ color: "var(--foreground-muted)" }}>선생님께 팀 코드를 받아 팀에 가입하세요.</p>
+                </div>
+            </div>
+        )}
         <div
             className="fixed inset-0 flex items-end sm:items-center justify-center p-0 sm:p-4"
             style={{ zIndex: 150, background: "rgba(0,0,0,0.55)", backdropFilter: "blur(4px)" }}
@@ -485,7 +498,9 @@ export default function MyChannelUploadModal({ isOpen, onClose }: Props) {
                                             선생님께 팀 코드를 받거나 프리미엄 플랜을 이용해주세요.
                                         </p>
                                     </div>
-                                    <button disabled className="shrink-0 flex items-center gap-1 px-3 py-1.5 rounded-xl text-[11px] font-bold opacity-50 cursor-not-allowed"
+                                    <button
+                                        onClick={() => { setShowAILockToast(true); setTimeout(() => setShowAILockToast(false), 3000); }}
+                                        className="shrink-0 flex items-center gap-1 px-3 py-1.5 rounded-xl text-[11px] font-bold transition-all active:scale-95"
                                         style={{ background: "linear-gradient(135deg, #8B5CF6, #4361EE)", color: "white" }}>
                                         <Sparkles size={11} /> 업그레이드
                                     </button>
@@ -674,5 +689,6 @@ export default function MyChannelUploadModal({ isOpen, onClose }: Props) {
                 </div>
             </div>
         </div>
+        </>
     );
 }

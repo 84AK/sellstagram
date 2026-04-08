@@ -81,6 +81,7 @@ export default function UploadModal() {
     const [loadingResult, setLoadingResult] = useState(false);
     const [isAnalyzing, setIsAnalyzing] = useState(false);
     const [isAIStudioOpen, setIsAIStudioOpen] = useState(false);
+    const [showAILockToast, setShowAILockToast] = useState(false);
     const [productPrice, setProductPrice] = useState("10000");
 
     // 구매한 상품 관련
@@ -622,6 +623,17 @@ export default function UploadModal() {
 
     return (
         <>
+        {/* AI 잠금 토스트 */}
+        {showAILockToast && (
+            <div className="fixed top-6 left-1/2 -translate-x-1/2 z-[300] flex items-center gap-2.5 px-4 py-3 rounded-2xl shadow-xl"
+                style={{ background: "var(--surface)", border: "1.5px solid #8B5CF644", boxShadow: "0 8px 32px rgba(139,92,246,0.18)" }}>
+                <Lock size={14} style={{ color: "#8B5CF6" }} />
+                <div>
+                    <p className="text-xs font-black" style={{ color: "#8B5CF6" }}>AI 기능은 팀 배정 후 이용 가능해요</p>
+                    <p className="text-[10px]" style={{ color: "var(--foreground-muted)" }}>선생님께 팀 코드를 받거나 프리미엄 플랜을 이용해주세요.</p>
+                </div>
+            </div>
+        )}
         {isAIStudioOpen && (
             <AIContentStudio
                 onApply={(appliedCaption, appliedTags) => {
@@ -827,13 +839,11 @@ export default function UploadModal() {
                                     </button>
                                 ) : (
                                     <button
-                                        disabled
-                                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-black transition-all cursor-not-allowed opacity-60"
-                                        style={{ background: "var(--surface-3)", color: "var(--foreground-muted)", border: "1.5px dashed #8B5CF644" }}
+                                        onClick={() => { setShowAILockToast(true); setTimeout(() => setShowAILockToast(false), 3000); }}
+                                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-black transition-all"
+                                        style={{ background: "#8B5CF611", color: "#8B5CF6", border: "1.5px dashed #8B5CF644" }}
                                     >
-                                        <Lock size={10} style={{ color: "#8B5CF6" }} />
-                                        <span style={{ color: "#8B5CF6" }}>AI 기능</span>
-                                        <span className="px-1.5 py-0.5 rounded-full text-white text-[9px]" style={{ background: "#8B5CF6" }}>팀 배정 필요</span>
+                                        <Lock size={10} /> AI 기능 <span className="px-1.5 py-0.5 rounded-full text-white text-[9px]" style={{ background: "#8B5CF6" }}>팀 배정 필요</span>
                                     </button>
                                 )}
                             </div>

@@ -15,7 +15,11 @@ export function useAIAccess() {
         user.role === "admin" ||
         user.role === "teacher";
 
-    const hasTeam = typeof user.team === "string" && user.team.trim() !== "";
+    // "미배정" 또는 빈 문자열이면 팀 미배정으로 판단
+    const UNASSIGNED_VALUES = ["", "미배정", "unassigned"];
+    const hasTeam =
+        typeof user.team === "string" &&
+        !UNASSIGNED_VALUES.includes(user.team.trim());
 
     const hasAccess = isPrivileged || hasTeam;
 
