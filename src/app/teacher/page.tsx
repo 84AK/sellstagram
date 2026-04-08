@@ -59,7 +59,7 @@ interface StudentProfile {
     points: number;
 }
 
-type Tab = "class" | "feed" | "mission" | "shop" | "reward" | "weekly" | "teams" | "simulation";
+type Tab = "class" | "feed" | "mission" | "shop" | "reward" | "weekly" | "teams" | "simulation" | "push";
 
 interface SimResult {
     id: string;
@@ -524,6 +524,7 @@ function Dashboard({ onLogout }: { onLogout: () => void }) {
         { id: "shop", label: "상품 관리", emoji: "🛍️" },
         { id: "reward", label: "리워드 관리", emoji: "🎁" },
         { id: "simulation", label: "시뮬레이션 결과", emoji: "📈" },
+        { id: "push",       label: "푸시 알림 발송", emoji: "🔔" },
     ];
 
     return (
@@ -1614,6 +1615,8 @@ function Dashboard({ onLogout }: { onLogout: () => void }) {
                     </div>
                 )}
 
+                {/* ══════════ TAB: 푸시 알림 발송 ══════════ */}
+                {activeTab === "push" && <PushNotifyTab />}
 
             </div>
         </div>
@@ -3508,6 +3511,122 @@ function TeacherSimMonitor({
                     )}
                 </div>
             )}
+        </div>
+    );
+}
+
+// ─────────── 푸시 알림 발송 탭 ────────────────────────────────────────────
+function PushNotifyTab() {
+    const [title,   setTitle]   = React.useState("📢 선생님 공지");
+    const [body,    setBody]    = React.useState("");
+    const [url,     setUrl]     = React.useState("/feed");
+    const [sending, setSending] = React.useState(false);
+    const [result,  setResult]  = React.useState<{ sent: number; failed: number; total: number } | null>(null);
+    const [error,   setError]   = React.useState<string | null>(null);
+
+    const PRESETS = [
+        { label: "🎯 미션 시작",    title: "🎯 새 미션이 시작됐어요!",        body: "지금 바로 미션을 확인하고 도전해보세요!", url: "/missions" },
+        { label: "📢 수업 공지",    title: "📢 선생님 공지",                  body: "",                                     url: "/feed" },
+        { label: "🏆 순위 공개",    title: "🏆 이번 주 팀 순위 공개!",        body: "피드에서 순위를 확인해보세요.",           url: "/feed" },
+        { label: "📝 과제 마감",    title: "⏰ 과제 마감 임박!",              body: "지금 바로 게시물을 올려주세요.",          url: "/feed" },
+    ];
+
+    async function handleSend() {
+        if (!body.trim()) { setError("본문 내용을 입력해주세요."); return; }
+        setSending(true);
+        setResult(null);
+        setError(null);
+        try {
+            const { data: { session } } = await supabase.auth.getSession();
+            const res = await fetch("/api/push/send", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${session?.access_token || ""}`,
+                },
+                body: JSON.stringify({ title, body, url }),
+            });
+            if (!res.ok) {
+                const data = await res.json();
+                setError(data.error || "발송 실패");
+                return;
+            }
+            const data = await res.json();
+            setResult(data);
+        } catch {
+            setError("네트워크 오류가 발생했어요.");
+        } finally {
+            setSending(false);
+        }
+    }
+
+    return (
+        <div className="flex flex-col gap-4 max-w-xl">
+            <div>
+                <p className="text-sm font-black" style={{ color: "var(--foreground)" }}>빠른 선택</p>
+                <div className="flex flex-wrap gap-2 mt-2">
+                    {PRESETS.map(p => (
+                        <button key={p.label}
+                            onClick={() => { setTitle(p.title); if (p.body) setBody(p.body); setUrl(p.url); }}
+                            className="px-3 py-1.5 rounded-xl text-xs font-bold transition-all active:scale-95"
+                            style={{ background: "var(--surface-2)", color: "var(--foreground-soft)", border: "1px solid var(--border)" }}>
+                            {p.label}
+                        </button>
+                    ))}
+                </div>
+            </div>
+
+            <div className="rounded-2xl p-4 flex flex-col gap-3"
+                style={{ background: "var(--surface)", border: "1.5px solid var(--border)" }}>
+                <div>
+                    <label className="text-xs font-bold" style={{ color: "var(--foreground-muted)" }}>제목</label>
+                    <input value={title} onChange={e => setTitle(e.target.value)}
+                        className="w-full mt-1 px-3 py-2 rounded-xl text-sm font-bold outline-none"
+                        style={{ background: "var(--surface-2)", color: "var(--foreground)", border: "1px solid var(--border)" }}
+                        placeholder="알림 제목" />
+                </div>
+                <div>
+                    <label className="text-xs font-bold" style={{ color: "var(--foreground-muted)" }}>본문</label>
+                    <textarea value={body} onChange={e => setBody(e.target.value)} rows={3}
+                        className="w-full mt-1 px-3 py-2 rounded-xl text-sm outline-none resize-none"
+                        style={{ background: "var(--surface-2)", color: "var(--foreground)", border: "1px solid var(--border)" }}
+                        placeholder="알림 내용을 입력하세요..." />
+                </div>
+                <div>
+                    <label className="text-xs font-bold" style={{ color: "var(--foreground-muted)" }}>클릭 시 이동 경로</label>
+                    <input value={url} onChange={e => setUrl(e.target.value)}
+                        className="w-full mt-1 px-3 py-2 rounded-xl text-sm outline-none"
+                        style={{ background: "var(--surface-2)", color: "var(--foreground)", border: "1px solid var(--border)" }}
+                        placeholder="/feed" />
+                </div>
+
+                {error && (
+                    <p className="text-xs px-3 py-2 rounded-xl" style={{ background: "var(--primary-light)", color: "var(--primary)" }}>
+                        ⚠️ {error}
+                    </p>
+                )}
+                {result && (
+                    <p className="text-xs px-3 py-2 rounded-xl font-bold" style={{ background: "#06D6A015", color: "#06D6A0" }}>
+                        ✅ 발송 완료: {result.sent}명 성공 / {result.failed}명 실패 (총 {result.total}명)
+                    </p>
+                )}
+
+                <button onClick={handleSend} disabled={sending || !body.trim()}
+                    className="w-full py-3 rounded-xl text-sm font-black text-white transition-all active:scale-[0.98] disabled:opacity-50"
+                    style={{ background: "linear-gradient(135deg, var(--primary), #FF9A72)" }}>
+                    {sending ? "발송 중..." : "전체 학생에게 알림 보내기 🔔"}
+                </button>
+            </div>
+
+            <div className="rounded-2xl p-4 text-xs"
+                style={{ background: "#4361EE10", border: "1.5px solid #4361EE30", color: "var(--foreground-muted)" }}>
+                <p className="font-black mb-1" style={{ color: "#4361EE" }}>알림 수신 조건</p>
+                <ul className="flex flex-col gap-1 list-disc list-inside">
+                    <li>앱을 홈 화면에 설치하고 알림을 허용한 학생만 수신해요.</li>
+                    <li>iOS는 Safari에서 홈 화면 추가 후 앱으로 실행해야 받을 수 있어요.</li>
+                    <li>학생들이 <strong>/install</strong> 페이지를 참고하도록 안내해주세요.</li>
+                </ul>
+            </div>
         </div>
     );
 }

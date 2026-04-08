@@ -19,6 +19,7 @@ import {
     Inbox,
     Menu,
     X,
+    Download,
 } from "lucide-react";
 import ThemeToggle from "@/components/common/ThemeToggle";
 import { useGameStore } from "@/store/useGameStore";
@@ -32,6 +33,7 @@ const navItems = [
     { name: "마켓 시뮬레이션", href: "/simulate", icon: PlayCircle },
     { name: "메시지",          href: "/messages", icon: Inbox },
     { name: "사용 가이드",     href: "/guide",    icon: HelpCircle },
+    { name: "앱 설치",         href: "/install",  icon: Download },
     { name: "프로필",          href: "/profile",  icon: User },
 ];
 

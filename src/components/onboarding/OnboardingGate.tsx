@@ -8,7 +8,7 @@ import OnboardingWizard from "./OnboardingWizard";
 import BrandLoader from "@/components/common/BrandLoader";
 
 // 인증 체크를 건너뛸 페이지 (홈, 로그인, 콜백, 교사 대시보드, 관리자, 게시물 공유)
-const PUBLIC_PATHS = ["/login", "/auth/callback", "/teacher", "/admin", "/post/", "/ab-test/"];
+const PUBLIC_PATHS = ["/login", "/auth/callback", "/teacher", "/admin", "/post/", "/ab-test/", "/install"];
 
 type Status = "loading" | "needs-onboarding" | "ready";
 

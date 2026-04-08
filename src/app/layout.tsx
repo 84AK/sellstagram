@@ -13,6 +13,7 @@ import OnboardingGate from "@/components/onboarding/OnboardingGate";
 import MissionCompleteToast from "@/components/common/MissionCompleteToast";
 import PrivacyProvider from "@/components/layout/PrivacyProvider";
 import PageTransitionLoader from "@/components/common/PageTransitionLoader";
+import PushPermissionBanner from "@/components/pwa/PushPermissionBanner";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -81,6 +82,7 @@ export default function RootLayout({
             <GuideModal />
             <MissionCompleteToast />
             <PageTransitionLoader />
+            <PushPermissionBanner />
           </OnboardingGate>
         </ThemeProvider>
       </body>
