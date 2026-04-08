@@ -42,9 +42,12 @@ interface UserProfile {
     rank: string;
     team: string;
     points: number;
-    role: "student" | "teacher" | "";
+    role: "student" | "teacher" | "admin" | "";
     skillXP: SkillXP;
     avatarConfig?: AvatarConfig;
+    marketerType?: string;
+    selectedCharId: string;   // 선택된 캐릭터 변형 ID
+    activeSkin: string;       // 적용된 스킨 ID
 }
 
 interface Post {
@@ -108,6 +111,8 @@ interface GameState {
     missionCompletionQueue: Mission[];  // 방금 완료된 미션 토스트용
 
     // Actions
+    setSelectedChar: (charId: string) => void;
+    setActiveSkin: (skinId: string) => void;
     addFunds: (amount: number) => void;
     purchaseProduct: (product: Product) => void;
     startCampaign: (campaign: Campaign) => void;
@@ -214,8 +219,23 @@ export const useGameStore = create<GameState>((set) => ({
         points: 0,
         role: "",
         skillXP: DEFAULT_SKILL_XP,
+        selectedCharId: typeof window !== "undefined"
+            ? (localStorage.getItem("sellstagram_char") ?? "")
+            : "",
+        activeSkin: typeof window !== "undefined"
+            ? (localStorage.getItem("sellstagram_skin") ?? "default")
+            : "default",
     },
     missions: [],
+
+    setSelectedChar: (charId) => {
+        if (typeof window !== "undefined") localStorage.setItem("sellstagram_char", charId);
+        set((state) => ({ user: { ...state.user, selectedCharId: charId } }));
+    },
+    setActiveSkin: (skinId) => {
+        if (typeof window !== "undefined") localStorage.setItem("sellstagram_skin", skinId);
+        set((state) => ({ user: { ...state.user, activeSkin: skinId } }));
+    },
 
     addFunds: (amount) => set((state) => ({ balance: state.balance + amount })),
 

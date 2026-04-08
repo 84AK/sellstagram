@@ -39,6 +39,7 @@ import {
 import { useGameStore } from "@/store/useGameStore";
 import { supabase, isSupabaseConfigured, DbProfile } from "@/lib/supabase/client";
 import { getSavedAvatarStyle } from "@/lib/avatar/styles";
+import PartnerRoom from "@/components/character/PartnerRoom";
 
 interface TeamMember {
     id: string;
@@ -465,6 +466,16 @@ export default function ProfilePage() {
                         </GlassCard>
                     ))}
                 </div>
+
+                {/* 나의 파트너 */}
+                {user.marketerType && (
+                    <div>
+                        <h2 className="text-xs font-black uppercase tracking-widest mb-3" style={{ color: "var(--foreground-muted)" }}>
+                            나의 마케터 파트너
+                        </h2>
+                        <PartnerRoom marketerType={user.marketerType} points={user.points} />
+                    </div>
+                )}
 
                 {/* 탭 전환 */}
                 <div className="flex gap-1 p-1 rounded-2xl w-fit overflow-x-auto no-scrollbar" style={{ background: "var(--surface-2)" }}>

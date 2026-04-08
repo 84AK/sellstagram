@@ -350,7 +350,7 @@ export function SessionContent({ hideLearnLink }: { hideLearnLink?: boolean } = 
 
             {/* ── 수업 결과 기록 버튼 ── */}
             <a
-                href="https://84ak.github.io/activity_log/"
+                href="https://activity-log-six.vercel.app/"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center justify-between p-5 rounded-2xl transition-all hover:scale-[1.01] active:scale-[0.99]"

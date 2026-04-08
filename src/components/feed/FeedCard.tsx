@@ -21,12 +21,16 @@ import {
     ChevronRight,
     Megaphone,
     Zap,
+    FlaskConical,
+    Lock,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
+import ABTestCreateModal from "./ABTestCreateModal";
 import TermTooltip from "../common/TermTooltip";
 import { useGameStore } from "@/store/useGameStore";
 import { simulateMarketingEffect } from "@/lib/simulation/engine";
 import { supabase } from "@/lib/supabase/client";
+import { useAIAccess } from "@/lib/hooks/useAIAccess";
 
 interface Comment {
     id: string;
@@ -112,6 +116,9 @@ export default function FeedCard({ id, user, content, stats, timeAgo, sellingPri
     const [editSaving, setEditSaving] = useState(false);
     const [deleted, setDeleted] = useState(false);
 
+    // A/B 테스트
+    const [showABModal, setShowABModal] = useState(false);
+
     // 광고 시스템
     const [adBudget, setAdBudget] = useState<number | null>(initialAdBudget ?? null);
     const [showAdModal, setShowAdModal] = useState(false);
@@ -128,6 +135,7 @@ export default function FeedCard({ id, user, content, stats, timeAgo, sellingPri
     const { addInsight, startCampaign, setAIReportModal, addSkillXP, user: currentUser, balance, spendBalance } = useGameStore();
     const router = useRouter();
     const isMyPost = user.handle === currentUser.handle;
+    const { hasAccess: hasAIAccess } = useAIAccess();
 
     // 마운트 시 human comment count만 별도 로드 (AI 반응 제외)
     useEffect(() => {
@@ -139,6 +147,23 @@ export default function FeedCard({ id, user, content, stats, timeAgo, sellingPri
             .then(({ count }) => setHumanCommentCount(count ?? 0));
     }, [id]);
 
+    // 타인 게시물: 만료된 광고 뱃지 숨김 처리 (클라이언트 사이드 체크)
+    useEffect(() => {
+        if (isMyPost || !initialAdBudget) return;
+        supabase
+            .from("ad_campaigns")
+            .select("end_date, status")
+            .eq("post_id", id)
+            .order("created_at", { ascending: false })
+            .limit(1)
+            .maybeSingle()
+            .then(({ data }) => {
+                if (!data || data.status !== "active" || (data.end_date && new Date(data.end_date) < new Date())) {
+                    setAdBudget(null);
+                }
+            });
+    }, [id, isMyPost, initialAdBudget]);
+
     // 광고 캠페인 로드 + 경과일 기반 시뮬레이션 실행 (내 게시물만)
     useEffect(() => {
         if (!isMyPost) return;
@@ -149,7 +174,14 @@ export default function FeedCard({ id, user, content, stats, timeAgo, sellingPri
             .eq("status", "active")
             .maybeSingle()
             .then(async ({ data }) => {
-                if (!data) return;
+                if (!data) {
+                    // active 캠페인이 없으면 광고 뱃지 제거 (posts.ad_budget이 stale한 경우 대비)
+                    if (initialAdBudget) {
+                        supabase.from("posts").update({ ad_budget: null }).eq("id", id);
+                        setAdBudget(null);
+                    }
+                    return;
+                }
                 const now = new Date();
                 if (data.end_date && new Date(data.end_date) < now) {
                     supabase.from("ad_campaigns").update({ status: "completed" }).eq("id", data.id);
@@ -532,6 +564,15 @@ export default function FeedCard({ id, user, content, stats, timeAgo, sellingPri
 
     return (
         <>
+        {/* A/B 테스트 생성 모달 */}
+        {showABModal && (
+            <ABTestCreateModal
+                postA={{ id, image: content.image, images: allImages, caption: content.caption, tags: content.tags }}
+                onClose={() => setShowABModal(false)}
+                onCreated={() => { setShowABModal(false); }}
+            />
+        )}
+
         <article className="border-b" style={{ background: "var(--surface)", borderColor: "var(--border)" }}>
 
             {/* ─── 헤더 ─── */}
@@ -620,10 +661,15 @@ export default function FeedCard({ id, user, content, stats, timeAgo, sellingPri
                                     style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
                                     {isMyPost && (
                                         <>
-                                            <button onClick={handleAIAnalyze}
+                                            <button
+                                                onClick={hasAIAccess ? handleAIAnalyze : undefined}
                                                 className="w-full flex items-center gap-2.5 px-4 py-3 text-sm font-bold transition-colors hover:bg-foreground/5 text-left"
-                                                style={{ color: "var(--primary)" }}>
-                                                <Sparkles size={15} /> AI 분석하기
+                                                style={{ color: hasAIAccess ? "var(--primary)" : "var(--foreground-muted)", cursor: hasAIAccess ? "pointer" : "default" }}
+                                            >
+                                                {hasAIAccess
+                                                    ? <><Sparkles size={15} /> AI 분석하기</>
+                                                    : <><Lock size={15} /> AI 분석하기 <span className="text-[10px] ml-auto px-1.5 py-0.5 rounded-full font-semibold" style={{ background: "#8B5CF622", color: "#8B5CF6" }}>팀 배정 필요</span></>
+                                                }
                                             </button>
                                             <button onClick={() => { setShowAdModal(true); setShowMenu(false); }}
                                                 className="w-full flex items-center gap-2.5 px-4 py-3 text-sm font-bold transition-colors hover:bg-foreground/5 text-left"
@@ -635,6 +681,11 @@ export default function FeedCard({ id, user, content, stats, timeAgo, sellingPri
                                                 className="w-full flex items-center gap-2.5 px-4 py-3 text-sm font-bold transition-colors hover:bg-foreground/5 text-left"
                                                 style={{ color: "var(--secondary)" }}>
                                                 <Pencil size={15} /> 수정하기
+                                            </button>
+                                            <button onClick={() => { setShowABModal(true); setShowMenu(false); }}
+                                                className="w-full flex items-center gap-2.5 px-4 py-3 text-sm font-bold transition-colors hover:bg-foreground/5 text-left"
+                                                style={{ color: "#8B5CF6" }}>
+                                                <FlaskConical size={15} /> A/B 테스트
                                             </button>
                                             <button onClick={handleDelete}
                                                 className="w-full flex items-center gap-2.5 px-4 py-3 text-sm font-bold transition-colors hover:bg-red-50 text-left"

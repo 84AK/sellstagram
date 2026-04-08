@@ -8,7 +8,7 @@ import OnboardingWizard from "./OnboardingWizard";
 import BrandLoader from "@/components/common/BrandLoader";
 
 // 인증 체크를 건너뛸 페이지 (홈, 로그인, 콜백, 교사 대시보드, 관리자, 게시물 공유)
-const PUBLIC_PATHS = ["/login", "/auth/callback", "/teacher", "/admin", "/post/"];
+const PUBLIC_PATHS = ["/login", "/auth/callback", "/teacher", "/admin", "/post/", "/ab-test/"];
 
 type Status = "loading" | "needs-onboarding" | "ready";
 
@@ -98,6 +98,7 @@ export default function OnboardingGate({ children }: { children: React.ReactNode
                 team: profile.team,
                 points: profile.points ?? 0,
                 role: profile.role ?? "student",
+                marketerType: profile.marketer_type ?? undefined,
                 skillXP: {
                     copywriting: savedSkillXP?.copywriting ?? 0,
                     analytics: savedSkillXP?.analytics ?? 0,
@@ -151,7 +152,7 @@ export default function OnboardingGate({ children }: { children: React.ReactNode
                         balanceChannelRef.current = null;
                     }
                     useGameStore.setState({
-                        user: { name: "", handle: "", avatar: "", rank: "Beginner", team: "", points: 0, role: "", skillXP: { copywriting: 0, analytics: 0, creative: 0 } },
+                        user: { name: "", handle: "", avatar: "", rank: "Beginner", team: "", points: 0, role: "", skillXP: { copywriting: 0, analytics: 0, creative: 0 }, selectedCharId: "", activeSkin: "default" },
                         posts: [],
                         insights: [],
                         missions: [],

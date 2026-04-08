@@ -1,10 +1,11 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { Plus, X, Image as ImageIcon, Video, ArrowLeft, Heart, MessageCircle, Share2, Send } from "lucide-react";
+import { Plus, X, Image as ImageIcon, Video, ArrowLeft, Heart, MessageCircle, Share2, Send, ExternalLink } from "lucide-react";
 import { supabase } from "@/lib/supabase/client";
 import { useGameStore } from "@/store/useGameStore";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 /** avatar가 http로 시작하면 이미지, 아니면 이모지/이니셜로 처리 */
 function AvatarDisplay({ avatar, name, size }: { avatar?: string | null; name: string; size: "lg" | "md" | "sm" }) {
@@ -242,6 +243,7 @@ function PostDetailView({ post, user }: { post: UserPost; user: StoryUser; onBac
 }
 
 function UserPostsModal({ user, onClose }: UserModalProps) {
+    const router = useRouter();
     const [posts, setPosts] = useState<UserPost[]>([]);
     const [loading, setLoading] = useState(true);
     const [selected, setSelected] = useState<UserPost | null>(null);
@@ -286,20 +288,35 @@ function UserPostsModal({ user, onClose }: UserModalProps) {
                                 <ArrowLeft size={18} />
                             </button>
                         )}
-                        <div className="w-10 h-10 rounded-full overflow-hidden shrink-0 flex items-center justify-center"
-                            style={{ background: "linear-gradient(135deg, var(--primary), var(--secondary))" }}
+                        <button
+                            onClick={() => { onClose(); router.push(`/profile/${user.handle}`); }}
+                            className="flex items-center gap-3 group text-left"
                         >
-                            <AvatarDisplay avatar={user.avatar} name={user.name} size="md" />
-                        </div>
-                        <div>
-                            <p className="text-sm font-black" style={{ color: "var(--foreground)" }}>{user.name}</p>
-                            <p className="text-[11px]" style={{ color: "var(--foreground-muted)" }}>@{user.handle}</p>
-                        </div>
+                            <div className="w-10 h-10 rounded-full overflow-hidden shrink-0 flex items-center justify-center"
+                                style={{ background: "linear-gradient(135deg, var(--primary), var(--secondary))" }}
+                            >
+                                <AvatarDisplay avatar={user.avatar} name={user.name} size="md" />
+                            </div>
+                            <div>
+                                <p className="text-sm font-black group-hover:underline" style={{ color: "var(--foreground)" }}>{user.name}</p>
+                                <p className="text-[11px]" style={{ color: "var(--foreground-muted)" }}>@{user.handle}</p>
+                            </div>
+                        </button>
                     </div>
-                    <button onClick={onClose} className="p-1.5 rounded-full transition-colors hover:bg-black/5"
-                        style={{ color: "var(--foreground-muted)" }}>
-                        <X size={18} />
-                    </button>
+                    <div className="flex items-center gap-1">
+                        <button
+                            onClick={() => { onClose(); router.push(`/profile/${user.handle}`); }}
+                            className="p-1.5 rounded-full transition-colors hover:bg-black/5"
+                            title="프로필 보기"
+                            style={{ color: "var(--foreground-muted)" }}
+                        >
+                            <ExternalLink size={16} />
+                        </button>
+                        <button onClick={onClose} className="p-1.5 rounded-full transition-colors hover:bg-black/5"
+                            style={{ color: "var(--foreground-muted)" }}>
+                            <X size={18} />
+                        </button>
+                    </div>
                 </div>
 
                 {selected ? (

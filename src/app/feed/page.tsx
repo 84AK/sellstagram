@@ -20,8 +20,10 @@ import DailyChallenge from "@/components/feed/DailyChallenge";
 import Insights from "@/components/dashboard/Insights";
 import MyChannelFeed from "@/components/feed/MyChannelFeed";
 import MyChannelUploadModal from "@/components/feed/MyChannelUploadModal";
+import ABTestVoteCard from "@/components/feed/ABTestVoteCard";
 import FeedSkeleton from "@/components/feed/FeedSkeleton";
 import { useGameStore } from "@/store/useGameStore";
+import { useABTestStore } from "@/store/useABTestStore";
 import { supabase, DbPost } from "@/lib/supabase/client";
 
 function dbPostToStorePost(p: DbPost) {
@@ -76,6 +78,10 @@ export default function FeedPage() {
     const setGuideModalOpen = useGameStore(s => s.setGuideModalOpen);
     const addPost = useGameStore(s => s.addPost);
     const setWeek = useGameStore(s => s.setWeek);
+    const { tests: abTests, loadTests: loadABTests } = useABTestStore();
+    // A/B 테스트 Supabase 초기화
+    React.useEffect(() => { loadABTests(); }, [loadABTests]);
+
     const [feedFilter, setFeedFilter] = useState<"latest" | "hot">("latest");
     const [classActive, setClassActive] = useState(false);
     const [activeMission, setActiveMission] = useState<{ title: string; description: string } | null>(null);
@@ -380,6 +386,54 @@ export default function FeedPage() {
                     </div>
                 </div>
 
+                {/* A/B 테스트 섹션 — 가로 스크롤 */}
+                {(() => {
+                    const activeTests = abTests.filter(t => t.status === "active");
+                    if (activeTests.length === 0) return null;
+                    return (
+                        <div className="flex flex-col gap-2">
+                            {/* 헤더 */}
+                            <div className="flex items-center justify-between px-1">
+                                <h3 className="text-sm font-black flex items-center gap-2" style={{ color: "#8B5CF6" }}>
+                                    <span className="w-2 h-2 rounded-full animate-pulse inline-block" style={{ background: "#8B5CF6" }} />
+                                    진행 중인 A/B 테스트
+                                </h3>
+                                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ background: "#8B5CF622", color: "#8B5CF6" }}>
+                                    {activeTests.length}개
+                                </span>
+                            </div>
+
+                            {/* 가로 스크롤 컨테이너 */}
+                            <div
+                                className="flex gap-3 overflow-x-auto pb-2 no-scrollbar"
+                                style={{ scrollSnapType: "x mandatory" }}
+                            >
+                                {activeTests.map(t => (
+                                    <div
+                                        key={t.id}
+                                        className="shrink-0"
+                                        style={{ width: "min(88vw, 420px)", scrollSnapAlign: "start" }}
+                                    >
+                                        <ABTestVoteCard test={t} />
+                                    </div>
+                                ))}
+                                {/* 오른쪽 여백 — 마지막 카드가 잘려 보이게 */}
+                                <div className="shrink-0 w-4" />
+                            </div>
+
+                            {/* 페이지 인디케이터 (2개 이상일 때) */}
+                            {activeTests.length > 1 && (
+                                <div className="flex justify-center gap-1.5 mt-1">
+                                    {activeTests.map((t, i) => (
+                                        <span key={t.id} className="w-1.5 h-1.5 rounded-full transition-all"
+                                            style={{ background: i === 0 ? "#8B5CF6" : "#8B5CF633" }} />
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    );
+                })()}
+
                 {/* 피드 목록 */}
                 <div className="flex flex-col gap-6 pb-8">
                     {isLoading ? (
@@ -397,43 +451,48 @@ export default function FeedPage() {
                                 새로고침
                             </button>
                         </div>
-                    ) : sortedPosts.map((post) =>
-                        post.type === "video" ? (
-                            <div key={post.id} className="w-full max-w-sm mx-auto">
-                                <VideoPlayer
-                                    id={post.id}
-                                    user={post.user}
-                                    description={post.description ?? ""}
-                                    musicName={post.musicName ?? ""}
-                                    stats={{
-                                        likes: String(post.stats.likes),
-                                        comments: post.stats.comments ?? "0",
-                                        shares: post.stats.shares ?? "0",
-                                    }}
-                                />
-                            </div>
-                        ) : post.content ? (
-                            <div key={post.id} className="max-w-md mx-auto w-full rounded-2xl overflow-hidden" style={{ boxShadow: "0 2px 12px rgba(0,0,0,0.07)" }}>
-                                <FeedCard
-                                    id={post.id}
-                                    user={post.user}
-                                    content={post.content}
-                                    stats={{
-                                        likes: typeof post.stats.likes === "number" ? post.stats.likes : 0,
-                                        engagement: post.stats.engagement ?? "",
-                                        sales: post.stats.sales ?? "",
-                                        comments: post.stats.comments,
-                                        shares: post.stats.shares,
-                                    }}
-                                    timeAgo={post.timeAgo}
-                                    sellingPrice={post.sellingPrice}
-                                    landingImages={post.landingImages}
-                                    images={post.images}
-                                    adBudget={post.adBudget}
-                                />
-                            </div>
-                        ) : null
-                    )}
+                    ) : sortedPosts.map(post => {
+                        if (post.type === "video") {
+                            return (
+                                <div key={post.id} className="w-full max-w-sm mx-auto">
+                                    <VideoPlayer
+                                        id={post.id}
+                                        user={post.user}
+                                        description={post.description ?? ""}
+                                        musicName={post.musicName ?? ""}
+                                        stats={{
+                                            likes: String(post.stats.likes),
+                                            comments: post.stats.comments ?? "0",
+                                            shares: post.stats.shares ?? "0",
+                                        }}
+                                    />
+                                </div>
+                            );
+                        } else if (post.content) {
+                            return (
+                                <div key={post.id} className="max-w-md mx-auto w-full rounded-2xl overflow-hidden" style={{ boxShadow: "0 2px 12px rgba(0,0,0,0.07)" }}>
+                                    <FeedCard
+                                        id={post.id}
+                                        user={post.user}
+                                        content={post.content}
+                                        stats={{
+                                            likes: typeof post.stats.likes === "number" ? post.stats.likes : 0,
+                                            engagement: post.stats.engagement ?? "",
+                                            sales: post.stats.sales ?? "",
+                                            comments: post.stats.comments,
+                                            shares: post.stats.shares,
+                                        }}
+                                        timeAgo={post.timeAgo}
+                                        sellingPrice={post.sellingPrice}
+                                        landingImages={post.landingImages}
+                                        images={post.images}
+                                        adBudget={post.adBudget}
+                                    />
+                                </div>
+                            );
+                        }
+                        return null;
+                    })}
 
                     {/* 무한 스크롤 sentinel + 로딩 */}
                     {!isLoading && !loadError && (

@@ -11,6 +11,8 @@ import {
     Loader2,
 } from "lucide-react";
 import { MARKETING_TYPE_DATA, AVATAR_OPTIONS, TEAM_EMOJIS } from "@/lib/constants/game";
+import CharacterSVG from "@/components/character/CharacterSVG";
+import { MARKETER_TO_CHARACTER, CHARACTERS } from "@/lib/characters/characters";
 
 /* ── 마케터 포지션 타입 (아이콘은 크기가 달라 여기서 주입) ── */
 interface MarketingType {
@@ -166,7 +168,7 @@ export default function OnboardingWizard({ onComplete }: { onComplete?: () => vo
             localStorage.setItem("sellstagram_user_id", session.user.id);
         }
 
-        updateProfile({ name: name.trim(), handle, avatar: selectedAvatar, rank: selectedType.badge, team: assignedTeam, role: "student" });
+        updateProfile({ name: name.trim(), handle, avatar: selectedAvatar, rank: selectedType.badge, team: assignedTeam, role: "student", marketerType: selectedType.id });
 
         setSaving(false);
         setIsComplete(true);
@@ -179,26 +181,35 @@ export default function OnboardingWizard({ onComplete }: { onComplete?: () => vo
 
     // ── 완료 화면 ──
     if (isComplete && selectedType) {
+        const charType = MARKETER_TO_CHARACTER[selectedType.id];
+        const char = charType ? CHARACTERS[charType] : null;
         return (
             <div className="fixed inset-0 z-[200] flex items-center justify-center p-4"
                 style={{ background: "rgba(0,0,0,0.6)", backdropFilter: "blur(8px)" }}>
                 <div className="w-full max-w-sm rounded-3xl p-8 text-center"
                     style={{ background: "var(--surface)", boxShadow: "var(--shadow-lg)" }}>
-                    <div className="text-6xl mb-4" style={{ animation: "var(--animate-pop-in)" }}>
-                        {selectedAvatar}
-                    </div>
-                    <div className="w-12 h-12 mx-auto mb-5 rounded-2xl flex items-center justify-center"
-                        style={{ background: "var(--accent-light)" }}>
-                        <CheckCircle2 size={24} style={{ color: "var(--accent)" }} />
-                    </div>
+
+                    {/* 파트너 캐릭터 등장 */}
+                    {char && charType && (
+                        <div className="flex flex-col items-center mb-5">
+                            <div className="w-28 h-28 rounded-3xl flex items-center justify-center mb-3"
+                                style={{ background: char.bgColor, border: `2px solid ${char.borderColor}`, animation: "var(--animate-pop-in)" }}>
+                                <CharacterSVG type={charType} size={100} />
+                            </div>
+                            <span className="text-lg font-black" style={{ color: char.color }}>{char.name}</span>
+                            <span className="text-xs font-semibold mt-0.5" style={{ color: "#aaa" }}>{char.species}</span>
+                            <span className="text-xs italic mt-1 px-3" style={{ color: "#bbb" }}>&quot;{char.quote}&quot;</span>
+                        </div>
+                    )}
+
                     <h2 className="text-2xl font-black mb-1 font-outfit" style={{ color: "var(--foreground)" }}>
-                        환영해요, {name}!
+                        파트너 만남 완료! 🎉
                     </h2>
                     <p className="text-sm font-semibold mb-1" style={{ color: "var(--foreground-soft)" }}>
-                        {selectedType.badge}
+                        {name} · {selectedType.badge}
                     </p>
-                    <p className="text-xs mb-6" style={{ color: "var(--foreground-muted)" }}>
-                        마케터로서의 첫 걸음을 내딛었어요 🎉
+                    <p className="text-xs mb-5" style={{ color: "var(--foreground-muted)" }}>
+                        XP를 모을수록 파트너가 함께 성장해요 🌱
                     </p>
                     <div className="rounded-2xl p-4 mb-6" style={{ background: joinedTeam ? "var(--accent-light)" : "var(--surface-2)", border: joinedTeam ? "1px solid var(--accent)" : "none" }}>
                         <div className="flex items-center gap-2">
@@ -351,9 +362,27 @@ export default function OnboardingWizard({ onComplete }: { onComplete?: () => vo
                             <h2 className="text-xl font-black mb-1 font-outfit" style={{ color: "var(--foreground)" }}>
                                 나는 어떤 마케터? 🤔
                             </h2>
-                            <p className="text-sm mb-5" style={{ color: "var(--foreground-soft)" }}>
-                                가장 나다운 스타일을 하나 골라봐요!
+                            <p className="text-sm mb-4" style={{ color: "var(--foreground-soft)" }}>
+                                타입을 고르면 나만의 파트너가 생겨요!
                             </p>
+
+                            {/* 선택된 캐릭터 미리보기 */}
+                            {selectedType && (() => {
+                                const charType = MARKETER_TO_CHARACTER[selectedType.id];
+                                const char = charType ? CHARACTERS[charType] : null;
+                                return char ? (
+                                    <div className="flex items-center gap-3 p-3 rounded-2xl mb-4 transition-all"
+                                        style={{ background: char.bgColor, border: `1.5px solid ${char.borderColor}` }}>
+                                        <CharacterSVG type={charType} size={56} />
+                                        <div>
+                                            <p className="font-black text-sm" style={{ color: char.color }}>{char.name}</p>
+                                            <p className="text-[11px]" style={{ color: "#aaa" }}>{char.species}</p>
+                                            <p className="text-[11px] italic mt-0.5" style={{ color: "#999" }}>&quot;{char.quote}&quot;</p>
+                                        </div>
+                                    </div>
+                                ) : null;
+                            })()}
+
                             <div className="grid grid-cols-2 gap-3">
                                 {MARKETING_TYPES.map((type) => (
                                     <button key={type.id} onClick={() => setSelectedType(type)}

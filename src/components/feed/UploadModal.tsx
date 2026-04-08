@@ -31,6 +31,8 @@ import { supabase } from "@/lib/supabase/client";
 import { simulateMarketingEffect } from "@/lib/simulation/engine";
 import { getTodayChallenge } from "@/lib/challenges/dailyChallenges";
 import AIContentStudio from "./AIContentStudio";
+import { useAIAccess } from "@/lib/hooks/useAIAccess";
+import { Lock } from "lucide-react";
 
 interface OwnedProduct {
     id: string;
@@ -58,6 +60,7 @@ export default function UploadModal() {
         user
     } = useGameStore();
     const router = useRouter();
+    const { hasAccess: hasAIAccess } = useAIAccess();
     const [uploadType, setUploadType] = useState<"post" | "video">("post");
     const [currentWeek, setCurrentWeek] = useState<number>(1);
 
@@ -814,13 +817,25 @@ export default function UploadModal() {
                                 <label className="text-[10px] font-bold text-foreground/40 uppercase tracking-widest">
                                     {uploadType === "post" ? "Caption" : "Video Description"}
                                 </label>
-                                <button
-                                    onClick={() => setIsAIStudioOpen(true)}
-                                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-black text-white transition-all hover:opacity-90 active:scale-95"
-                                    style={{ background: "linear-gradient(135deg,#FF6B35,#4361EE)" }}
-                                >
-                                    <Sparkles size={10} /> AI와 함께 만들기
-                                </button>
+                                {hasAIAccess ? (
+                                    <button
+                                        onClick={() => setIsAIStudioOpen(true)}
+                                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-black text-white transition-all hover:opacity-90 active:scale-95"
+                                        style={{ background: "linear-gradient(135deg,#FF6B35,#4361EE)" }}
+                                    >
+                                        <Sparkles size={10} /> AI와 함께 만들기
+                                    </button>
+                                ) : (
+                                    <button
+                                        disabled
+                                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-black transition-all cursor-not-allowed opacity-60"
+                                        style={{ background: "var(--surface-3)", color: "var(--foreground-muted)", border: "1.5px dashed #8B5CF644" }}
+                                    >
+                                        <Lock size={10} style={{ color: "#8B5CF6" }} />
+                                        <span style={{ color: "#8B5CF6" }}>AI 기능</span>
+                                        <span className="px-1.5 py-0.5 rounded-full text-white text-[9px]" style={{ background: "#8B5CF6" }}>팀 배정 필요</span>
+                                    </button>
+                                )}
                             </div>
                             <textarea
                                 placeholder={uploadType === "post" ? "Z세대를 사로잡을 매력적인 카피를 작성하세요..." : "릴스 알고리즘을 타기 위한 핵심 설명과 키워드를 입력하세요..."}
