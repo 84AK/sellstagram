@@ -12,6 +12,7 @@ import {
     ChevronRight,
     Zap,
     Loader2,
+    History,
 } from "lucide-react";
 import StoryBar from "@/components/feed/StoryBar";
 import FeedCard from "@/components/feed/FeedCard";
@@ -398,9 +399,16 @@ export default function FeedPage() {
                                     <span className="w-2 h-2 rounded-full animate-pulse inline-block" style={{ background: "#8B5CF6" }} />
                                     진행 중인 A/B 테스트
                                 </h3>
-                                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ background: "#8B5CF622", color: "#8B5CF6" }}>
-                                    {activeTests.length}개
-                                </span>
+                                <div className="flex items-center gap-2">
+                                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ background: "#8B5CF622", color: "#8B5CF6" }}>
+                                        {activeTests.length}개
+                                    </span>
+                                    <Link href="/ab-test/history"
+                                        className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold transition-all hover:opacity-80"
+                                        style={{ background: "var(--surface-2)", color: "var(--foreground-muted)" }}>
+                                        <History size={10} /> 이력
+                                    </Link>
+                                </div>
                             </div>
 
                             {/* 가로 스크롤 컨테이너 */}
