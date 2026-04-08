@@ -387,56 +387,82 @@ export default function FeedPage() {
                     </div>
                 </div>
 
-                {/* A/B 테스트 섹션 — 가로 스크롤 */}
+                {/* A/B 테스트 섹션 — 항상 표시 */}
                 {(() => {
                     const activeTests = abTests.filter(t => t.status === "active");
-                    if (activeTests.length === 0) return null;
+                    const closedCount = abTests.filter(t => t.status === "closed").length;
                     return (
                         <div className="flex flex-col gap-2">
                             {/* 헤더 */}
                             <div className="flex items-center justify-between px-1">
                                 <h3 className="text-sm font-black flex items-center gap-2" style={{ color: "#8B5CF6" }}>
-                                    <span className="w-2 h-2 rounded-full animate-pulse inline-block" style={{ background: "#8B5CF6" }} />
-                                    진행 중인 A/B 테스트
+                                    {activeTests.length > 0
+                                        ? <><span className="w-2 h-2 rounded-full animate-pulse inline-block" style={{ background: "#8B5CF6" }} />진행 중인 A/B 테스트</>
+                                        : <>🧪 A/B 테스트</>
+                                    }
                                 </h3>
                                 <div className="flex items-center gap-2">
-                                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ background: "#8B5CF622", color: "#8B5CF6" }}>
-                                        {activeTests.length}개
-                                    </span>
+                                    {activeTests.length > 0 && (
+                                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ background: "#8B5CF622", color: "#8B5CF6" }}>
+                                            {activeTests.length}개
+                                        </span>
+                                    )}
                                     <Link href="/ab-test/history"
-                                        className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold transition-all hover:opacity-80"
-                                        style={{ background: "var(--surface-2)", color: "var(--foreground-muted)" }}>
-                                        <History size={10} /> 이력
+                                        className="flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold transition-all hover:opacity-80 active:scale-95"
+                                        style={{ background: "#8B5CF622", color: "#8B5CF6" }}>
+                                        <History size={11} /> 전체 이력 {closedCount > 0 && `(${closedCount})`}
                                     </Link>
                                 </div>
                             </div>
 
-                            {/* 가로 스크롤 컨테이너 */}
-                            <div
-                                className="flex gap-3 overflow-x-auto pb-2 no-scrollbar"
-                                style={{ scrollSnapType: "x mandatory" }}
-                            >
-                                {activeTests.map(t => (
+                            {activeTests.length > 0 ? (
+                                <>
+                                    {/* 가로 스크롤 컨테이너 */}
                                     <div
-                                        key={t.id}
-                                        className="shrink-0"
-                                        style={{ width: "min(88vw, 420px)", scrollSnapAlign: "start" }}
+                                        className="flex gap-3 overflow-x-auto pb-2 no-scrollbar"
+                                        style={{ scrollSnapType: "x mandatory" }}
                                     >
-                                        <ABTestVoteCard test={t} />
+                                        {activeTests.map(t => (
+                                            <div
+                                                key={t.id}
+                                                className="shrink-0"
+                                                style={{ width: "min(88vw, 420px)", scrollSnapAlign: "start" }}
+                                            >
+                                                <ABTestVoteCard test={t} />
+                                            </div>
+                                        ))}
+                                        <div className="shrink-0 w-4" />
                                     </div>
-                                ))}
-                                {/* 오른쪽 여백 — 마지막 카드가 잘려 보이게 */}
-                                <div className="shrink-0 w-4" />
-                            </div>
-
-                            {/* 페이지 인디케이터 (2개 이상일 때) */}
-                            {activeTests.length > 1 && (
-                                <div className="flex justify-center gap-1.5 mt-1">
-                                    {activeTests.map((t, i) => (
-                                        <span key={t.id} className="w-1.5 h-1.5 rounded-full transition-all"
-                                            style={{ background: i === 0 ? "#8B5CF6" : "#8B5CF633" }} />
-                                    ))}
-                                </div>
+                                    {activeTests.length > 1 && (
+                                        <div className="flex justify-center gap-1.5 mt-1">
+                                            {activeTests.map((t, i) => (
+                                                <span key={t.id} className="w-1.5 h-1.5 rounded-full transition-all"
+                                                    style={{ background: i === 0 ? "#8B5CF6" : "#8B5CF633" }} />
+                                            ))}
+                                        </div>
+                                    )}
+                                </>
+                            ) : (
+                                /* 진행중 테스트 없음 — 이력 진입 카드 */
+                                <Link href="/ab-test/history"
+                                    className="flex items-center gap-4 px-4 py-3.5 rounded-2xl transition-all hover:opacity-90 active:scale-[0.99]"
+                                    style={{ background: "linear-gradient(135deg, #8B5CF608, #4361EE05)", border: "1.5px dashed #8B5CF640" }}>
+                                    <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+                                        style={{ background: "#8B5CF620" }}>
+                                        <History size={18} style={{ color: "#8B5CF6" }} />
+                                    </div>
+                                    <div className="flex-1">
+                                        <p className="text-sm font-black" style={{ color: "#8B5CF6" }}>
+                                            현재 진행 중인 테스트가 없어요
+                                        </p>
+                                        <p className="text-xs mt-0.5" style={{ color: "var(--foreground-muted)" }}>
+                                            {closedCount > 0
+                                                ? `종료된 테스트 ${closedCount}개의 결과를 확인해보세요 →`
+                                                : "피드 글 작성 시 AB 테스트를 만들 수 있어요"}
+                                        </p>
+                                    </div>
+                                    <ChevronRight size={16} style={{ color: "#8B5CF6", opacity: 0.6 }} />
+                                </Link>
                             )}
                         </div>
                     );

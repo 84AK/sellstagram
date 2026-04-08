@@ -2,11 +2,19 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import webpush from "web-push";
 
-webpush.setVapidDetails(
-    process.env.VAPID_SUBJECT!,
-    process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!,
-    process.env.VAPID_PRIVATE_KEY!
-);
+// 빌드 타임이 아닌 요청 시점에 초기화 (env 미설정 시 빌드 에러 방지)
+let vapidInitialized = false;
+function initVapid() {
+    if (vapidInitialized) return;
+    const subject = process.env.VAPID_SUBJECT;
+    const publicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+    const privateKey = process.env.VAPID_PRIVATE_KEY;
+    if (!subject || !publicKey || !privateKey) {
+        throw new Error("VAPID 환경변수가 설정되지 않았습니다.");
+    }
+    webpush.setVapidDetails(subject, publicKey, privateKey);
+    vapidInitialized = true;
+}
 
 const supabaseAdmin = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -27,6 +35,7 @@ interface PushPayload {
 
 export async function POST(req: NextRequest) {
     try {
+        initVapid();
         // 교사/관리자 인증 — Bearer JWT (Supabase 세션 토큰) 검증
         const authHeader = req.headers.get("authorization");
         const token = authHeader?.replace("Bearer ", "").trim();
