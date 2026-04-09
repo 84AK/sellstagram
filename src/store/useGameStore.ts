@@ -258,6 +258,8 @@ export const useGameStore = create<GameState>((set) => ({
     })),
 
     addPost: (post) => set((state) => {
+        // 동일 ID가 이미 있으면 무시 (Realtime 중복 방지)
+        if (state.posts.some(p => p.id === post.id)) return state;
         const newPosts = [post, ...state.posts];
 
         // 미션 자동 감지
@@ -290,9 +292,23 @@ export const useGameStore = create<GameState>((set) => ({
         user: { ...state.user, ...data }
     })),
 
-    addPoints: (amount) => set((state) => ({
-        user: { ...state.user, points: state.user.points + amount }
-    })),
+    addPoints: (amount) => {
+        // 비정상 값 방어: 0~500 사이로 클램프
+        const safeAmount = Math.max(0, Math.min(amount, 500));
+        set((state) => {
+            const newPoints = state.user.points + safeAmount;
+            // Supabase에 비동기 저장 (fire-and-forget)
+            supabase.auth.getSession().then(({ data: { session } }) => {
+                if (session?.user?.id) {
+                    supabase.from("profiles")
+                        .update({ points: newPoints })
+                        .eq("id", session.user.id)
+                        .then(() => {});
+                }
+            });
+            return { user: { ...state.user, points: newPoints } };
+        });
+    },
 
     setAvatarConfig: (config) => set((state) => ({
         user: { ...state.user, avatarConfig: config },

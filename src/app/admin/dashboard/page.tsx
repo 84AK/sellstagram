@@ -53,6 +53,7 @@ export default function AdminDashboard() {
     const [commentCount, setCommentCount] = useState(0);
     const [purchaseCount, setPurchaseCount] = useState(0);
     const [loading, setLoading] = useState(true);
+    const [refreshing, setRefreshing] = useState(false);
     const [updatingRole, setUpdatingRole] = useState<string | null>(null);
     const [updatingTeam, setUpdatingTeam] = useState<string | null>(null);
     const [updatingLeader, setUpdatingLeader] = useState<string | null>(null);
@@ -93,40 +94,45 @@ export default function AdminDashboard() {
         });
     }, [router]);
 
-    // 데이터 로드
+    // 데이터 로드 (외부에서 재호출 가능하도록 분리)
+    const loadData = async (isRefresh = false) => {
+        if (isRefresh) setRefreshing(true);
+        const [
+            { data: profileData },
+            { data: postData },
+            { count: commentCnt },
+            { count: purchaseCnt },
+            { data: gameState },
+            { data: appSettings },
+        ] = await Promise.all([
+            supabase.from("profiles").select("*").order("created_at"),
+            // limit 제거: 전체 게시물 로드 (팀 통계 정확도 확보)
+            supabase.from("posts").select("id,user_name,user_handle,caption,description,likes,type,created_at").order("created_at", { ascending: false }),
+            supabase.from("comments").select("id", { count: "exact", head: true }),
+            supabase.from("purchases").select("id", { count: "exact", head: true }),
+            supabase.from("game_state").select("teacher_pin, initial_balance").eq("id", 1).single(),
+            supabase.from("app_settings").select("unlocked_weeks").eq("id", 1).single(),
+        ]);
+        setProfiles(profileData ?? []);
+        setPosts(postData ?? []);
+        setCommentCount(commentCnt ?? 0);
+        setPurchaseCount(purchaseCnt ?? 0);
+        setCurrentPin(gameState?.teacher_pin ?? "");
+        if (gameState?.initial_balance != null) {
+            setInitialBalance(gameState.initial_balance);
+            setBalanceInput(String(gameState.initial_balance));
+        }
+        if (Array.isArray(appSettings?.unlocked_weeks)) {
+            setUnlockedWeeks(appSettings.unlocked_weeks);
+        }
+        setLoading(false);
+        if (isRefresh) setRefreshing(false);
+    };
+
     useEffect(() => {
         if (!authChecked) return;
-        const load = async () => {
-            const [
-                { data: profileData },
-                { data: postData },
-                { count: commentCnt },
-                { count: purchaseCnt },
-                { data: gameState },
-                { data: appSettings },
-            ] = await Promise.all([
-                supabase.from("profiles").select("*").order("created_at"),
-                supabase.from("posts").select("id,user_name,user_handle,caption,description,likes,type,created_at").order("created_at", { ascending: false }).limit(50),
-                supabase.from("comments").select("id", { count: "exact", head: true }),
-                supabase.from("purchases").select("id", { count: "exact", head: true }),
-                supabase.from("game_state").select("teacher_pin, initial_balance").eq("id", 1).single(),
-                supabase.from("app_settings").select("unlocked_weeks").eq("id", 1).single(),
-            ]);
-            setProfiles(profileData ?? []);
-            setPosts(postData ?? []);
-            setCommentCount(commentCnt ?? 0);
-            setPurchaseCount(purchaseCnt ?? 0);
-            setCurrentPin(gameState?.teacher_pin ?? "");
-            if (gameState?.initial_balance != null) {
-                setInitialBalance(gameState.initial_balance);
-                setBalanceInput(String(gameState.initial_balance));
-            }
-            if (Array.isArray(appSettings?.unlocked_weeks)) {
-                setUnlockedWeeks(appSettings.unlocked_weeks);
-            }
-            setLoading(false);
-        };
-        load();
+        loadData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [authChecked]);
 
     const handleLogout = async () => {
@@ -350,6 +356,14 @@ export default function AdminDashboard() {
                 {/* ── 개요 탭 ── */}
                 {activeTab === "overview" && (
                     <div className="flex flex-col gap-5">
+                        <div className="flex items-center justify-between">
+                            <p className="text-xs font-bold" style={{ color: "var(--foreground-muted)" }}>
+                                학생 {profiles.filter(p => p.role !== "teacher").length}명 · 교사 {profiles.filter(p => p.role === "teacher").length}명
+                            </p>
+                            <button onClick={() => loadData(true)} disabled={refreshing} className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-colors hover:bg-black/5 disabled:opacity-50" style={{ color: "var(--foreground-muted)" }}>
+                                <RefreshCw size={13} className={refreshing ? "animate-spin" : ""} /> {refreshing ? "로딩 중..." : "새로고침"}
+                            </button>
+                        </div>
                         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                             {stats.map(({ label, value, icon: Icon, color }) => (
                                 <div key={label} className="flex flex-col gap-2 p-4 rounded-2xl"
@@ -393,8 +407,8 @@ export default function AdminDashboard() {
                             <p className="text-sm font-bold" style={{ color: "var(--foreground)" }}>
                                 전체 {profiles.length}명
                             </p>
-                            <button onClick={() => window.location.reload()} className="p-2 rounded-lg" style={{ color: "var(--foreground-muted)" }}>
-                                <RefreshCw size={14} />
+                            <button onClick={() => loadData(true)} disabled={refreshing} className="p-2 rounded-lg disabled:opacity-50" style={{ color: "var(--foreground-muted)" }}>
+                                <RefreshCw size={14} className={refreshing ? "animate-spin" : ""} />
                             </button>
                         </div>
                         <div className="flex flex-col gap-2">
@@ -431,7 +445,7 @@ export default function AdminDashboard() {
                                     </div>
                                     {/* 하단: 팀 / 역할 / 리더 컨트롤 */}
                                     <div className="flex items-center gap-2 pl-12">
-                                        {/* 팀 배정 */}
+                                        {/* 팀 배정 — DB에 있는 실제 팀 이름으로 동적 생성 */}
                                         <select
                                             value={p.team || "미배정"}
                                             onChange={e => handleTeamChange(p.id, e.target.value)}
@@ -439,12 +453,9 @@ export default function AdminDashboard() {
                                             className="text-xs font-bold px-2 py-1.5 rounded-lg outline-none flex-1"
                                             style={{ background: "var(--surface-2)", color: "var(--foreground)", border: "1px solid var(--border)" }}>
                                             <option value="미배정">미배정</option>
-                                            <option value="A팀">A팀</option>
-                                            <option value="B팀">B팀</option>
-                                            <option value="C팀">C팀</option>
-                                            <option value="D팀">D팀</option>
-                                            <option value="E팀">E팀</option>
-                                            <option value="F팀">F팀</option>
+                                            {Array.from(new Set(profiles.map(pr => pr.team).filter(t => t && t !== "미배정"))).sort().map(t => (
+                                                <option key={t} value={t}>{t}</option>
+                                            ))}
                                         </select>
                                         {/* 역할 변경 */}
                                         <select

@@ -39,6 +39,7 @@ create table if not exists public.posts (
     engagement_rate text default '0%',
     sales text,
     highlighted boolean default false, -- 교사가 강조 표시
+    source text default 'simulation',  -- 'simulation' | 'channel'
     created_at timestamptz default now()
 );
 
@@ -244,3 +245,10 @@ on conflict (id) do nothing;
 -- app_settings: 누구나 읽기, 수정은 API(service_role)로 전면 제한
 alter table public.app_settings enable row level security;
 create policy "app_settings_read" on public.app_settings for select using (true);
+
+-- =====================================================
+-- 마이그레이션: posts 테이블에 source 컬럼 추가
+-- 기존 DB에 적용 시 Supabase SQL Editor에서 실행
+-- =====================================================
+alter table public.posts add column if not exists source text default 'simulation';
+-- 기존 데이터는 모두 'simulation'으로 간주

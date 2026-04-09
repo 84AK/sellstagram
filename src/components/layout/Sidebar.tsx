@@ -4,7 +4,6 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
     Home,
-    BookOpen,
     ShoppingBag,
     User,
     Plus,
@@ -13,13 +12,14 @@ import {
     Shield,
     LogOut,
     PlayCircle,
-    HelpCircle,
     PanelLeftOpen,
     PanelLeftClose,
     Inbox,
     Menu,
     X,
-    Download,
+    Target,
+    FlaskConical,
+    GraduationCap,
 } from "lucide-react";
 import ThemeToggle from "@/components/common/ThemeToggle";
 import { useGameStore } from "@/store/useGameStore";
@@ -27,14 +27,13 @@ import { supabase } from "@/lib/supabase/client";
 import { useEffect, useState } from "react";
 
 const navItems = [
-    { name: "피드",            href: "/feed",     icon: Home },
-    { name: "학습 허브",       href: "/learn",    icon: BookOpen },
-    { name: "스토어",          href: "/shop",     icon: ShoppingBag },
-    { name: "마켓 시뮬레이션", href: "/simulate", icon: PlayCircle },
-    { name: "메시지",          href: "/messages", icon: Inbox },
-    { name: "사용 가이드",     href: "/guide",    icon: HelpCircle },
-    { name: "앱 설치",         href: "/install",  icon: Download },
-    { name: "프로필",          href: "/profile",  icon: User },
+    { name: "피드",              href: "/feed",     icon: Home },
+    { name: "주간 미션",         href: "/missions", icon: Target },
+    { name: "AI 마켓 시뮬레이션",href: "/simulate", icon: FlaskConical },
+    { name: "커리큘럼",          href: "/session",  icon: GraduationCap },
+    { name: "스토어",            href: "/shop",     icon: ShoppingBag },
+    { name: "메시지",            href: "/messages", icon: Inbox },
+    { name: "프로필",            href: "/profile",  icon: User },
 ];
 
 export default function Sidebar() {
@@ -145,10 +144,10 @@ export default function Sidebar() {
     const closeMobileMenu = () => setMobileMenuOpen(false);
 
     const mobileExtraNavItems = [
-        { href: "/shop",     icon: ShoppingBag, label: "스토어" },
-        { href: "/simulate", icon: PlayCircle,  label: "마켓 시뮬레이션" },
-        { href: "/messages", icon: Inbox,       label: "메시지" },
-        { href: "/guide",    icon: HelpCircle,  label: "사용 가이드" },
+        { href: "/shop",     icon: ShoppingBag,  label: "스토어" },
+        { href: "/simulate", icon: FlaskConical, label: "AI 마켓 시뮬레이션" },
+        { href: "/session",  icon: GraduationCap, label: "커리큘럼" },
+        { href: "/messages", icon: Inbox,        label: "메시지" },
     ];
 
     const mobileAdminItems = [
@@ -165,9 +164,9 @@ export default function Sidebar() {
                 style={{ background: "var(--surface)", borderTop: "1px solid var(--border)" }}
             >
                 {[
-                    { href: "/feed",    icon: Home,     label: "홈" },
-                    { href: "/learn",   icon: BookOpen, label: "학습" },
-                    { href: "/profile", icon: User,     label: "나" },
+                    { href: "/feed",     icon: Home,   label: "홈" },
+                    { href: "/missions", icon: Target, label: "미션" },
+                    { href: "/profile",  icon: User,   label: "나" },
                 ].map(item => {
                     const Icon = item.icon;
                     const isActive = pathname === item.href;
@@ -363,7 +362,7 @@ export default function Sidebar() {
                                     Sellstagram
                                 </h1>
                                 <p className="text-[9px] font-medium mt-0.5 truncate" style={{ color: "var(--foreground-muted)" }}>
-                                    마케팅 실습 플랫폼
+                                    AI 마케팅 시뮬레이터
                                 </p>
                             </div>
                         </Link>
@@ -428,7 +427,9 @@ export default function Sidebar() {
                     {navItems.map((item) => {
                         const Icon = item.icon;
                         const isActive = pathname === item.href
-                            || (item.href === "/learn" && ["/session", "/missions"].includes(pathname))
+                            || (item.href === "/session" && pathname.startsWith("/session"))
+                            || (item.href === "/missions" && pathname.startsWith("/missions"))
+                            || (item.href === "/simulate" && pathname.startsWith("/simulate"))
                             || (item.href === "/shop" && ["/rewards"].includes(pathname));
 
                         return (

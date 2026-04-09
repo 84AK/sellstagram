@@ -23,6 +23,8 @@ import {
     Zap,
     FlaskConical,
     Lock,
+    ArrowRightCircle,
+    Shield,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import ABTestCreateModal from "./ABTestCreateModal";
@@ -30,6 +32,7 @@ import TermTooltip from "../common/TermTooltip";
 import { useGameStore } from "@/store/useGameStore";
 import { simulateMarketingEffect } from "@/lib/simulation/engine";
 import { supabase } from "@/lib/supabase/client";
+import { getValidSession, showSessionExpiredError } from "@/lib/supabase/session";
 import { useAIAccess } from "@/lib/hooks/useAIAccess";
 
 interface Comment {
@@ -66,9 +69,13 @@ interface FeedCardProps {
     landingImages?: string[];
     images?: string[];
     adBudget?: number;
+    source?: "simulation" | "channel";
+    isAdmin?: boolean;
+    onMoveToChannel?: (id: string) => void;
+    onAdminDelete?: (id: string) => void;
 }
 
-export default function FeedCard({ id, user, content, stats, timeAgo, sellingPrice, landingImages, images, adBudget: initialAdBudget }: FeedCardProps) {
+export default function FeedCard({ id, user, content, stats, timeAgo, sellingPrice, landingImages, images, adBudget: initialAdBudget, source, isAdmin, onMoveToChannel, onAdminDelete }: FeedCardProps) {
     const [isLiked, setIsLiked] = useState(false);
     const [localLikes, setLocalLikes] = useState(stats.likes);
     const [isSaved, setIsSaved] = useState(false);
@@ -103,6 +110,15 @@ export default function FeedCard({ id, user, content, stats, timeAgo, sellingPri
     })();
     const [allImages, setAllImages] = useState<string[]>(initImages);
     const [imgIdx, setImgIdx] = useState(0);
+
+    // 캐러셀 이미지 전체 프리로드 — 화살표 클릭 시 즉시 표시
+    useEffect(() => {
+        allImages.forEach(src => {
+            if (!src) return;
+            const img = new window.Image();
+            img.src = src;
+        });
+    }, [allImages]);
     // 캡션 더보기
     const CAPTION_LIMIT = 80;
     const [captionExpanded, setCaptionExpanded] = useState(false);
@@ -136,6 +152,52 @@ export default function FeedCard({ id, user, content, stats, timeAgo, sellingPri
     const router = useRouter();
     const isMyPost = user.handle === currentUser.handle;
     const { hasAccess: hasAIAccess } = useAIAccess();
+
+    // ── 채널로 이동 ──
+    const [movingToChannel, setMovingToChannel] = useState(false);
+    const handleMoveToChannel = async () => {
+        if (!confirm(`이 게시물을 내 채널로 이동할까요?\n시뮬레이션 피드에서 사라지고 채널 탭에서 보입니다.`)) return;
+        setMovingToChannel(true);
+        setShowMenu(false);
+        const session = await getValidSession();
+        if (!session) { showSessionExpiredError(); setMovingToChannel(false); return; }
+        const { error } = await supabase.from("posts").update({ source: "channel" }).eq("id", id);
+        if (error) { alert("이동에 실패했어요. 잠시 후 다시 시도해 주세요."); }
+        else { onMoveToChannel?.(id); }
+        setMovingToChannel(false);
+    };
+
+    // ── 관리자 삭제 ──
+    const [adminDeleting, setAdminDeleting] = useState(false);
+    const handleAdminDelete = async () => {
+        if (!confirm(`[관리자] @${user.handle}의 게시물을 삭제할까요?`)) return;
+        setAdminDeleting(true);
+        setShowMenu(false);
+        const res = await fetch("/api/admin/delete-post", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ postId: id }),
+        });
+        if (!res.ok) { alert("관리자 삭제에 실패했어요."); }
+        else { onAdminDelete?.(id); setDeleted(true); }
+        setAdminDeleting(false);
+    };
+
+    // ── 관리자 채널 이동 ──
+    const [adminMoving, setAdminMoving] = useState(false);
+    const handleAdminMoveToChannel = async () => {
+        if (!confirm(`[관리자] @${user.handle}의 게시물을 채널로 이동할까요?`)) return;
+        setAdminMoving(true);
+        setShowMenu(false);
+        const res = await fetch("/api/admin/update-post", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ postId: id, field: "source", value: "channel" }),
+        });
+        if (!res.ok) { alert("관리자 이동에 실패했어요."); }
+        else { onMoveToChannel?.(id); }
+        setAdminMoving(false);
+    };
 
     // 마운트 시 human comment count만 별도 로드 (AI 반응 제외)
     useEffect(() => {
@@ -555,7 +617,14 @@ export default function FeedCard({ id, user, content, stats, timeAgo, sellingPri
 
     const handleDelete = async () => {
         if (!confirm("게시물을 삭제할까요?")) return;
-        await supabase.from("posts").delete().eq("id", id);
+        // 삭제 전 세션 유효성 확인 (모든 브라우저 공통)
+        const session = await getValidSession();
+        if (!session) { showSessionExpiredError(); return; }
+        const { error } = await supabase.from("posts").delete().eq("id", id);
+        if (error) {
+            alert("삭제에 실패했어요. 잠시 후 다시 시도해 주세요.");
+            return;
+        }
         setDeleted(true);
         setShowMenu(false);
     };
@@ -659,6 +728,7 @@ export default function FeedCard({ id, user, content, stats, timeAgo, sellingPri
                                 <div className="fixed inset-0 z-10" onClick={() => setShowMenu(false)} />
                                 <div className="absolute right-0 top-8 z-20 min-w-[170px] rounded-2xl overflow-hidden shadow-xl"
                                     style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
+                                    {/* ── 내 게시물 메뉴 ── */}
                                     {isMyPost && (
                                         <>
                                             <button
@@ -687,10 +757,49 @@ export default function FeedCard({ id, user, content, stats, timeAgo, sellingPri
                                                 style={{ color: "#8B5CF6" }}>
                                                 <FlaskConical size={15} /> A/B 테스트
                                             </button>
+                                            {/* 시뮬레이션 게시물만 채널 이동 가능 */}
+                                            {source === "simulation" && (
+                                                <button
+                                                    onClick={handleMoveToChannel}
+                                                    disabled={movingToChannel}
+                                                    className="w-full flex items-center gap-2.5 px-4 py-3 text-sm font-bold transition-colors hover:bg-foreground/5 text-left disabled:opacity-50"
+                                                    style={{ color: "#06D6A0" }}>
+                                                    <ArrowRightCircle size={15} />
+                                                    {movingToChannel ? "이동 중..." : "내 채널로 이동"}
+                                                </button>
+                                            )}
                                             <button onClick={handleDelete}
                                                 className="w-full flex items-center gap-2.5 px-4 py-3 text-sm font-bold transition-colors hover:bg-red-50 text-left"
                                                 style={{ color: "#EF4444" }}>
                                                 <Trash2 size={15} /> 삭제하기
+                                            </button>
+                                            <div style={{ borderTop: "1px solid var(--border)" }} />
+                                        </>
+                                    )}
+                                    {/* ── 관리자 전용 메뉴 (다른 유저 게시물) ── */}
+                                    {isAdmin && !isMyPost && (
+                                        <>
+                                            <div className="px-4 py-2 flex items-center gap-1.5">
+                                                <Shield size={11} style={{ color: "#7C3AED" }} />
+                                                <span className="text-[10px] font-black uppercase tracking-wider" style={{ color: "#7C3AED" }}>관리자</span>
+                                            </div>
+                                            {source === "simulation" && (
+                                                <button
+                                                    onClick={handleAdminMoveToChannel}
+                                                    disabled={adminMoving}
+                                                    className="w-full flex items-center gap-2.5 px-4 py-3 text-sm font-bold transition-colors hover:bg-foreground/5 text-left disabled:opacity-50"
+                                                    style={{ color: "#06D6A0" }}>
+                                                    <ArrowRightCircle size={15} />
+                                                    {adminMoving ? "이동 중..." : "채널로 이동"}
+                                                </button>
+                                            )}
+                                            <button
+                                                onClick={handleAdminDelete}
+                                                disabled={adminDeleting}
+                                                className="w-full flex items-center gap-2.5 px-4 py-3 text-sm font-bold transition-colors hover:bg-red-50 text-left disabled:opacity-50"
+                                                style={{ color: "#EF4444" }}>
+                                                <Trash2 size={15} />
+                                                {adminDeleting ? "삭제 중..." : "삭제하기 (관리자)"}
                                             </button>
                                             <div style={{ borderTop: "1px solid var(--border)" }} />
                                         </>

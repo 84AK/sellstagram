@@ -11,7 +11,11 @@ const supabaseAnonKey = rawKey.length > 10 ? rawKey : "not-configured";
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     auth: {
-        flowType: "pkce", // implicit → PKCE: URL fragment 토큰 노출 방지 + iOS/iPad 안정성 향상
+        flowType: "pkce",          // PKCE: URL fragment 토큰 노출 방지 + iOS/iPad 안정성
+        persistSession: true,      // 세션을 localStorage에 저장 (탭 닫아도 유지)
+        autoRefreshToken: true,    // 토큰 만료 전 자동 갱신 (모든 브라우저 공통)
+        detectSessionInUrl: true,  // OAuth 콜백 URL에서 세션 자동 감지
+        storageKey: "sellstagram_auth_v1", // 명시적 키 (기본값 충돌 방지)
     },
 });
 
@@ -60,6 +64,7 @@ export interface DbPost {
     seller_user_id: string | null;
     images: string[] | null;
     ad_budget: number | null;
+    source: "simulation" | "channel" | null;
 }
 
 export interface DbMission {

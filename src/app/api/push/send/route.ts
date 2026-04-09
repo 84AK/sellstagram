@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import webpush from "web-push";
+import { verifyAdminToken } from "@/lib/admin/token";
 
 // 빌드 타임이 아닌 요청 시점에 초기화 (env 미설정 시 빌드 에러 방지)
 let vapidInitialized = false;
@@ -36,22 +37,27 @@ interface PushPayload {
 export async function POST(req: NextRequest) {
     try {
         initVapid();
-        // 교사/관리자 인증 — Bearer JWT (Supabase 세션 토큰) 검증
-        const authHeader = req.headers.get("authorization");
-        const token = authHeader?.replace("Bearer ", "").trim();
-        if (!token) {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-        }
-        // 토큰으로 유저 조회 (서비스 롤로 검증)
-        const { data: { user: caller }, error: authErr } = await supabaseAdmin.auth.getUser(token);
-        if (authErr || !caller) {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-        }
-        // profiles 테이블에서 role 확인
-        const { data: profile } = await supabaseAdmin
-            .from("profiles").select("role").eq("id", caller.id).single();
-        if (profile?.role !== "teacher" && profile?.role !== "admin") {
-            return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+        // 교사/관리자 인증 — 두 가지 방법 지원
+        // 방법 1: 관리자 쿠키 토큰 (admin_token)
+        const adminCookie = req.cookies.get("admin_token")?.value ?? "";
+        const isAdminCookie = verifyAdminToken(adminCookie);
+
+        if (!isAdminCookie) {
+            // 방법 2: Supabase Bearer JWT (교사 계정)
+            const authHeader = req.headers.get("authorization");
+            const token = authHeader?.replace("Bearer ", "").trim();
+            if (!token) {
+                return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+            }
+            const { data: { user: caller }, error: authErr } = await supabaseAdmin.auth.getUser(token);
+            if (authErr || !caller) {
+                return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+            }
+            const { data: profile } = await supabaseAdmin
+                .from("profiles").select("role").eq("id", caller.id).single();
+            if (profile?.role !== "teacher" && profile?.role !== "admin") {
+                return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+            }
         }
 
         const payload: PushPayload = await req.json();
@@ -104,7 +110,10 @@ export async function POST(req: NextRequest) {
 
         return NextResponse.json({ ok: true, sent, failed, total: subs?.length ?? 0 });
     } catch (err) {
-        console.error("[push/send]", err);
-        return NextResponse.json({ error: "Server error" }, { status: 500 });
+        const msg = err instanceof Error ? err.message : String(err);
+        console.error("[push/send]", msg);
+        // 내부 메시지는 서버 로그에만, 클라이언트에는 일반화된 메시지 반환
+        const clientMsg = process.env.NODE_ENV === "development" ? msg : "푸시 알림 발송 중 오류가 발생했습니다.";
+        return NextResponse.json({ error: clientMsg }, { status: 500 });
     }
 }

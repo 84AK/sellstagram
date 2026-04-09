@@ -10,6 +10,8 @@ import {
 import { useGameStore } from "@/store/useGameStore";
 import { useAIAccess } from "@/lib/hooks/useAIAccess";
 import { Lock } from "lucide-react";
+import { supabase } from "@/lib/supabase/client";
+import { getValidSession, showSessionExpiredError } from "@/lib/supabase/session";
 
 // ─── 상수 ──────────────────────────────────────────────────────────
 const MAX_IMAGES    = 5;
@@ -44,12 +46,14 @@ interface Props {
 
 export default function MyChannelUploadModal({ isOpen, onClose }: Props) {
     // ── 전역 스토어 ────────────────────────────────────────────────
-    const { addPost, addPoints, user } = useGameStore();
+    const { addPoints, user } = useGameStore();
+    const currentWeek = useGameStore(s => s.week);
 
     // ── 작성 상태 ──────────────────────────────────────────────────
     const [topic,     setTopic]     = useState("");
     const [content,   setContent]   = useState("");
-    const [images,    setImages]    = useState<{ url: string; name: string }[]>([]);
+    const [images,    setImages]    = useState<{ url: string; name: string; file: File }[]>([]);
+    const [isPosting, setIsPosting] = useState(false);
     const [previewMd, setPreviewMd] = useState(false);
     const [useAI,          setUseAI]          = useState(false);
     const { hasAccess: hasAIAccess } = useAIAccess();
@@ -63,7 +67,7 @@ export default function MyChannelUploadModal({ isOpen, onClose }: Props) {
     const [copied,      setCopied]     = useState(false);
 
     // ── 에러 ───────────────────────────────────────────────────────
-    const [errors, setErrors] = useState<string[]>([]);
+    const [errors, setErrors] = useState<React.ReactNode[]>([]);
 
     const fileInputRef = useRef<HTMLInputElement>(null);
     const dropZoneRef  = useRef<HTMLDivElement>(null);
@@ -73,8 +77,8 @@ export default function MyChannelUploadModal({ isOpen, onClose }: Props) {
     // ── 이미지 처리 ────────────────────────────────────────────────
     function processFiles(files: FileList | File[]) {
         const fileArr = Array.from(files);
-        const newErrors: string[] = [];
-        const toAdd: { url: string; name: string }[] = [];
+        const newErrors: React.ReactNode[] = [];
+        const toAdd: { url: string; name: string; file: File }[] = [];
 
         for (const file of fileArr) {
             if (images.length + toAdd.length >= MAX_IMAGES) {
@@ -86,10 +90,16 @@ export default function MyChannelUploadModal({ isOpen, onClose }: Props) {
                 continue;
             }
             if (file.size > MAX_BYTES) {
-                newErrors.push(`${file.name}: 파일 크기가 ${MAX_MB}MB를 초과했어요 (현재 ${(file.size / 1024 / 1024).toFixed(1)}MB).`);
+                newErrors.push(
+                    <>{file.name}: 파일 크기가 {MAX_MB}MB를 초과했어요 (현재 {(file.size / 1024 / 1024).toFixed(1)}MB).{" "}
+                    <a href="https://aklabs-84.github.io/webp_master/" target="_blank" rel="noopener noreferrer"
+                        className="underline font-bold" style={{ color: "var(--primary)" }}>
+                        WebP로 변환하기 →
+                    </a></>
+                );
                 continue;
             }
-            toAdd.push({ url: URL.createObjectURL(file), name: file.name });
+            toAdd.push({ url: URL.createObjectURL(file), name: file.name, file });
         }
 
         setErrors(newErrors);
@@ -113,25 +123,75 @@ export default function MyChannelUploadModal({ isOpen, onClose }: Props) {
         });
     }
 
+    // ── 이미지 Storage 업로드 헬퍼 ───────────────────────────────
+    async function uploadImageToStorage(file: File, userId: string): Promise<string | null> {
+        const ext = file.name.split(".").pop() ?? "jpg";
+        const path = `${userId}/${Date.now()}_${Math.random().toString(36).substr(2, 4)}.${ext}`;
+        const { error } = await supabase.storage.from("posts").upload(path, file, { cacheControl: "3600" });
+        if (error) { console.error("Storage upload error:", error.message); return null; }
+        const { data: { publicUrl } } = supabase.storage.from("posts").getPublicUrl(path);
+        return publicUrl;
+    }
+
     // ── 피드에 올리기 (공통) ──────────────────────────────────────
-    function postToFeed(captionOverride?: string) {
+    async function postToFeed(captionOverride?: string) {
         const caption = captionOverride ?? content.trim();
-        addPost({
-            id:      Math.random().toString(36).substr(2, 9),
-            type:    "post",
-            user:    { name: user.name, handle: user.handle, avatar: user.avatar },
-            content: {
-                image:   images[0]?.url ?? "",
-                caption: (topic ? `**${topic}**\n\n` : "") + caption,
-                tags:    [],
-            },
-            images:  images.map(i => i.url),
-            stats:   { likes: 0, engagement: "0%", sales: "₩0", comments: "0", shares: "0" },
-            timeAgo: "방금 전",
-            createdAt: new Date().toISOString(),
-        });
-        addPoints(20);
-        setStep("done");
+        const finalCaption = (topic ? `**${topic}**\n\n` : "") + caption;
+        setIsPosting(true);
+        setErrors([]);
+
+        try {
+            // 모든 브라우저 공통: 세션 유효성 검사 + 만료 시 자동 갱신 시도
+            const session = await getValidSession();
+            if (!session?.user?.id) {
+                setIsPosting(false);
+                showSessionExpiredError();
+                return;
+            }
+            const userId = session.user.id;
+
+            // 1. 이미지 Storage 업로드
+            let imageUrl: string | null = null;
+            const extraImageUrls: string[] = [];
+            for (let i = 0; i < images.length; i++) {
+                const url = await uploadImageToStorage(images[i].file, userId);
+                if (i === 0) imageUrl = url;
+                else if (url) extraImageUrls.push(url);
+            }
+
+            // 2. Supabase posts 테이블에 저장 (select로 실제 DB ID 수신)
+            const { data: inserted, error: insertError } = await supabase.from("posts").insert({
+                user_id:         session.user.id,
+                user_name:       user.name  || "학생",
+                user_handle:     user.handle || "student",
+                user_avatar:     user.avatar || "🦊",
+                type:            "post",
+                caption:         finalCaption,
+                image_url:       imageUrl,
+                tags:            [],
+                likes:           0,
+                comments:        0,
+                shares:          0,
+                engagement_rate: "0%",
+                images:          extraImageUrls,
+                week:            currentWeek,
+                source:          "channel",
+            }).select().single();
+
+            if (insertError || !inserted) {
+                // INSERT 실패 시 에러 표시 (채널 게시물은 시뮬레이션 store에 추가하지 않음)
+                console.error("Post insert error:", insertError?.message);
+                throw new Error("게시물 저장에 실패했어요. 다시 시도해주세요.");
+            }
+            // INSERT 성공 — 모달 닫힐 때 feed/page.tsx의 handleChannelUploadClose가 채널 목록 새로고침
+
+            addPoints(20);
+            setStep("done");
+        } catch (e) {
+            setErrors([e instanceof Error ? e.message : "업로드 중 오류가 발생했어요. 다시 시도해주세요."]);
+        } finally {
+            setIsPosting(false);
+        }
     }
 
     // ── 기본 올리기 (AI 없이) ─────────────────────────────────────
@@ -140,7 +200,7 @@ export default function MyChannelUploadModal({ isOpen, onClose }: Props) {
         if (!content.trim()) errs.push("내용을 입력해주세요.");
         if (errs.length) { setErrors(errs); return; }
         setErrors([]);
-        postToFeed();
+        void postToFeed();
     }
 
     // ── AI 변환 후 올리기 ─────────────────────────────────────────
@@ -187,7 +247,7 @@ export default function MyChannelUploadModal({ isOpen, onClose }: Props) {
         images.forEach(i => URL.revokeObjectURL(i.url));
         setImages([]); setTopic(""); setContent(""); setErrors([]);
         setStep("write"); setConversions({}); setCopied(false);
-        setPreviewMd(false); setShowHints(false);
+        setPreviewMd(false); setShowHints(false); setIsPosting(false);
     }
 
     function handleClose() { handleReset(); onClose(); }
@@ -519,7 +579,7 @@ export default function MyChannelUploadModal({ isOpen, onClose }: Props) {
                                 /* 바로 올리기 */
                                 <button
                                     onClick={handleDirectPost}
-                                    disabled={!canPost}
+                                    disabled={!canPost || isPosting}
                                     className="w-full py-3.5 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 transition-all active:scale-[0.98] disabled:opacity-50"
                                     style={{
                                         background: "linear-gradient(135deg, var(--primary), #FF9A72)",
@@ -527,7 +587,7 @@ export default function MyChannelUploadModal({ isOpen, onClose }: Props) {
                                         boxShadow:  "0 4px 16px rgba(255,107,53,0.3)",
                                     }}
                                 >
-                                    <Send size={16} /> 피드에 올리기
+                                    {isPosting ? <><Loader2 size={16} className="animate-spin" /> 업로드 중...</> : <><Send size={16} /> 피드에 올리기</>}
                                 </button>
                             ) : (
                                 /* AI 변환 후 올리기 */
@@ -637,15 +697,16 @@ export default function MyChannelUploadModal({ isOpen, onClose }: Props) {
                                     {copied ? <><Check size={14} /> 복사됨</> : <><Copy size={14} /> 복사</>}
                                 </button>
                                 <button
-                                    onClick={() => postToFeed(conversions[activePlat]?.converted)}
-                                    className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold transition-all active:scale-[0.98]"
+                                    onClick={() => void postToFeed(conversions[activePlat]?.converted)}
+                                    disabled={isPosting}
+                                    className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold transition-all active:scale-[0.98] disabled:opacity-50"
                                     style={{
                                         background: `linear-gradient(135deg, ${activeMeta.color}, ${activeMeta.color}cc)`,
                                         color:      "white",
                                         boxShadow:  `0 4px 16px ${activeMeta.color}44`,
                                     }}
                                 >
-                                    <Send size={14} /> 피드에 올리기
+                                    {isPosting ? <><Loader2 size={14} className="animate-spin" /> 업로드 중...</> : <><Send size={14} /> 피드에 올리기</>}
                                 </button>
                             </div>
                         </>

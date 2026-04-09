@@ -88,6 +88,8 @@ export default function FeedPage() {
     const [activeMission, setActiveMission] = useState<{ title: string; description: string } | null>(null);
     const [feedTab, setFeedTab] = useState<"simulation" | "channel">("simulation");
     const [channelModalOpen, setChannelModalOpen] = useState(false);
+    const [channelPosts, setChannelPosts] = useState<ReturnType<typeof dbPostToStorePost>[]>([]);
+    const [channelLoading, setChannelLoading] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
     const [loadError, setLoadError] = useState(false);
     const [dbOffset, setDbOffset] = useState(PAGE_SIZE);
@@ -106,11 +108,12 @@ export default function FeedPage() {
     const streak = calcStreak(posts, user.handle);
 
     const loadMorePosts = useCallback(async () => {
-        if (loadingMore || !hasMore) return;
+        if (isLoading || loadingMore || !hasMore) return;
         setLoadingMore(true);
         const { data, error } = await supabase
             .from("posts")
             .select("*")
+            .eq("source", "simulation")
             .order("created_at", { ascending: false })
             .range(dbOffset, dbOffset + PAGE_SIZE - 1);
         if (!error && data) {
@@ -123,7 +126,7 @@ export default function FeedPage() {
             }
         }
         setLoadingMore(false);
-    }, [loadingMore, hasMore, dbOffset]);
+    }, [isLoading, loadingMore, hasMore, dbOffset]);
 
     useEffect(() => {
         const sentinel = sentinelRef.current;
@@ -147,7 +150,7 @@ export default function FeedPage() {
         setIsLoading(true);
         setLoadError(false);
         Promise.all([
-            supabase.from("posts").select("*").order("created_at", { ascending: false }).limit(PAGE_SIZE),
+            supabase.from("posts").select("*").eq("source", "simulation").order("created_at", { ascending: false }).limit(PAGE_SIZE),
             supabase.from("game_state").select("week").eq("id", 1).single(),
             supabase.from("app_settings").select("class_active").eq("id", 1).single(),
             supabase.from("missions").select("title, description").eq("is_active", true)
@@ -170,7 +173,9 @@ export default function FeedPage() {
         const feedChannel = supabase
             .channel("feed-all")
             .on("postgres_changes", { event: "INSERT", schema: "public", table: "posts" }, (payload) => {
-                const newPost = dbPostToStorePost(payload.new as DbPost);
+                const raw = payload.new as DbPost;
+                if (raw.source !== "simulation") return; // 내 채널 글은 시뮬레이션 피드에 추가 안 함
+                const newPost = dbPostToStorePost(raw);
                 addPost(newPost);
             })
             .on("postgres_changes", { event: "UPDATE", schema: "public", table: "game_state" }, (payload) => {
@@ -191,6 +196,30 @@ export default function FeedPage() {
         };
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
+
+    // 내 채널 탭 전환 시 channel 게시물 로드
+    useEffect(() => {
+        if (feedTab !== "channel") return;
+        setChannelLoading(true);
+        supabase.from("posts").select("*")
+            .eq("source", "channel")
+            .order("created_at", { ascending: false })
+            .then(({ data }) => {
+                setChannelPosts((data ?? []).map(dbPostToStorePost));
+                setChannelLoading(false);
+            });
+    }, [feedTab]);
+
+    // 내 채널 신규 업로드 시 목록 즉시 반영
+    const handleChannelUploadClose = () => {
+        setChannelModalOpen(false);
+        if (feedTab === "channel") {
+            supabase.from("posts").select("*")
+                .eq("source", "channel")
+                .order("created_at", { ascending: false })
+                .then(({ data }) => setChannelPosts((data ?? []).map(dbPostToStorePost)));
+        }
+    };
 
     return (
         <div className="flex flex-col lg:flex-row gap-8 p-4 pt-6 lg:pt-10 max-w-6xl mx-auto w-full overflow-x-hidden">
@@ -242,7 +271,7 @@ export default function FeedPage() {
                             }}
                         >
                             {tab === "simulation" ? (
-                                <><span>🎮</span><span>시뮬레이션</span></>
+                                <><span>🧪</span><span>AI 실험실</span></>
                             ) : (
                                 <><span>📡</span><span>내 채널</span></>
                             )}
@@ -252,11 +281,88 @@ export default function FeedPage() {
 
                 {/* 내 채널 탭 */}
                 {feedTab === "channel" && (
-                    <MyChannelFeed onOpenUpload={() => setChannelModalOpen(true)} />
+                    <div className="flex flex-col gap-5 pb-24">
+                        {/* 상단 액션 바 */}
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <h3 className="text-lg font-black font-outfit" style={{ color: "var(--foreground)" }}>
+                                    📡 내 채널
+                                </h3>
+                                <p className="text-xs mt-0.5" style={{ color: "var(--foreground-muted)" }}>
+                                    실제 SNS에 발행한 콘텐츠 모음
+                                </p>
+                            </div>
+                            <button
+                                onClick={() => setChannelModalOpen(true)}
+                                className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl font-bold text-sm transition-all hover:opacity-90 active:scale-[0.97]"
+                                style={{ background: "var(--secondary)", color: "white", boxShadow: "0 3px 10px rgba(67,97,238,0.3)" }}
+                            >
+                                <Plus size={15} /> 콘텐츠 만들기
+                            </button>
+                        </div>
+
+                        {/* 게시물 목록 */}
+                        {channelLoading ? (
+                            <FeedSkeleton />
+                        ) : channelPosts.length === 0 ? (
+                            <div className="flex flex-col items-center gap-4 py-16 rounded-2xl"
+                                style={{ background: "var(--surface)", border: "1.5px dashed var(--border)" }}>
+                                <span className="text-5xl">📡</span>
+                                <div className="text-center">
+                                    <p className="font-black text-base" style={{ color: "var(--foreground)" }}>
+                                        아직 올린 콘텐츠가 없어요
+                                    </p>
+                                    <p className="text-sm mt-1" style={{ color: "var(--foreground-muted)" }}>
+                                        콘텐츠를 만들어 내 SNS에 발행해보세요
+                                    </p>
+                                </div>
+                                <button
+                                    onClick={() => setChannelModalOpen(true)}
+                                    className="flex items-center gap-2 px-5 py-3 rounded-xl font-bold text-sm transition-all hover:opacity-90"
+                                    style={{ background: "var(--secondary)", color: "white" }}
+                                >
+                                    <Plus size={15} /> 첫 콘텐츠 만들기
+                                </button>
+                            </div>
+                        ) : (
+                            channelPosts.map(post => post.content ? (
+                                <div key={post.id} className="max-w-md mx-auto w-full rounded-2xl overflow-hidden"
+                                    style={{ boxShadow: "0 2px 12px rgba(0,0,0,0.07)" }}>
+                                    <FeedCard
+                                        id={post.id}
+                                        user={post.user}
+                                        content={post.content}
+                                        stats={{
+                                            likes: typeof post.stats.likes === "number" ? post.stats.likes : 0,
+                                            engagement: post.stats.engagement ?? "",
+                                            sales: post.stats.sales ?? "",
+                                            comments: post.stats.comments,
+                                            shares: post.stats.shares,
+                                        }}
+                                        timeAgo={post.timeAgo}
+                                        images={post.images}
+                                        source="channel"
+                                        isAdmin={user.role === "teacher"}
+                                        onAdminDelete={(deletedId) =>
+                                            setChannelPosts(prev => prev.filter(p => p.id !== deletedId))
+                                        }
+                                    />
+                                </div>
+                            ) : null)
+                        )}
+                    </div>
                 )}
 
                 {/* ── 시뮬레이션 탭 콘텐츠 ── */}
                 {feedTab === "simulation" && (<>
+
+                {/* AI 실험실 헤더 */}
+                <div className="px-1 py-1">
+                    <p className="text-sm font-black" style={{ color: "var(--foreground)" }}>🧪 AI 실험실</p>
+                    <p className="text-[11px] mt-0.5" style={{ color: "var(--foreground-muted)" }}>
+                        미션·시뮬레이션으로 만든 AI 마케팅 콘텐츠가 모이는 공간
+                    </p>
+                </div>
 
                 {/* 수업 진행 배너 — 선생님이 수업 시작 눌렀을 때만 표시 */}
                 {classActive ? (
@@ -521,6 +627,18 @@ export default function FeedPage() {
                                         landingImages={post.landingImages}
                                         images={post.images}
                                         adBudget={post.adBudget}
+                                        source="simulation"
+                                        isAdmin={user.role === "teacher"}
+                                        onMoveToChannel={(movedId) =>
+                                            useGameStore.setState(s => ({
+                                                posts: s.posts.filter(p => p.id !== movedId)
+                                            }))
+                                        }
+                                        onAdminDelete={(deletedId) =>
+                                            useGameStore.setState(s => ({
+                                                posts: s.posts.filter(p => p.id !== deletedId)
+                                            }))
+                                        }
                                     />
                                 </div>
                             );
@@ -528,10 +646,10 @@ export default function FeedPage() {
                         return null;
                     })}
 
-                    {/* 무한 스크롤 sentinel + 로딩 */}
-                    {!isLoading && !loadError && (
-                        <div ref={sentinelRef} className="flex justify-center py-4 pb-24">
-                            {loadingMore ? (
+                    {/* 무한 스크롤 sentinel — 항상 렌더링해야 observer가 초기에 올바르게 등록됨 */}
+                    <div ref={sentinelRef} className="flex justify-center py-4 pb-24">
+                        {!isLoading && !loadError && (
+                            loadingMore ? (
                                 <div className="flex items-center gap-2" style={{ color: "var(--foreground-muted)" }}>
                                     <Loader2 size={16} className="animate-spin" />
                                     <span className="text-xs font-medium">피드 불러오는 중...</span>
@@ -540,9 +658,9 @@ export default function FeedPage() {
                                 <p className="text-xs font-medium" style={{ color: "var(--foreground-muted)" }}>
                                     모든 게시물을 봤어요 ✓
                                 </p>
-                            ) : null}
-                        </div>
-                    )}
+                            ) : null
+                        )}
+                    </div>
                 </div>
 
                 </>)}
@@ -591,7 +709,7 @@ export default function FeedPage() {
             {/* 내 채널 업로드 모달 */}
             <MyChannelUploadModal
                 isOpen={channelModalOpen}
-                onClose={() => setChannelModalOpen(false)}
+                onClose={handleChannelUploadClose}
             />
         </div>
     );

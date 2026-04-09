@@ -383,7 +383,8 @@ export default function StoryBar() {
                 .from("profiles")
                 .select("id, name, handle, avatar")
                 .neq("handle", user.handle || "")
-                .limit(10);
+                .order("created_at", { ascending: false })
+                .limit(50);
             if (data) setOthers(data);
         };
         load();

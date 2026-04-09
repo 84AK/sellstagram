@@ -28,6 +28,7 @@ import {
 import { useRouter } from "next/navigation";
 import { useGameStore } from "@/store/useGameStore";
 import { supabase } from "@/lib/supabase/client";
+import { getValidSession, showSessionExpiredError } from "@/lib/supabase/session";
 import { simulateMarketingEffect } from "@/lib/simulation/engine";
 import { getTodayChallenge } from "@/lib/challenges/dailyChallenges";
 import AIContentStudio from "./AIContentStudio";
@@ -240,7 +241,7 @@ export default function UploadModal() {
     };
 
     const uploadImageToStorage = async (file: File): Promise<string | null> => {
-        const { data: { session } } = await supabase.auth.getSession();
+        const session = await getValidSession();
         const userId = session?.user?.id || "anon";
         const ext = file.name.split(".").pop() ?? "jpg";
         const path = `${userId}/${Date.now()}.${ext}`;
@@ -355,8 +356,15 @@ export default function UploadModal() {
         setIsUploading(true);
 
         try {
-            const { data: { session } } = await supabase.auth.getSession();
-            const userId = session?.user?.id ?? localStorage.getItem("sellstagram_user_id");
+            // 모든 브라우저 공통: 세션 유효성 검사 + 만료 시 자동 갱신 시도
+            const session = await getValidSession();
+            if (!session?.user?.id) {
+                setIsUploading(false);
+                showSessionExpiredError();
+                return;
+            }
+
+            const userId = session.user.id;
             const tagList = uploadType === "post" ? tags.split(",").map(t => t.trim()).filter(Boolean) : [];
 
             // 이미지 Storage 업로드 (다중)
@@ -364,6 +372,11 @@ export default function UploadModal() {
             const extraImageUrls: string[] = [];
             if (selectedFiles.length > 0 && uploadType === "post") {
                 imageUrl = await uploadImageToStorage(selectedFiles[0]);
+                if (!imageUrl) {
+                    setIsUploading(false);
+                    alert("이미지 업로드에 실패했어요.\n\n• 파일 크기가 5MB 이하인지 확인해 주세요\n• HEIC(아이폰 기본 포맷)는 JPG/PNG로 변환 후 업로드해 주세요\n• 인터넷 연결을 확인하고 다시 시도해 주세요");
+                    return;
+                }
                 for (let i = 1; i < selectedFiles.length; i++) {
                     const url = await uploadImageToStorage(selectedFiles[i]);
                     if (url) extraImageUrls.push(url);
@@ -402,20 +415,16 @@ export default function UploadModal() {
                 selling_price: uploadType === "post" && selectedProduct ? parsedSellingPrice : null,
                 seller_user_id: uploadType === "post" && selectedProduct ? (session?.user?.id ?? null) : null,
                 sold_count: 0,
+                source: "simulation",
             }).select().single();
 
             if (error || !inserted) {
-                // Supabase 미연결 시 로컬에만 저장
-                addPost({
-                    id: Math.random().toString(36).substr(2, 9),
-                    type: uploadType,
-                    user: { name: user.name, handle: user.handle, avatar: user.avatar },
-                    content: uploadType === "post" ? { image: imageUrl ?? "", caption, tags: tagList } : undefined,
-                    description: undefined,
-                    musicName: undefined,
-                    stats: { likes: 0, engagement: "0%", sales: "₩0", comments: "0", shares: "0" },
-                    timeAgo: "방금 전",
-                } as any);
+                // DB 저장 실패 — 로컬 fallback 없이 사용자에게 오류 안내
+                // (fallback을 허용하면 "내 화면에만 보이는 유령 게시물" 현상 발생)
+                setIsUploading(false);
+                const errMsg = error?.message ?? "알 수 없는 오류";
+                alert(`게시물 저장에 실패했어요.\n(${errMsg})\n\n잠시 후 다시 시도하거나 페이지를 새로고침해 주세요.`);
+                return;
             }
             // Supabase 성공 시 realtime이 자동으로 addPost 호출 (page.tsx 구독)
 
@@ -1157,7 +1166,19 @@ export default function UploadModal() {
                 </div>
 
                 {/* Modal Footer */}
-                <div className="p-6 pt-2 border-t border-foreground/5 bg-background/80 backdrop-blur-md flex-shrink-0">
+                <div className="p-6 pt-2 border-t border-foreground/5 bg-background/80 backdrop-blur-md flex-shrink-0 flex flex-col gap-3">
+                    {/* AI 미사용 안내 — 소프트 가이드 (방식 A) */}
+                    {!aiPreview && !isMissionMode && caption && (
+                        <div className="flex items-start gap-2.5 px-3.5 py-2.5 rounded-xl"
+                            style={{ background: "rgba(255,107,53,0.08)", border: "1px solid rgba(255,107,53,0.2)" }}>
+                            <Sparkles size={14} className="shrink-0 mt-0.5" style={{ color: "var(--primary)" }} />
+                            <p className="text-[11px] leading-relaxed" style={{ color: "var(--primary)" }}>
+                                <strong>시뮬레이션 탭은 AI 마케팅 실험 공간이에요.</strong><br />
+                                AI 코치로 글을 다듬으면 더 정확한 시뮬레이션 결과를 얻을 수 있어요.
+                                일반 실습 결과물은 <strong>내 채널 탭</strong>을 이용해 주세요.
+                            </p>
+                        </div>
+                    )}
                     <button
                         disabled={isUploading || isSuccess || !caption}
                         onClick={handleUpload}
@@ -1165,15 +1186,19 @@ export default function UploadModal() {
                             ? "bg-green-500 text-white"
                             : isUploading
                                 ? "bg-foreground/10 text-foreground/40"
-                                : "bg-foreground text-background hover:bg-foreground/90"
+                                : aiPreview || isMissionMode
+                                    ? "bg-foreground text-background hover:bg-foreground/90"
+                                    : "bg-foreground/20 text-foreground/50 hover:bg-foreground/30"
                             }`}
                     >
                         {isSuccess ? (
                             <>업로드 완료! <CheckCircle size={20} /></>
                         ) : isUploading ? (
                             <><Loader2 size={18} className="animate-spin" /> 성과 시뮬레이션 중...</>
+                        ) : aiPreview || isMissionMode ? (
+                            <>시뮬레이션 피드에 게시하기 <Send size={18} /></>
                         ) : (
-                            <>실세계 피드에 게시하기 <Send size={18} /></>
+                            <>그냥 올리기 (AI 미사용) <Send size={18} /></>
                         )}
                     </button>
                 </div>

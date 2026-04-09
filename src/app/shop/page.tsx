@@ -265,6 +265,15 @@ export default function ShopPage() {
                     <p className="text-sm" style={{ color: "var(--foreground-muted)" }}>
                         {activeTab === "shop" ? "상품을 구매하고 마케팅 실습을 시작하세요." : "XP를 사용해 나만의 아바타를 꾸며보세요."}
                     </p>
+                    {activeTab === "shop" && (
+                        <div className="flex items-center gap-2 mt-3 px-4 py-2.5 rounded-2xl text-[12px] font-semibold"
+                            style={{ background: "var(--secondary-light)", border: "1px solid rgba(67,97,238,0.2)", color: "var(--secondary)" }}>
+                            <Info size={13} className="shrink-0" />
+                            <span>
+                                <strong>게임 흐름:</strong> 상품 구매 → AI 실험실에서 홍보 콘텐츠 제작 → 시뮬레이션 결과 확인 → 수익 획득
+                            </span>
+                        </div>
+                    )}
                 </div>
 
                 {/* 잔액 + XP */}
