@@ -252,3 +252,44 @@ create policy "app_settings_read" on public.app_settings for select using (true)
 -- =====================================================
 alter table public.posts add column if not exists source text default 'simulation';
 -- 기존 데이터는 모두 'simulation'으로 간주
+
+-- =====================================================
+-- push_subscriptions: 푸시 알림 구독 정보
+-- =====================================================
+create table if not exists public.push_subscriptions (
+    id          uuid default gen_random_uuid() primary key,
+    endpoint    text unique not null,
+    p256dh      text not null,
+    auth        text not null,
+    user_id     uuid references auth.users(id) on delete cascade,
+    user_name   text,
+    created_at  timestamptz default now(),
+    updated_at  timestamptz default now()
+);
+
+alter table public.push_subscriptions enable row level security;
+create policy "push_sub_insert" on public.push_subscriptions
+    for insert with check (auth.uid() = user_id);
+create policy "push_sub_delete" on public.push_subscriptions
+    for delete using (auth.uid() = user_id);
+create index if not exists push_subscriptions_user_id_idx on public.push_subscriptions(user_id);
+
+-- =====================================================
+-- RPC: increment_user_points
+-- 서버에서 포인트 적립량을 검증 (1회 최대 500)
+-- 클라이언트가 임의 금액을 보내도 서버에서 차단
+-- =====================================================
+create or replace function public.increment_user_points(p_user_id uuid, p_amount integer)
+returns void
+language plpgsql
+security definer
+as $$
+begin
+    if p_amount <= 0 or p_amount > 500 then
+        raise exception 'Invalid amount: must be 1-500';
+    end if;
+    update public.profiles
+    set points = points + p_amount
+    where id = p_user_id;
+end;
+$$;

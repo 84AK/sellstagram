@@ -107,6 +107,8 @@ interface GameState {
     isAIStudioOpen: boolean;
     aiStudioDraftCaption: string;
     aiStudioDraftTags: string;
+    globalToast: { message: string; type: "error" | "info" | "success" } | null;
+    setGlobalToast: (toast: { message: string; type: "error" | "info" | "success" } | null) => void;
 
     missionCompletionQueue: Mission[];  // 방금 완료된 미션 토스트용
 
@@ -210,6 +212,7 @@ export const useGameStore = create<GameState>((set) => ({
     isAIStudioOpen: false,
     aiStudioDraftCaption: "",
     aiStudioDraftTags: "",
+    globalToast: null,
     user: {
         name: "",
         handle: "",
@@ -293,17 +296,20 @@ export const useGameStore = create<GameState>((set) => ({
     })),
 
     addPoints: (amount) => {
-        // 비정상 값 방어: 0~500 사이로 클램프
-        const safeAmount = Math.max(0, Math.min(amount, 500));
+        // 클라이언트 1차 방어: 0~500 범위 클램프
+        const safeAmount = Math.max(1, Math.min(Math.floor(amount), 500));
         set((state) => {
+            // 낙관적 UI 업데이트
             const newPoints = state.user.points + safeAmount;
-            // Supabase에 비동기 저장 (fire-and-forget)
+            // 서버 2차 검증: RPC increment_user_points (1회 최대 500 서버에서 재검증)
             supabase.auth.getSession().then(({ data: { session } }) => {
                 if (session?.user?.id) {
-                    supabase.from("profiles")
-                        .update({ points: newPoints })
-                        .eq("id", session.user.id)
-                        .then(() => {});
+                    supabase.rpc("increment_user_points", {
+                        p_user_id: session.user.id,
+                        p_amount: safeAmount,
+                    }).then(({ error }) => {
+                        if (error) console.warn("[addPoints RPC]", error.message);
+                    });
                 }
             });
             return { user: { ...state.user, points: newPoints } };
@@ -368,6 +374,7 @@ export const useGameStore = create<GameState>((set) => ({
 
     setAIStudioOpen: (open) => set({ isAIStudioOpen: open }),
     setAIStudioDraft: (caption, tags) => set({ aiStudioDraftCaption: caption, aiStudioDraftTags: tags }),
+    setGlobalToast: (toast) => set({ globalToast: toast }),
 
     nextWeek: () => set((state) => ({ week: Math.min(29, state.week + 1) })),
     prevWeek: () => set((state) => ({ week: Math.max(1, state.week - 1) })),

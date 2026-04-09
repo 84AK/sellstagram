@@ -11,6 +11,7 @@ import AIReportModal from "@/components/feed/AIReportModal";
 import { ThemeProvider } from "@/components/common/ThemeProvider";
 import OnboardingGate from "@/components/onboarding/OnboardingGate";
 import MissionCompleteToast from "@/components/common/MissionCompleteToast";
+import GlobalToast from "@/components/common/GlobalToast";
 import PrivacyProvider from "@/components/layout/PrivacyProvider";
 import PageTransitionLoader from "@/components/common/PageTransitionLoader";
 import PushPermissionBanner from "@/components/pwa/PushPermissionBanner";
@@ -81,6 +82,7 @@ export default function RootLayout({
             <AIReportModal />
             <GuideModal />
             <MissionCompleteToast />
+            <GlobalToast />
             <PageTransitionLoader />
             <PushPermissionBanner />
           </OnboardingGate>

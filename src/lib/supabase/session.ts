@@ -1,5 +1,6 @@
 import { supabase } from "./client";
 import type { Session } from "@supabase/supabase-js";
+import { useGameStore } from "@/store/useGameStore";
 
 /**
  * 모든 브라우저에서 안정적으로 유효한 세션을 반환합니다.
@@ -27,16 +28,15 @@ export async function getValidSession(): Promise<Session | null> {
 }
 
 /**
- * 세션이 없을 때 사용자에게 표시할 공통 에러 메시지
- * (alert 대신 toast를 사용하는 경우 이 함수를 수정하세요)
+ * 세션이 없을 때 사용자에게 표시할 공통 에러 메시지 (토스트)
  */
 export function showSessionExpiredError() {
-    alert(
-        "로그인 세션이 만료되었어요.\n\n" +
-        "아래 방법으로 해결할 수 있어요:\n" +
-        "1. 페이지를 새로고침 (F5 또는 당겨서 새로고침)\n" +
-        "2. 그래도 안 되면 로그아웃 후 다시 로그인\n\n" +
-        "아이패드/아이폰에서는 사파리를 완전히 종료 후\n" +
-        "다시 열면 해결됩니다."
-    );
+    useGameStore.getState().setGlobalToast({
+        type: "error",
+        message: "로그인 세션이 만료되었어요. 페이지를 새로고침하거나 다시 로그인해 주세요.",
+    });
+    // 5초 후 자동 닫기
+    setTimeout(() => {
+        useGameStore.getState().setGlobalToast(null);
+    }, 5000);
 }
