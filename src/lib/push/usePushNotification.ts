@@ -35,7 +35,10 @@ export function usePushNotification() {
         }
         setPermission(Notification.permission as PushPermission);
 
-        navigator.serviceWorker.ready.then((reg) => {
+        Promise.race([
+            navigator.serviceWorker.ready,
+            new Promise<never>((_, reject) => setTimeout(() => reject(new Error("timeout")), 5000)),
+        ]).then((reg) => {
             reg.pushManager.getSubscription().then((sub) => {
                 setIsSubscribed(!!sub);
             });
@@ -47,11 +50,24 @@ export function usePushNotification() {
         if (!isSupported) return false;
         setIsLoading(true);
         try {
+            // 서비스 워커 등록 여부 먼저 확인 (dev 모드에서는 SW 비활성화)
+            const registrations = await navigator.serviceWorker.getRegistrations();
+            if (registrations.length === 0) {
+                throw new Error("서비스 워커가 등록되지 않았습니다.");
+            }
+
             const permission = await Notification.requestPermission();
             setPermission(permission as PushPermission);
             if (permission !== "granted") return false;
 
-            const reg = await navigator.serviceWorker.ready;
+            // 10초 타임아웃 — SW가 활성화되지 않으면 hang 방지
+            const swReady = Promise.race([
+                navigator.serviceWorker.ready,
+                new Promise<never>((_, reject) =>
+                    setTimeout(() => reject(new Error("SW ready timeout")), 10000)
+                ),
+            ]);
+            const reg = await swReady;
             const existing = await reg.pushManager.getSubscription();
             if (existing) await existing.unsubscribe();
 

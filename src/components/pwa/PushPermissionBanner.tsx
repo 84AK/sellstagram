@@ -67,7 +67,7 @@ export default function PushPermissionBanner() {
                                 구독 등록에 실패했어요
                             </p>
                             <p className="text-xs mt-0.5" style={{ color: "var(--foreground-muted)" }}>
-                                잠시 후 다시 시도해 주세요.
+                                배포된 앱(Vercel)에서 사용해 주세요. 개발 모드에서는 알림이 지원되지 않습니다.
                             </p>
                         </>
                     ) : subscribeResult === "denied" ? (
