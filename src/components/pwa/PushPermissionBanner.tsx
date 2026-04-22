@@ -9,7 +9,7 @@ const DISMISSED_KEY = "push_banner_dismissed";
 export default function PushPermissionBanner() {
     const { permission, isSubscribed, isSupported, isLoading, subscribe } = usePushNotification();
     const [visible, setVisible] = useState(false);
-    const [subscribeResult, setSubscribeResult] = useState<"success" | "denied" | null>(null);
+    const [subscribeResult, setSubscribeResult] = useState<"success" | "denied" | "error" | null>(null);
 
     useEffect(() => {
         if (!isSupported) return;
@@ -32,6 +32,9 @@ export default function PushPermissionBanner() {
         if (ok) {
             setSubscribeResult("success");
             setTimeout(() => setVisible(false), 2000);
+        } else if (Notification.permission === "granted") {
+            // 권한은 허용됐지만 구독 등록 자체 실패 (VAPID 설정 등 기술적 오류)
+            setSubscribeResult("error");
         } else {
             setSubscribeResult("denied");
         }
@@ -58,6 +61,15 @@ export default function PushPermissionBanner() {
                         <p className="text-sm font-black" style={{ color: "var(--accent)" }}>
                             알림 설정 완료!
                         </p>
+                    ) : subscribeResult === "error" ? (
+                        <>
+                            <p className="text-sm font-black" style={{ color: "var(--foreground)" }}>
+                                구독 등록에 실패했어요
+                            </p>
+                            <p className="text-xs mt-0.5" style={{ color: "var(--foreground-muted)" }}>
+                                잠시 후 다시 시도해 주세요.
+                            </p>
+                        </>
                     ) : subscribeResult === "denied" ? (
                         <>
                             <p className="text-sm font-black" style={{ color: "var(--foreground)" }}>
