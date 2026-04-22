@@ -75,6 +75,13 @@ export default function UploadModal() {
     const [tags, setTags] = useState("");
     const [isUploading, setIsUploading] = useState(false);
     const [isSuccess, setIsSuccess] = useState(false);
+
+    // 하루 업로드 제한
+    const MAX_DAILY_XP_POSTS = 3;
+    const MAX_DAILY_POST_XP = 50;
+    const [todayPostCount, setTodayPostCount] = useState(0);
+    const [todayXpEarned, setTodayXpEarned] = useState(0);
+    const [xpActuallyGiven, setXpActuallyGiven] = useState(0);
     const [aiPreview, setAiPreview] = useState<string>("");
     const [showResult, setShowResult] = useState(false);
     const [simResult, setSimResult] = useState<{ impressions: number; engagementRate: number; clicks: number; revenue: number } | null>(null);
@@ -138,6 +145,19 @@ export default function UploadModal() {
         (async () => {
             const { data: { session } } = await supabase.auth.getSession();
             if (!session?.user) { setProductsLoaded(true); return; }
+
+            // 오늘 업로드 수 + 획득 XP 조회
+            const todayStart = new Date();
+            todayStart.setHours(0, 0, 0, 0);
+            const { data: todayPosts } = await supabase
+                .from("posts")
+                .select("created_at")
+                .eq("user_id", session.user.id)
+                .gte("created_at", todayStart.toISOString());
+            const count = todayPosts?.length ?? 0;
+            setTodayPostCount(count);
+            // XP 추정: 포인트를 정확히 모르므로 최대값으로 계산 (보수적 추정)
+            setTodayXpEarned(Math.min(count * 20, MAX_DAILY_POST_XP));
             const { data } = await supabase
                 .from("purchases")
                 .select("product_id, quantity, sold_quantity, products(id, name, price, category, image_url)")
@@ -428,19 +448,29 @@ export default function UploadModal() {
             }
             // Supabase 성공 시 realtime이 자동으로 addPost 호출 (page.tsx 구독)
 
-            // 포인트 지급: 게시물 +10 XP, 미션 모드 +20 XP, 챌린지 참여 추가 보너스
-            const xp = (isMissionMode ? 20 : 10) + (challengeMode ? todayChallenge.bonusXP : 0);
-            addPoints(xp);
-            // Supabase profiles.points 동기화
-            supabase.auth.getSession().then(({ data: { session } }) => {
-                if (session?.user) {
-                    supabase.from("profiles").select("points").eq("id", session.user.id).single()
-                        .then(({ data: prof }) => {
-                            const cur = prof?.points ?? 0;
-                            supabase.from("profiles").update({ points: cur + xp }).eq("id", session.user.id);
-                        });
-                }
-            });
+            // 포인트 지급: 하루 제한 적용
+            const newTodayCount = todayPostCount + 1;
+            setTodayPostCount(newTodayCount);
+            const baseXp = (isMissionMode ? 20 : 10) + (challengeMode ? todayChallenge.bonusXP : 0);
+            const remainingXpBudget = Math.max(0, MAX_DAILY_POST_XP - todayXpEarned);
+            const xp = newTodayCount <= MAX_DAILY_XP_POSTS
+                ? Math.min(baseXp, remainingXpBudget)
+                : 0;
+            setXpActuallyGiven(xp);
+            setTodayXpEarned(prev => Math.min(prev + xp, MAX_DAILY_POST_XP));
+
+            if (xp > 0) {
+                addPoints(xp);
+                supabase.auth.getSession().then(({ data: { session } }) => {
+                    if (session?.user) {
+                        supabase.from("profiles").select("points").eq("id", session.user.id).single()
+                            .then(({ data: prof }) => {
+                                const cur = prof?.points ?? 0;
+                                supabase.from("profiles").update({ points: cur + xp }).eq("id", session.user.id);
+                            });
+                    }
+                });
+            }
 
             // 선택된 상품 재고 1개 차감 (sold_quantity + 1)
             if (selectedProduct && session?.user?.id) {
@@ -541,7 +571,9 @@ export default function UploadModal() {
 
     // 업로드 결과 화면
     if (showResult && simResult) {
-        const xpGained = (isMissionMode ? 20 : 10) + (challengeMode ? todayChallenge.bonusXP : 0);
+        const xpGained = xpActuallyGiven;
+        const hitPostLimit = todayPostCount > MAX_DAILY_XP_POSTS;
+        const hitXpLimit = xpActuallyGiven === 0 && todayPostCount <= MAX_DAILY_XP_POSTS && todayXpEarned >= MAX_DAILY_POST_XP;
         const personaEmojis: Record<string, string> = { p1: "🛍️", p2: "💚", p3: "🔍", p4: "✨" };
         return (
             <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300">
@@ -554,7 +586,19 @@ export default function UploadModal() {
                             </div>
                             <div className="flex-1">
                                 <h3 className="text-lg font-black italic tracking-tighter">게시물 올라갔어요!</h3>
-                                <p className="text-[11px] text-foreground/50">+{xpGained} XP 획득 · 시뮬레이션 결과를 확인하세요</p>
+                                {xpGained > 0 ? (
+                                    <p className="text-[11px] text-foreground/50">+{xpGained} XP 획득 · 시뮬레이션 결과를 확인하세요</p>
+                                ) : hitPostLimit ? (
+                                    <p className="text-[11px] font-bold" style={{ color: "var(--primary)" }}>
+                                        오늘 포인트 한도 도달 (하루 {MAX_DAILY_XP_POSTS}회) · 내일 다시 적립돼요
+                                    </p>
+                                ) : hitXpLimit ? (
+                                    <p className="text-[11px] font-bold" style={{ color: "var(--primary)" }}>
+                                        오늘 XP 한도 도달 ({MAX_DAILY_POST_XP} XP) · 내일 다시 적립돼요
+                                    </p>
+                                ) : (
+                                    <p className="text-[11px] text-foreground/50">시뮬레이션 결과를 확인하세요</p>
+                                )}
                             </div>
                             {challengeMode && (
                                 <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-black text-white"
@@ -1179,6 +1223,23 @@ export default function UploadModal() {
                             </p>
                         </div>
                     )}
+                    {/* 오늘 포인트 현황 */}
+                    <div className="flex items-center justify-between px-1">
+                        <span className="text-[11px]" style={{ color: "var(--foreground-muted)" }}>
+                            오늘 포인트 적립 현황
+                        </span>
+                        <div className="flex items-center gap-2">
+                            <span className="text-[11px] font-bold"
+                                style={{ color: todayPostCount >= MAX_DAILY_XP_POSTS ? "var(--primary)" : "var(--accent)" }}>
+                                게시물 {Math.min(todayPostCount, MAX_DAILY_XP_POSTS)}/{MAX_DAILY_XP_POSTS}회
+                            </span>
+                            <span className="text-[11px]" style={{ color: "var(--foreground-muted)" }}>·</span>
+                            <span className="text-[11px] font-bold"
+                                style={{ color: todayXpEarned >= MAX_DAILY_POST_XP ? "var(--primary)" : "var(--accent)" }}>
+                                {todayXpEarned}/{MAX_DAILY_POST_XP} XP
+                            </span>
+                        </div>
+                    </div>
                     <button
                         disabled={isUploading || isSuccess || !caption}
                         onClick={handleUpload}

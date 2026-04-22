@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useGameStore } from "@/store/useGameStore";
+import { supabase } from "@/lib/supabase/client";
 
 const VAPID_PUBLIC_KEY = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!;
 
@@ -59,13 +60,14 @@ export function usePushNotification() {
                 applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
             });
 
+            const { data: { session } } = await supabase.auth.getSession();
             const res = await fetch("/api/push/subscribe", {
                 method:  "POST",
                 headers: { "Content-Type": "application/json" },
                 body:    JSON.stringify({
                     subscription: sub.toJSON(),
-                    userId:   user.handle || null,
-                    userName: user.name   || null,
+                    userId:   session?.user?.id || null,
+                    userName: user.name || null,
                 }),
             });
 

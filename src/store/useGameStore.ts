@@ -148,6 +148,9 @@ interface GameState {
 
     unreadCount: number;
     setUnreadCount: (count: number) => void;
+
+    pageLoading: boolean;
+    setPageLoading: (loading: boolean) => void;
 }
 
 // 미션 조건 충족 여부 판단
@@ -296,23 +299,22 @@ export const useGameStore = create<GameState>((set) => ({
     })),
 
     addPoints: (amount) => {
-        // 클라이언트 1차 방어: 0~500 범위 클램프
         const safeAmount = Math.max(1, Math.min(Math.floor(amount), 500));
-        set((state) => {
-            // 낙관적 UI 업데이트
-            const newPoints = state.user.points + safeAmount;
-            // 서버 2차 검증: RPC increment_user_points (1회 최대 500 서버에서 재검증)
-            supabase.auth.getSession().then(({ data: { session } }) => {
-                if (session?.user?.id) {
-                    supabase.rpc("increment_user_points", {
-                        p_user_id: session.user.id,
-                        p_amount: safeAmount,
-                    }).then(({ error }) => {
-                        if (error) console.warn("[addPoints RPC]", error.message);
-                    });
+        // 낙관적 UI — set()은 순수하게 상태만 변경
+        set((state) => ({ user: { ...state.user, points: state.user.points + safeAmount } }));
+        // 서버 동기화는 set() 밖에서 실행
+        supabase.auth.getSession().then(({ data: { session } }) => {
+            if (!session?.user?.id) return;
+            supabase.rpc("increment_user_points", {
+                p_user_id: session.user.id,
+                p_amount: safeAmount,
+            }).then(({ error }) => {
+                if (error) {
+                    console.warn("[addPoints RPC]", error.message);
+                    // 서버 실패 시 롤백
+                    set((state) => ({ user: { ...state.user, points: Math.max(0, state.user.points - safeAmount) } }));
                 }
             });
-            return { user: { ...state.user, points: newPoints } };
         });
     },
 
@@ -332,7 +334,9 @@ export const useGameStore = create<GameState>((set) => ({
                     supabase.from("profiles")
                         .update({ skill_xp: newSkillXP })
                         .eq("id", session.user.id)
-                        .then(() => {});
+                        .then(({ error }) => {
+                            if (error) console.warn("[addSkillXP]", error.message);
+                        });
                 }
             });
             return { user: { ...state.user, skillXP: newSkillXP } };
@@ -382,4 +386,6 @@ export const useGameStore = create<GameState>((set) => ({
     resetPosts: () => set({ posts: [] }),
     setSidebarExpanded: (expanded) => set({ sidebarExpanded: expanded }),
     setUnreadCount: (count) => set({ unreadCount: count }),
+    pageLoading: false,
+    setPageLoading: (loading) => set({ pageLoading: loading }),
 }));

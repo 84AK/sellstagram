@@ -35,11 +35,13 @@ import {
     ChevronDown,
     Pencil,
     Image as ImageIcon,
+    AlertCircle,
 } from "lucide-react";
 import { useGameStore } from "@/store/useGameStore";
 import { getSessionByWeek, THEME_COLORS } from "@/lib/curriculum/sessions";
 import { supabase, DbPost, DbProfile, DbMission } from "@/lib/supabase/client";
 import { TEAM_META } from "@/lib/constants/game";
+import BrandLoader from "@/components/common/BrandLoader";
 
 interface TeamStat {
     id: string;
@@ -234,6 +236,15 @@ function Dashboard({ onLogout }: { onLogout: () => void }) {
     // handle → team 매핑 (팀별 집계용)
     const [handleToTeam, setHandleToTeam] = useState<Record<string, string>>({});
 
+    // 미처리 실물 리워드 카운트 (탭 배지용)
+    const [pendingRewardCount, setPendingRewardCount] = useState(0);
+
+    // 교사 푸시 구독 상태
+    const [teacherPushSubscribed, setTeacherPushSubscribed] = useState(false);
+    const [teacherPushLoading, setTeacherPushLoading] = useState(false);
+    const [teacherPushSupported, setTeacherPushSupported] = useState(false);
+    const [teacherPushResult, setTeacherPushResult] = useState<"success" | "denied" | "error" | null>(null);
+
     // 🔒 시스템 업데이트 공통 함수 (전용 API 경유)
     const callTeacherApi = async (action: "update" | "delete_all_posts", table: string, id: any, data?: any) => {
         try {
@@ -248,6 +259,56 @@ function Dashboard({ onLogout }: { onLogout: () => void }) {
             console.error("[Teacher API Client Error]:", err);
             return { error: err };
         }
+    };
+
+    // 교사 푸시 구독 등록
+    const handleTeacherPushSubscribe = async () => {
+        if (teacherPushLoading || !teacherPushSupported) return;
+        setTeacherPushLoading(true);
+        setTeacherPushResult(null);
+        try {
+            const perm = await Notification.requestPermission();
+            if (perm === "denied") {
+                setTeacherPushResult("denied");
+                setTeacherPushLoading(false);
+                return;
+            }
+            if (perm !== "granted") {
+                setTeacherPushResult("error");
+                setTeacherPushLoading(false);
+                return;
+            }
+
+            const reg = await navigator.serviceWorker.ready;
+            const existing = await reg.pushManager.getSubscription();
+            if (existing) await existing.unsubscribe();
+
+            const vapidKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!;
+            const padding = "=".repeat((4 - (vapidKey.length % 4)) % 4);
+            const base64 = (vapidKey + padding).replace(/-/g, "+").replace(/_/g, "/");
+            const applicationServerKey = Uint8Array.from([...atob(base64)].map(c => c.charCodeAt(0)));
+
+            const sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey });
+
+            const res = await fetch("/api/push/subscribe", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    subscription: sub.toJSON(),
+                    userId: null,
+                    userName: null,
+                    userRole: "teacher",
+                }),
+            });
+
+            if (!res.ok) throw new Error("저장 실패");
+            setTeacherPushSubscribed(true);
+            setTeacherPushResult("success");
+        } catch (err) {
+            console.error("[teacher push subscribe]", err);
+            setTeacherPushResult("error");
+        }
+        setTeacherPushLoading(false);
     };
 
     // Supabase: 팀 현황 로드 (profiles + posts)
@@ -464,6 +525,23 @@ function Dashboard({ onLogout }: { onLogout: () => void }) {
             }
         });
 
+        // 교사 푸시 구독 상태 확인
+        const supported = typeof window !== "undefined" && "serviceWorker" in navigator && "PushManager" in window && "Notification" in window;
+        setTeacherPushSupported(supported);
+        if (supported) {
+            navigator.serviceWorker.ready.then(reg => {
+                reg.pushManager.getSubscription().then(sub => setTeacherPushSubscribed(!!sub));
+            }).catch(() => {});
+        }
+
+        // 미처리 실물 리워드 카운트
+        supabase
+            .from("reward_purchases")
+            .select("id", { count: "exact", head: true })
+            .eq("item_type", "real")
+            .is("is_processed", null)
+            .then(({ count }) => setPendingRewardCount(count ?? 0));
+
         // 기존 시뮬레이션 결과 로드
         setIsLoadingSimResults(true);
         supabase.from("simulation_results")
@@ -515,14 +593,14 @@ function Dashboard({ onLogout }: { onLogout: () => void }) {
     const teamSimRanking = Object.entries(teamSimRevenue)
         .sort(([, a], [, b]) => b - a);
 
-    const tabs: { id: Tab; label: string; emoji: string }[] = [
+    const tabs: { id: Tab; label: string; emoji: string; badge?: number }[] = [
         { id: "class", label: "수업 현황", emoji: "🎓" },
         { id: "teams", label: "팀 관리", emoji: "👥" },
         { id: "weekly", label: "주차별 결과", emoji: "📊" },
         { id: "feed", label: "피드 모니터링", emoji: "📱" },
         { id: "mission", label: "미션 관리", emoji: "🏆" },
         { id: "shop", label: "상품 관리", emoji: "🛍️" },
-        { id: "reward", label: "리워드 관리", emoji: "🎁" },
+        { id: "reward", label: "리워드 관리", emoji: "🎁", badge: pendingRewardCount || undefined },
         { id: "simulation", label: "시뮬레이션 결과", emoji: "📈" },
         { id: "push",       label: "푸시 알림 발송", emoji: "🔔" },
     ];
@@ -588,6 +666,104 @@ function Dashboard({ onLogout }: { onLogout: () => void }) {
                     </button>
                 </div>
             </header>
+
+            {/* ── 리워드 알림 구독 배너 ── */}
+            {teacherPushSupported && (
+                <>
+                    {/* 구독 성공 */}
+                    {teacherPushSubscribed && teacherPushResult === "success" && (
+                        <div className="px-6 py-3 flex items-center justify-between gap-4"
+                            style={{ background: "rgba(6,214,160,0.08)", borderBottom: "1px solid rgba(6,214,160,0.2)" }}>
+                            <div className="flex items-center gap-3">
+                                <CheckCircle2 size={20} style={{ color: "var(--accent)", flexShrink: 0 }} />
+                                <div>
+                                    <p className="text-sm font-black" style={{ color: "var(--accent)" }}>
+                                        알림 설정 완료! 🎉
+                                    </p>
+                                    <p className="text-xs" style={{ color: "var(--foreground-muted)" }}>
+                                        이제 학생이 실물 보상을 구매하면 이 기기로 즉시 알림이 옵니다
+                                    </p>
+                                </div>
+                            </div>
+                            <button onClick={() => setTeacherPushResult(null)}
+                                className="p-1.5 rounded-lg" style={{ color: "var(--foreground-muted)" }}>
+                                <X size={16} />
+                            </button>
+                        </div>
+                    )}
+
+                    {/* 권한 거부 */}
+                    {teacherPushResult === "denied" && (
+                        <div className="px-6 py-3 flex items-center justify-between gap-4"
+                            style={{ background: "rgba(239,68,68,0.06)", borderBottom: "1px solid rgba(239,68,68,0.2)" }}>
+                            <div className="flex items-center gap-3">
+                                <XCircle size={20} style={{ color: "#EF4444", flexShrink: 0 }} />
+                                <div>
+                                    <p className="text-sm font-black" style={{ color: "#EF4444" }}>
+                                        알림이 차단되어 있어요
+                                    </p>
+                                    <p className="text-xs" style={{ color: "var(--foreground-muted)" }}>
+                                        브라우저 주소창 왼쪽 🔒 아이콘 → 알림 → 허용으로 변경 후 새로고침해주세요
+                                    </p>
+                                </div>
+                            </div>
+                            <button onClick={() => setTeacherPushResult(null)}
+                                className="p-1.5 rounded-lg" style={{ color: "var(--foreground-muted)" }}>
+                                <X size={16} />
+                            </button>
+                        </div>
+                    )}
+
+                    {/* 오류 */}
+                    {teacherPushResult === "error" && (
+                        <div className="px-6 py-3 flex items-center justify-between gap-4"
+                            style={{ background: "rgba(239,68,68,0.06)", borderBottom: "1px solid rgba(239,68,68,0.2)" }}>
+                            <div className="flex items-center gap-3">
+                                <AlertCircle size={20} style={{ color: "#EF4444", flexShrink: 0 }} />
+                                <div>
+                                    <p className="text-sm font-black" style={{ color: "#EF4444" }}>
+                                        알림 설정에 실패했어요
+                                    </p>
+                                    <p className="text-xs" style={{ color: "var(--foreground-muted)" }}>
+                                        잠시 후 다시 시도해주세요
+                                    </p>
+                                </div>
+                            </div>
+                            <button onClick={() => setTeacherPushResult(null)}
+                                className="p-1.5 rounded-lg" style={{ color: "var(--foreground-muted)" }}>
+                                <X size={16} />
+                            </button>
+                        </div>
+                    )}
+
+                    {/* 미구독 안내 */}
+                    {!teacherPushSubscribed && teacherPushResult !== "denied" && teacherPushResult !== "error" && (
+                        <div className="px-6 py-3 flex items-center justify-between gap-4"
+                            style={{ background: "rgba(255,107,53,0.08)", borderBottom: "1px solid rgba(255,107,53,0.2)" }}>
+                            <div className="flex items-center gap-3">
+                                <span className="text-xl">🔔</span>
+                                <div>
+                                    <p className="text-sm font-black" style={{ color: "var(--primary)" }}>
+                                        학생 리워드 구매 알림을 받으려면 알림을 허용해주세요
+                                    </p>
+                                    <p className="text-xs" style={{ color: "var(--foreground-muted)" }}>
+                                        학생이 실물 보상을 구매하면 이 기기로 즉시 알림이 옵니다
+                                    </p>
+                                </div>
+                            </div>
+                            <button
+                                onClick={handleTeacherPushSubscribe}
+                                disabled={teacherPushLoading}
+                                className="shrink-0 flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-black text-white transition-all disabled:opacity-60"
+                                style={{ background: "var(--primary)" }}>
+                                {teacherPushLoading
+                                    ? <><Loader2 size={14} className="animate-spin" /> 처리 중...</>
+                                    : "알림 허용"}
+                            </button>
+                        </div>
+                    )}
+                </>
+            )}
 
             <div className="max-w-5xl mx-auto px-4 py-6 flex flex-col gap-6">
 
@@ -715,19 +891,39 @@ function Dashboard({ onLogout }: { onLogout: () => void }) {
                 </div>
 
                 {/* ── 탭 ── */}
-                <div className="flex gap-2 p-1.5 rounded-2xl" style={{ background: "var(--surface-2)" }}>
-                    {tabs.map((tab) => (
-                        <button key={tab.id} onClick={() => setActiveTab(tab.id)}
-                            className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-sm transition-all"
-                            style={{
-                                background: activeTab === tab.id ? "var(--surface)" : "transparent",
-                                color: activeTab === tab.id ? "var(--foreground)" : "var(--foreground-muted)",
-                                boxShadow: activeTab === tab.id ? "var(--shadow-sm)" : "none",
-                            }}>
-                            <span className="text-base">{tab.emoji}</span>
-                            <span>{tab.label}</span>
-                        </button>
-                    ))}
+                <div className="overflow-x-auto no-scrollbar">
+                    <div className="flex gap-1.5 p-1.5 rounded-2xl w-max min-w-full"
+                        style={{ background: "var(--surface-2)" }}>
+                        {tabs.map((tab) => {
+                            const active = activeTab === tab.id;
+                            return (
+                                <button key={tab.id} onClick={() => setActiveTab(tab.id)}
+                                    className="relative flex flex-col items-center gap-1 px-4 py-2.5 rounded-xl transition-all whitespace-nowrap"
+                                    style={{
+                                        background: active ? "var(--surface)" : "transparent",
+                                        color: active ? "var(--foreground)" : "var(--foreground-muted)",
+                                        boxShadow: active ? "var(--shadow-sm)" : "none",
+                                        minWidth: 72,
+                                    }}>
+                                    <span className="text-lg leading-none">{tab.emoji}</span>
+                                    <span className="text-[11px] font-bold leading-tight text-center"
+                                        style={{ color: active ? "var(--foreground)" : "var(--foreground-muted)" }}>
+                                        {tab.label}
+                                    </span>
+                                    {tab.badge && (
+                                        <span className="absolute top-1.5 right-1.5 min-w-[16px] h-4 flex items-center justify-center rounded-full text-[9px] font-black text-white px-1"
+                                            style={{ background: "var(--primary)" }}>
+                                            {tab.badge}
+                                        </span>
+                                    )}
+                                    {active && (
+                                        <span className="absolute bottom-1.5 left-1/2 -translate-x-1/2 w-4 h-0.5 rounded-full"
+                                            style={{ background: "var(--primary)" }} />
+                                    )}
+                                </button>
+                            );
+                        })}
+                    </div>
                 </div>
 
                 {/* ══════════ TAB 1: 수업 현황 ══════════ */}
@@ -830,9 +1026,7 @@ function Dashboard({ onLogout }: { onLogout: () => void }) {
 
                             <div className="divide-y" style={{ borderColor: "var(--border)" }}>
                                 {isLoadingTeams ? (
-                                    <div className="py-8 text-center text-sm" style={{ color: "var(--foreground-muted)" }}>
-                                        팀 데이터 불러오는 중...
-                                    </div>
+                                    <BrandLoader variant="section" text="팀 데이터 불러오는 중..." />
                                 ) : teamStats.length === 0 ? (
                                     <div className="py-8 text-center text-sm" style={{ color: "var(--foreground-muted)" }}>
                                         아직 참여한 학생이 없어요
@@ -1040,9 +1234,7 @@ function Dashboard({ onLogout }: { onLogout: () => void }) {
                         </div>
 
                         {isLoadingPosts ? (
-                            <div className="flex justify-center py-16">
-                                <Loader2 size={24} className="animate-spin" style={{ color: "var(--primary)" }} />
-                            </div>
+                            <BrandLoader variant="section" text="게시물 불러오는 중..." />
                         ) : dbPosts.length === 0 ? (
                             <div className="py-16 flex flex-col items-center gap-3"
                                 style={{ color: "var(--foreground-muted)" }}>
@@ -2119,6 +2311,8 @@ interface RewardPurchase {
     id: string;
     user_name: string;
     item_name: string;
+    item_type?: string;
+    is_processed?: boolean;
     purchased_at: string;
 }
 
@@ -2143,6 +2337,9 @@ function RewardManageTab() {
     const [form, setForm] = useState(EMPTY_REWARD_FORM);
     const [editingId, setEditingId] = useState<string | null>(null);
     const [activeSection, setActiveSection] = useState<"items" | "history">("items");
+    const [processingId, setProcessingId] = useState<string | null>(null);
+
+    const pendingCount = purchases.filter(p => p.item_type === "real" && !p.is_processed).length;
 
     useEffect(() => {
         const load = async () => {
@@ -2156,6 +2353,21 @@ function RewardManageTab() {
         };
         load();
     }, []);
+
+    const handleProcess = async (purchase: RewardPurchase) => {
+        if (processingId) return;
+        setProcessingId(purchase.id);
+        const { error } = await supabase
+            .from("reward_purchases")
+            .update({ is_processed: true })
+            .eq("id", purchase.id);
+        if (!error) {
+            setPurchases(prev => prev.map(p =>
+                p.id === purchase.id ? { ...p, is_processed: true } : p
+            ));
+        }
+        setProcessingId(null);
+    };
 
     const handleSave = async () => {
         if (!form.name.trim()) return;
@@ -2220,13 +2432,19 @@ function RewardManageTab() {
                     <button
                         key={key}
                         onClick={() => setActiveSection(key)}
-                        className="px-4 py-1.5 rounded-lg text-xs font-bold transition-all"
+                        className="relative flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-xs font-bold transition-all"
                         style={{
                             background: activeSection === key ? "var(--background)" : "transparent",
                             color: activeSection === key ? "var(--foreground)" : "var(--foreground-muted)",
                         }}
                     >
                         {label}
+                        {key === "history" && pendingCount > 0 && (
+                            <span className="flex items-center justify-center min-w-[16px] h-4 rounded-full text-[9px] font-black text-white px-1"
+                                style={{ background: "var(--primary)" }}>
+                                {pendingCount}
+                            </span>
+                        )}
                     </button>
                 ))}
             </div>
@@ -2315,7 +2533,7 @@ function RewardManageTab() {
 
                     {/* 아이템 목록 */}
                     {loading ? (
-                        <div className="flex justify-center py-10"><Loader2 size={24} className="animate-spin" style={{ color: "var(--primary)" }} /></div>
+                        <BrandLoader variant="section" text="리워드 목록 불러오는 중..." />
                     ) : items.length === 0 ? (
                         <div className="text-center py-12">
                             <p className="text-sm font-semibold" style={{ color: "var(--foreground-muted)" }}>등록된 리워드 아이템이 없어요</p>
@@ -2375,7 +2593,7 @@ function RewardManageTab() {
             {activeSection === "history" && (
                 <div className="flex flex-col gap-3">
                     <p className="text-xs font-semibold px-1" style={{ color: "var(--foreground-muted)" }}>
-                        학생들이 구매한 리워드 내역입니다. 실물 보상은 직접 확인 후 지급해주세요.
+                        학생들이 구매한 리워드 내역입니다. 실물 보상(🎫)은 직접 지급 후 <strong>지급 완료</strong> 버튼을 눌러주세요.
                     </p>
                     {purchases.length === 0 ? (
                         <div className="text-center py-12">
@@ -2383,19 +2601,50 @@ function RewardManageTab() {
                         </div>
                     ) : (
                         <div className="flex flex-col gap-2">
-                            {purchases.map(p => (
-                                <div key={p.id} className="flex items-center justify-between px-4 py-3 rounded-xl"
-                                    style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
-                                    <div>
-                                        <span className="text-sm font-bold" style={{ color: "var(--foreground)" }}>{p.user_name}</span>
-                                        <span className="text-xs mx-2" style={{ color: "var(--foreground-muted)" }}>→</span>
-                                        <span className="text-sm font-semibold" style={{ color: "var(--secondary)" }}>{p.item_name}</span>
+                            {purchases.map(p => {
+                                const isReal = p.item_type === "real";
+                                const processed = !!p.is_processed;
+                                const isProcessing = processingId === p.id;
+                                return (
+                                    <div key={p.id}
+                                        className="flex items-center justify-between gap-3 px-4 py-3 rounded-xl transition-all"
+                                        style={{
+                                            background: isReal && !processed ? "rgba(255,107,53,0.05)" : "var(--surface)",
+                                            border: isReal && !processed ? "1px solid rgba(255,107,53,0.25)" : "1px solid var(--border)",
+                                        }}>
+                                        <div className="flex-1 min-w-0">
+                                            <div className="flex items-center gap-2 flex-wrap">
+                                                <span className="text-sm font-bold" style={{ color: "var(--foreground)" }}>{p.user_name}</span>
+                                                <span className="text-xs" style={{ color: "var(--foreground-muted)" }}>→</span>
+                                                <span className="text-sm font-semibold" style={{ color: "var(--secondary)" }}>{p.item_name}</span>
+                                                {isReal && (
+                                                    <span className="text-[9px] font-black px-1.5 py-0.5 rounded-full"
+                                                        style={{ background: processed ? "rgba(6,214,160,0.15)" : "rgba(255,107,53,0.15)", color: processed ? "var(--accent)" : "var(--primary)" }}>
+                                                        {processed ? "✓ 지급완료" : "실물 보상"}
+                                                    </span>
+                                                )}
+                                            </div>
+                                            <span className="text-[10px]" style={{ color: "var(--foreground-muted)" }}>
+                                                {new Date(p.purchased_at).toLocaleString("ko-KR", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
+                                            </span>
+                                        </div>
+                                        {isReal && !processed && (
+                                            <button
+                                                onClick={() => handleProcess(p)}
+                                                disabled={isProcessing}
+                                                className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black transition-all disabled:opacity-50"
+                                                style={{ background: "var(--accent)", color: "white" }}>
+                                                {isProcessing ? (
+                                                    <Loader2 size={11} className="animate-spin" />
+                                                ) : (
+                                                    <CheckCircle2 size={11} />
+                                                )}
+                                                지급 완료
+                                            </button>
+                                        )}
                                     </div>
-                                    <span className="text-[10px]" style={{ color: "var(--foreground-muted)" }}>
-                                        {new Date(p.purchased_at).toLocaleString("ko-KR", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
-                                    </span>
-                                </div>
-                            ))}
+                                );
+                            })}
                         </div>
                     )}
                 </div>

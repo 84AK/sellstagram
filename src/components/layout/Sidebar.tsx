@@ -84,9 +84,20 @@ export default function Sidebar() {
         };
 
         let channel: ReturnType<typeof supabase.channel> | null = null;
-        load().then(ch => { if (ch) channel = ch; });
+        let cancelled = false;
 
-        return () => { if (channel) supabase.removeChannel(channel); };
+        load().then(ch => {
+            if (cancelled) {
+                if (ch) supabase.removeChannel(ch);
+            } else {
+                channel = ch ?? null;
+            }
+        });
+
+        return () => {
+            cancelled = true;
+            if (channel) supabase.removeChannel(channel);
+        };
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
@@ -144,10 +155,9 @@ export default function Sidebar() {
     const closeMobileMenu = () => setMobileMenuOpen(false);
 
     const mobileExtraNavItems = [
-        { href: "/shop",     icon: ShoppingBag,  label: "스토어" },
-        { href: "/simulate", icon: FlaskConical, label: "AI 마켓 시뮬레이션" },
+        { href: "/shop",     icon: ShoppingBag,   label: "스토어" },
+        { href: "/simulate", icon: FlaskConical,  label: "AI 마켓 시뮬레이션" },
         { href: "/session",  icon: GraduationCap, label: "커리큘럼" },
-        { href: "/messages", icon: Inbox,        label: "메시지" },
     ];
 
     const mobileAdminItems = [

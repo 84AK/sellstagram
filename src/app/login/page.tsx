@@ -6,6 +6,7 @@ import { supabase } from "@/lib/supabase/client";
 import {
     Zap, Loader2, Users, CheckCircle2, ChevronRight,
     Palette, BarChart2, Megaphone, Lightbulb, UserCheck, AlertCircle, ArrowLeft,
+    HelpCircle, ShieldAlert,
 } from "lucide-react";
 import { MARKETING_TYPE_DATA, AVATAR_OPTIONS } from "@/lib/constants/game";
 import BrandLoader from "@/components/common/BrandLoader";
@@ -19,9 +20,26 @@ const ICON_MAP_SM: Record<string, React.ReactNode> = {
 
 const MARKETING_TYPES = MARKETING_TYPE_DATA.map(t => ({ ...t, icon: ICON_MAP_SM[t.id] }));
 
+// 마케터 타입 표시용 매핑
+const TYPE_LABEL: Record<string, { title: string; color: string; bg: string }> = {
+    creator:     { title: "크리에이터",   color: "#FF6B35", bg: "#FFF0EB" },
+    analyst:     { title: "분석가",       color: "#4361EE", bg: "#EEF1FD" },
+    storyteller: { title: "스토리텔러",   color: "#8B5CF6", bg: "#F3EEFF" },
+    innovator:   { title: "이노베이터",   color: "#06D6A0", bg: "#E6FBF5" },
+};
+
 type Tab = "social" | "teamcode";
-// 이름 확인 결과
+
+// 서버 조회 결과
 type NameStatus = "available" | "taken" | "returning" | null;
+
+// returning 시 보여줄 프로필 미리보기
+interface ProfilePreview {
+    avatar: string;
+    marketer_type: string | null;
+    team: string;
+    team_emoji: string;
+}
 
 export default function LoginPage() {
     const router = useRouter();
@@ -37,14 +55,17 @@ export default function LoginPage() {
     const [name, setName] = useState("");
     const [nameChecking, setNameChecking] = useState(false);
     const [nameStatus, setNameStatus] = useState<NameStatus>(null);
+    const [profilePreview, setProfilePreview] = useState<ProfilePreview | null>(null);
+    // returning 확인 단계: null=미확인, true=확인, false=아님(이름 재입력)
+    const [confirmed, setConfirmed] = useState<boolean | null>(null);
     const [selectedType, setSelectedType] = useState<typeof MARKETING_TYPES[0] | null>(null);
     const [selectedAvatar, setSelectedAvatar] = useState("🦊");
     const [loading, setLoading] = useState(false);
+    const [isSocialUser, setIsSocialUser] = useState(false);
 
     const nameTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
     const teamCodeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-    // 이미 로그인된 경우 바로 진입
     useEffect(() => {
         supabase.auth.getSession().then(({ data: { session } }) => {
             if (session) router.push("/feed");
@@ -75,8 +96,7 @@ export default function LoginPage() {
         setTeamCode(code);
         setTeamInfo(null);
         setTeamCodeError("");
-        setNameStatus(null);
-        setName("");
+        resetNameState();
         if (teamCodeTimer.current) clearTimeout(teamCodeTimer.current);
         if (code.length < 6) return;
         setTeamCodeChecking(true);
@@ -98,43 +118,61 @@ export default function LoginPage() {
         }, 400);
     };
 
-    /* ── 이름 입력 → DB에서 이름 존재 여부 확인 ── */
+    const resetNameState = () => {
+        setName("");
+        setNameStatus(null);
+        setProfilePreview(null);
+        setConfirmed(null);
+        setSelectedType(null);
+        setSelectedAvatar("🦊");
+        setError(null);
+        setIsSocialUser(false);
+    };
+
+    /* ── 이름 입력 → 서버 API로 이름 조회 (RLS 우회) ── */
     const handleNameChange = (value: string) => {
         setName(value);
         setNameStatus(null);
+        setProfilePreview(null);
+        setConfirmed(null);
+        setError(null);
         if (nameTimer.current) clearTimeout(nameTimer.current);
         if (!value.trim() || !teamInfo) return;
         setNameChecking(true);
         nameTimer.current = setTimeout(async () => {
             try {
-                // profiles 전체에서 이름 조회 (팀 무관)
-                const { data: matches } = await supabase
-                    .from("profiles")
-                    .select("id, team")
-                    .eq("name", value.trim());
+                const params = new URLSearchParams({
+                    name: value.trim(),
+                    teamCode: teamCode,
+                });
+                const res = await fetch(`/api/auth/team-login?${params}`);
+                const json = await res.json();
 
-                if (!matches || matches.length === 0) {
-                    // 이름 사용 가능 → 신규 가입 폼 표시
-                    setNameStatus("available");
-                } else {
-                    // 같은 팀에 이름이 있으면 → 기존 계정 (재로그인)
-                    const sameTeam = matches.find(p => p.team === teamInfo.name);
-                    if (sameTeam) {
-                        setNameStatus("returning");
+                if (!res.ok) {
+                    if (json.status === "invalid_team") {
+                        setTeamCodeError("팀 코드가 만료됐어요. 선생님께 다시 확인해주세요.");
+                        setTeamInfo(null);
                     } else {
-                        // 다른 팀에 이름 있음 → 사용 불가
-                        setNameStatus("taken");
+                        setError("이름 확인 중 오류가 발생했어요. 다시 시도해주세요.");
                     }
+                    return;
+                }
+
+                const validStatuses: NameStatus[] = ["available", "taken", "returning"];
+                const status = validStatuses.includes(json.status) ? (json.status as NameStatus) : null;
+                setNameStatus(status);
+                if (json.status === "returning" && json.profile) {
+                    setProfilePreview(json.profile as ProfilePreview);
                 }
             } catch {
-                setNameStatus("available");
+                setError("네트워크 오류가 발생했어요. 다시 시도해주세요.");
             } finally {
                 setNameChecking(false);
             }
         }, 500);
     };
 
-    /* ── 기존 계정 로그인 (서버 API 호출) ── */
+    /* ── 기존 계정 로그인 (확인 후 실행) ── */
     const handleReturningLogin = async () => {
         if (!teamInfo || !name.trim()) return;
         setLoading(true);
@@ -146,13 +184,19 @@ export default function LoginPage() {
                 body: JSON.stringify({ name: name.trim(), teamCode }),
             });
             const json = await res.json();
-            if (!res.ok) { setError(json.error ?? "로그인 실패"); return; }
+            if (!res.ok) {
+                setIsSocialUser(!!json.isSocialUser);
+                setError(json.error ?? "로그인 실패");
+                return;
+            }
             if (json.session) {
                 await supabase.auth.setSession({
                     access_token: json.session.access_token,
                     refresh_token: json.session.refresh_token,
                 });
                 router.push("/feed");
+            } else {
+                setError("예상치 못한 응답이에요. 다시 시도해주세요.");
             }
         } catch {
             setError("네트워크 오류가 발생했어요");
@@ -194,17 +238,12 @@ export default function LoginPage() {
         }
     };
 
-    // 탭 전환 시 상태 초기화
     const switchTab = (t: Tab) => {
         setTab(t);
         setTeamCode("");
         setTeamInfo(null);
         setTeamCodeError("");
-        setName("");
-        setNameStatus(null);
-        setSelectedType(null);
-        setSelectedAvatar("🦊");
-        setError(null);
+        resetNameState();
     };
 
     const canSubmitNew =
@@ -215,7 +254,6 @@ export default function LoginPage() {
         <div className="min-h-screen flex items-center justify-center p-4 relative"
             style={{ background: "var(--background)" }}>
 
-            {/* 홈으로 버튼 */}
             <button
                 onClick={() => router.push("/")}
                 className="absolute top-5 left-5 flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-semibold transition-all hover:scale-[1.02] active:scale-[0.98]"
@@ -264,7 +302,7 @@ export default function LoginPage() {
 
                 {/* 에러 */}
                 {error && (
-                    <div className="w-full rounded-xl px-4 py-3 text-sm font-semibold text-center"
+                    <div className="w-full rounded-xl px-4 py-3 text-sm font-semibold text-center whitespace-pre-line"
                         style={{ background: "#FEF2F2", color: "#DC2626" }}>
                         {error}
                     </div>
@@ -369,7 +407,8 @@ export default function LoginPage() {
                                         value={name}
                                         onChange={e => handleNameChange(e.target.value)}
                                         placeholder="예: 김지우"
-                                        className="w-full px-4 py-3.5 rounded-xl text-sm font-semibold outline-none"
+                                        disabled={confirmed === true}
+                                        className="w-full px-4 py-3.5 rounded-xl text-sm font-semibold outline-none disabled:opacity-60"
                                         style={{
                                             background: "var(--surface-2)",
                                             border: nameStatus === "taken"
@@ -396,32 +435,113 @@ export default function LoginPage() {
                                     )}
                                 </div>
 
-                                {/* 이름 상태 피드백 */}
+                                {/* taken 힌트 개선 */}
                                 {nameStatus === "taken" && (
-                                    <p className="mt-1.5 text-xs font-bold flex items-center gap-1" style={{ color: "#F59E0B" }}>
-                                        <AlertCircle size={11} /> 이미 사용 중인 이름이에요. 다른 이름을 써주세요.
-                                    </p>
+                                    <div className="mt-2 rounded-xl px-3 py-2.5"
+                                        style={{ background: "#FFFBEB", border: "1px solid #F59E0B" }}>
+                                        <p className="text-xs font-bold flex items-center gap-1.5 mb-1" style={{ color: "#B45309" }}>
+                                            <AlertCircle size={12} /> 다른 팀에 같은 이름이 있어요
+                                        </p>
+                                        <p className="text-xs" style={{ color: "#92400E" }}>
+                                            혹시 다른 팀 코드로 가입하셨나요? 선생님께 팀 코드를 다시 확인해보세요.
+                                        </p>
+                                        <p className="text-xs mt-1" style={{ color: "#92400E" }}>
+                                            처음 가입이라면 이름 뒤에 숫자나 이니셜을 붙여보세요. <span className="font-bold">(예: 김지우2, 김지우B)</span>
+                                        </p>
+                                    </div>
                                 )}
+
                                 {nameStatus === "available" && (
                                     <p className="mt-1.5 text-xs font-bold flex items-center gap-1" style={{ color: "var(--accent)" }}>
                                         <CheckCircle2 size={11} /> 사용 가능한 이름이에요!
                                     </p>
                                 )}
-                                {nameStatus === "returning" && (
-                                    <p className="mt-1.5 text-xs font-bold flex items-center gap-1" style={{ color: "var(--secondary)" }}>
-                                        <UserCheck size={11} /> 기존 계정이 있어요. 바로 접속할게요!
-                                    </p>
-                                )}
                             </div>
                         )}
 
-                        {/* 기존 계정 → 접속 버튼 */}
-                        {nameStatus === "returning" && !nameChecking && (
+                        {/* ── returning: 프로필 미리보기 카드 ── */}
+                        {nameStatus === "returning" && !nameChecking && profilePreview && confirmed === null && (
+                            <div className="rounded-2xl overflow-hidden"
+                                style={{ border: "1.5px solid var(--secondary)", boxShadow: "0 4px 16px rgba(67,97,238,0.12)" }}>
+                                <div className="px-4 py-3 flex items-center gap-2"
+                                    style={{ background: "var(--secondary)", }}>
+                                    <UserCheck size={15} className="text-white" />
+                                    <span className="text-sm font-black text-white">이 계정이 맞나요?</span>
+                                </div>
+                                <div className="px-4 py-4" style={{ background: "var(--surface)" }}>
+                                    <div className="flex items-center gap-3 mb-4">
+                                        <div className="w-14 h-14 rounded-2xl flex items-center justify-center text-3xl shrink-0"
+                                            style={{ background: "var(--surface-2)" }}>
+                                            {profilePreview.avatar}
+                                        </div>
+                                        <div>
+                                            <p className="font-black text-base" style={{ color: "var(--foreground)" }}>{name}</p>
+                                            <p className="text-xs font-semibold mt-0.5" style={{ color: "var(--foreground-muted)" }}>
+                                                {profilePreview.team_emoji} {profilePreview.team}
+                                            </p>
+                                            {profilePreview.marketer_type && TYPE_LABEL[profilePreview.marketer_type] && (
+                                                <span className="inline-block text-xs font-bold px-2 py-0.5 rounded-full mt-1"
+                                                    style={{
+                                                        background: TYPE_LABEL[profilePreview.marketer_type].bg,
+                                                        color: TYPE_LABEL[profilePreview.marketer_type].color,
+                                                    }}>
+                                                    {TYPE_LABEL[profilePreview.marketer_type].title}
+                                                </span>
+                                            )}
+                                        </div>
+                                    </div>
+                                    <div className="flex gap-2">
+                                        <button
+                                            onClick={() => setConfirmed(false)}
+                                            className="flex-1 py-2.5 rounded-xl text-sm font-bold transition-all hover:opacity-80"
+                                            style={{ background: "var(--surface-2)", color: "var(--foreground-soft)" }}>
+                                            아니에요
+                                        </button>
+                                        <button
+                                            onClick={() => setConfirmed(true)}
+                                            className="flex-1 py-2.5 rounded-xl text-sm font-black text-white transition-all hover:opacity-90"
+                                            style={{ background: "linear-gradient(135deg, var(--secondary), #6B5CE7)" }}>
+                                            맞아요!
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* "아니에요" 선택 시 → 이름 다시 입력 안내 */}
+                        {confirmed === false && (
+                            <div className="rounded-xl px-4 py-3 flex items-start gap-2"
+                                style={{ background: "#FFF7ED", border: "1px solid #F59E0B" }}>
+                                <HelpCircle size={15} style={{ color: "#F59E0B", marginTop: 1 }} className="shrink-0" />
+                                <div>
+                                    <p className="text-xs font-bold" style={{ color: "#92400E" }}>
+                                        이름을 다시 입력해주세요
+                                    </p>
+                                    <p className="text-xs mt-0.5" style={{ color: "#B45309" }}>
+                                        팀 코드가 맞는지 선생님께 확인해보세요. 처음 가입이라면 이름을 입력하면 신규 계정이 만들어져요.
+                                    </p>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* 확인 완료 → 접속 버튼 */}
+                        {nameStatus === "returning" && confirmed === true && !nameChecking && (
                             <button onClick={handleReturningLogin} disabled={loading}
                                 className="w-full flex items-center justify-center gap-2 py-4 rounded-2xl font-black text-sm text-white transition-all hover:opacity-90 active:scale-[0.98] disabled:opacity-60"
                                 style={{ background: "linear-gradient(135deg, var(--secondary), #6B5CE7)", boxShadow: "0 4px 14px rgba(67,97,238,0.3)" }}>
                                 {loading ? <Loader2 size={18} className="animate-spin" /> : <UserCheck size={18} />}
                                 {loading ? "접속 중..." : "내 계정으로 접속하기"}
+                            </button>
+                        )}
+
+                        {/* 소셜 유저 안내 (에러 메시지와 별도로 탭 전환 버튼 제공) */}
+                        {isSocialUser && (
+                            <button
+                                onClick={() => { setError(null); switchTab("social"); }}
+                                className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold transition-all hover:opacity-90"
+                                style={{ background: "var(--surface-2)", color: "var(--secondary)", border: "1.5px solid var(--secondary)" }}>
+                                <ShieldAlert size={15} />
+                                소셜 로그인 탭으로 이동하기
                             </button>
                         )}
 
@@ -493,7 +613,6 @@ export default function LoginPage() {
                             </>
                         )}
 
-                        {/* 로딩 중 (반환 유저 로그인 처리) */}
                         {loading && nameStatus !== "available" && (
                             <BrandLoader variant="section" text="로그인 중..." />
                         )}

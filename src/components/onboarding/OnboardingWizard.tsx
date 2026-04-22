@@ -10,7 +10,7 @@ import {
     Users, CheckCircle2, Zap, GraduationCap, Shield,
     Loader2,
 } from "lucide-react";
-import { MARKETING_TYPE_DATA, AVATAR_OPTIONS, TEAM_EMOJIS } from "@/lib/constants/game";
+import { MARKETING_TYPE_DATA, AVATAR_OPTIONS } from "@/lib/constants/game";
 import CharacterSVG from "@/components/character/CharacterSVG";
 import { MARKETER_TO_CHARACTER, CHARACTERS } from "@/lib/characters/characters";
 
@@ -55,6 +55,7 @@ export default function OnboardingWizard({ onComplete }: { onComplete?: () => vo
     const [teacherPin, setTeacherPin] = useState("");
     const [pinError, setPinError] = useState(false);
     const [saving, setSaving] = useState(false);
+    const [saveError, setSaveError] = useState<string | null>(null);
 
     const totalSteps = role === "teacher" ? 2 : 4;
 
@@ -148,6 +149,7 @@ export default function OnboardingWizard({ onComplete }: { onComplete?: () => vo
     const handleStudentFinish = async () => {
         if (!selectedType || !name.trim()) return;
         setSaving(true);
+        setSaveError(null);
 
         const handle = name.trim().toLowerCase().replace(/\s/g, "_") + "_marketer";
 
@@ -162,8 +164,9 @@ export default function OnboardingWizard({ onComplete }: { onComplete?: () => vo
             });
             if (upsertError) {
                 console.error("Profile save error:", upsertError.message);
+                setSaveError("프로필 저장에 실패했어요. 인터넷 연결을 확인하고 다시 시도해주세요.");
                 setSaving(false);
-                return; // 저장 실패 시 완료 화면으로 넘어가지 않음
+                return;
             }
             localStorage.setItem("sellstagram_user_id", session.user.id);
         }
@@ -553,6 +556,14 @@ export default function OnboardingWizard({ onComplete }: { onComplete?: () => vo
                         </div>
                     )}
                 </div>
+
+                {/* 저장 실패 에러 */}
+                {saveError && (
+                    <div className="mx-6 mb-2 px-4 py-3 rounded-xl text-sm font-semibold text-center"
+                        style={{ background: "#FEF2F2", color: "#DC2626", border: "1px solid #FECACA" }}>
+                        {saveError}
+                    </div>
+                )}
 
                 {/* 하단 버튼 */}
                 <div className="px-6 pb-6 flex gap-3" style={{ borderTop: "1px solid var(--border)" }}>

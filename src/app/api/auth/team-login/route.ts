@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { createHmac } from "crypto";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@supabase/supabase-js";
 import { checkRateLimit, getClientIP } from "@/lib/auth/rateLimit";
@@ -20,24 +21,93 @@ function makeCredentials(name: string, teamCode: string) {
         throw new Error("TEAM_LOGIN_SECRET 환경변수가 설정되지 않았습니다. .env.local을 확인하세요.");
     }
 
-    // 이름+팀코드 해시 → 이메일 (충돌 최소화)
-    let h1 = 5381;
-    const s1 = name.trim().toLowerCase() + teamCode.toUpperCase();
-    for (let i = 0; i < s1.length; i++) {
-        h1 = (Math.imul(h1, 33) ^ s1.charCodeAt(i)) >>> 0;
-    }
+    const key = `${name.trim().toLowerCase()}:${teamCode.toUpperCase()}`;
 
-    // 팀코드+시크릿 해시 → 비밀번호
-    let h2 = 5381;
-    const s2 = teamCode.toUpperCase() + secret;
-    for (let i = 0; i < s2.length; i++) {
-        h2 = (Math.imul(h2, 33) ^ s2.charCodeAt(i)) >>> 0;
-    }
+    const emailHash = createHmac("sha256", secret)
+        .update(`email:${key}`)
+        .digest("hex")
+        .slice(0, 16);
+
+    const passwordHash = createHmac("sha256", secret)
+        .update(`password:${key}`)
+        .digest("hex");
 
     return {
-        email: `tc_${h1.toString(36)}@sellstagram.app`,
-        password: `SGS_${h2.toString(36)}_${teamCode.toUpperCase()}`,
+        email: `tc_${emailHash}@sellstagram.app`,
+        password: `SGS_${passwordHash}`,
     };
+}
+
+/**
+ * GET /api/auth/team-login?name=김지우&teamCode=ABC123
+ *
+ * 클라이언트 RLS 우회: 서버(admin)에서 이름 조회
+ * 반환: { status: "returning" | "available" | "taken", profile? }
+ */
+export async function GET(req: NextRequest) {
+    const ip = getClientIP(req);
+    if (!checkRateLimit(`teamlookup:${ip}`, 120, 60_000)) {
+        return NextResponse.json({ error: "요청이 너무 많아요. 잠시 후 다시 시도해주세요." }, { status: 429 });
+    }
+
+    const { searchParams } = new URL(req.url);
+    const name = searchParams.get("name")?.trim();
+    const teamCode = searchParams.get("teamCode")?.trim();
+
+    if (!name || !teamCode) {
+        return NextResponse.json({ error: "필수 파라미터 누락" }, { status: 400 });
+    }
+
+    let admin: ReturnType<typeof createAdminClient>;
+    try {
+        admin = createAdminClient();
+    } catch {
+        return NextResponse.json({ error: "서버 설정 오류" }, { status: 500 });
+    }
+
+    // 팀 코드 검증
+    const { data: team } = await admin
+        .from("teams")
+        .select("id, name, emoji")
+        .eq("join_code", teamCode.toUpperCase())
+        .maybeSingle();
+
+    if (!team) {
+        return NextResponse.json({ status: "invalid_team" }, { status: 400 });
+    }
+
+    // 같은 팀에 이름 있는지 확인
+    const { data: sameTeamProfile } = await admin
+        .from("profiles")
+        .select("id, avatar, marketer_type")
+        .eq("name", name)
+        .eq("team", team.name)
+        .maybeSingle();
+
+    if (sameTeamProfile) {
+        return NextResponse.json({
+            status: "returning",
+            profile: {
+                avatar: sameTeamProfile.avatar ?? "🦊",
+                marketer_type: sameTeamProfile.marketer_type ?? null,
+                team: team.name,
+                team_emoji: team.emoji ?? "",
+            },
+        });
+    }
+
+    // 다른 팀에 동명이 있는지 확인
+    const { data: otherTeamProfile } = await admin
+        .from("profiles")
+        .select("id")
+        .eq("name", name)
+        .limit(1);
+
+    if ((otherTeamProfile?.length ?? 0) > 0) {
+        return NextResponse.json({ status: "taken" });
+    }
+
+    return NextResponse.json({ status: "available" });
 }
 
 /**
@@ -52,9 +122,8 @@ function makeCredentials(name: string, teamCode: string) {
  *   response: { session }
  */
 export async function POST(req: NextRequest) {
-    // Rate limiting: IP당 분당 10회 이하
     const ip = getClientIP(req);
-    if (!checkRateLimit(`teamlogin:${ip}`, 10, 60_000)) {
+    if (!checkRateLimit(`teamlogin:${ip}`, 60, 60_000)) {
         return NextResponse.json(
             { error: "너무 많은 요청입니다. 1분 후 다시 시도해주세요." },
             { status: 429 }
@@ -109,8 +178,24 @@ export async function POST(req: NextRequest) {
     const { email, password } = credentials;
 
     if (existingProfile) {
-        // ── 기존 유저: 재로그인 ──
-        // 항상 팀 로그인 이메일/비밀번호로 업데이트 (소셜 가입 유저 포함)
+        // ── 소셜 로그인 계정 보호 ──
+        // Google/Kakao로 가입한 유저의 credentials를 덮어쓰지 않음
+        const { data: { user: authUser } } = await admin.auth.admin.getUserById(existingProfile.id);
+        const hasSocialIdentity = authUser?.identities?.some(
+            (identity) => identity.provider !== "email"
+        );
+
+        if (hasSocialIdentity) {
+            return NextResponse.json(
+                {
+                    error: "이 계정은 소셜 로그인(Google/Kakao)으로 가입되어 있어요.\n상단의 '소셜 로그인' 탭을 이용해주세요.",
+                    isSocialUser: true,
+                },
+                { status: 400 }
+            );
+        }
+
+        // ── 팀 코드 기반 기존 유저: 재로그인 ──
         const { error: updateError } = await admin.auth.admin.updateUserById(existingProfile.id, {
             email,
             password,
@@ -122,7 +207,6 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: "계정 업데이트에 실패했어요. 관리자에게 문의하세요." }, { status: 500 });
         }
 
-        // 로그인 (anon key 클라이언트로 호출해야 정상 JWT 발급)
         const anonClient = createClient(
             process.env.NEXT_PUBLIC_SUPABASE_URL!,
             process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -137,9 +221,13 @@ export async function POST(req: NextRequest) {
     }
 
     // ── 신규 유저 ──
-    // type 없으면 → 프론트에 신규 가입 폼 표시 요청
     if (!type) {
         return NextResponse.json({ isNewUser: true, team }, { status: 200 });
+    }
+
+    const VALID_TYPES = ["creator", "analyst", "storyteller", "innovator"] as const;
+    if (!VALID_TYPES.includes(type as typeof VALID_TYPES[number])) {
+        return NextResponse.json({ error: "올바르지 않은 마케터 타입이에요." }, { status: 400 });
     }
 
     // 이름 전체 중복 체크 (팀 무관)
@@ -181,12 +269,10 @@ export async function POST(req: NextRequest) {
     });
 
     if (profileError) {
-        // 롤백
         await admin.auth.admin.deleteUser(newUser.user.id);
         return NextResponse.json({ error: "프로필 생성에 실패했어요." }, { status: 500 });
     }
 
-    // 로그인
     const anonClient = createClient(
         process.env.NEXT_PUBLIC_SUPABASE_URL!,
         process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,

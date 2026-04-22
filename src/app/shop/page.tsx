@@ -31,7 +31,7 @@ import {
     getUnlockedStyleIds,
     addUnlockedStyle,
 } from "@/lib/avatar/styles";
-import { RewardsContent } from "@/app/rewards/page";
+import { RewardsContent } from "@/components/rewards/RewardsContent";
 import BrandLoader from "@/components/common/BrandLoader";
 
 interface Product {

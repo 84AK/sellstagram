@@ -22,6 +22,7 @@ import { supabase } from "@/lib/supabase/client";
 import { useGameStore } from "@/store/useGameStore";
 import { generateSimEvents, SimEvent, AiComment } from "@/lib/simulation/events";
 import type { SimAnalysisResult } from "@/app/api/simulate/analyze-post/route";
+import BrandLoader from "@/components/common/BrandLoader";
 
 interface SimState {
     active: boolean;
@@ -328,6 +329,7 @@ export default function SimulatePage() {
     const [isSaving, setIsSaving] = useState(false);
     const [saved, setSaved] = useState(false);
     const [dbPosts, setDbPosts] = useState<DbPost[]>([]);
+    const [postsLoading, setPostsLoading] = useState(true);
     const [aiAnalysis, setAiAnalysis] = useState<SimAnalysisResult | null>(null);
     const [isAnalyzing, setIsAnalyzing] = useState(false);
     const [celebration, setCelebration] = useState<{ show: boolean; message: string; emoji: string }>({ show: false, message: "", emoji: "" });
@@ -339,6 +341,7 @@ export default function SimulatePage() {
     // DB에서 내 게시물 로드
     useEffect(() => {
         if (!user.handle) return;
+        setPostsLoading(true);
         supabase
             .from("posts")
             .select("id, caption, image_url, engagement_rate, sales, tags, landing_images, selling_price, ad_budget")
@@ -350,6 +353,7 @@ export default function SimulatePage() {
                     setDbPosts(data);
                     if (data.length > 0 && !selectedPostId) setSelectedPostId(data[0].id);
                 }
+                setPostsLoading(false);
             });
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [user.handle]);
@@ -604,6 +608,10 @@ export default function SimulatePage() {
                 </Link>
             </div>
         );
+    }
+
+    if (postsLoading) {
+        return <BrandLoader variant="page" text="내 게시물 불러오는 중..." />;
     }
 
     if (myPosts.length === 0) {

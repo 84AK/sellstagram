@@ -31,7 +31,7 @@ import {
     type Tutorial,
 } from "@/lib/learn/content";
 import { useGameStore } from "@/store/useGameStore";
-import { SessionContent } from "@/app/session/page";
+import { SessionContent } from "@/components/session/SessionContent";
 import MissionList from "@/components/dashboard/MissionList";
 
 type Tab = "today" | "concept" | "ai" | "tutorial";

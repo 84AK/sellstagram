@@ -84,6 +84,10 @@ export default function FeedPage() {
     React.useEffect(() => { loadABTests(); }, [loadABTests]);
 
     const [feedFilter, setFeedFilter] = useState<"latest" | "hot">("latest");
+    const [teams, setTeams] = useState<{ id: string; name: string; emoji: string }[]>([]);
+    const [teamFilter, setTeamFilter] = useState<string | null>(null);
+    const [teamHandles, setTeamHandles] = useState<Set<string> | null>(null);
+    const [teamHandlesLoading, setTeamHandlesLoading] = useState(false);
     const [classActive, setClassActive] = useState(false);
     const [activeMission, setActiveMission] = useState<{ title: string; description: string } | null>(null);
     const [feedTab, setFeedTab] = useState<"simulation" | "channel">("simulation");
@@ -104,6 +108,10 @@ export default function FeedPage() {
             return bL - aL;
           })
         : posts;
+
+    const filteredPosts = teamHandles
+        ? sortedPosts.filter(p => teamHandles.has(p.user.handle))
+        : sortedPosts;
 
     const streak = calcStreak(posts, user.handle);
 
@@ -155,7 +163,8 @@ export default function FeedPage() {
             supabase.from("app_settings").select("class_active").eq("id", 1).single(),
             supabase.from("missions").select("title, description").eq("is_active", true)
                 .order("created_at", { ascending: true }).limit(1).single(),
-        ]).then(([postsRes, gameRes, settingsRes, missionRes]) => {
+            supabase.from("teams").select("id, name, emoji").order("name"),
+        ]).then(([postsRes, gameRes, settingsRes, missionRes, teamsRes]) => {
             if (postsRes.error) { setLoadError(true); setIsLoading(false); return; }
             if (postsRes.data) {
                 setHasMore(postsRes.data.length === PAGE_SIZE);
@@ -166,6 +175,7 @@ export default function FeedPage() {
             if (gameRes.data) setWeek(gameRes.data.week);
             if (settingsRes.data) setClassActive(settingsRes.data.class_active);
             setActiveMission(missionRes.data ?? null);
+            if (teamsRes.data) setTeams(teamsRes.data);
             setIsLoading(false);
         }).catch(() => { setLoadError(true); setIsLoading(false); });
 
@@ -196,6 +206,23 @@ export default function FeedPage() {
         };
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
+
+    // 팀 필터 변경 시 해당 팀 멤버 handle 목록 로드
+    useEffect(() => {
+        if (!teamFilter) {
+            setTeamHandles(null);
+            return;
+        }
+        setTeamHandlesLoading(true);
+        supabase
+            .from("profiles")
+            .select("handle")
+            .eq("team", teamFilter)
+            .then(({ data }) => {
+                setTeamHandles(new Set((data ?? []).map(p => p.handle)));
+                setTeamHandlesLoading(false);
+            });
+    }, [teamFilter]);
 
     // 내 채널 탭 전환 시 channel 게시물 로드
     useEffect(() => {
@@ -493,6 +520,58 @@ export default function FeedPage() {
                     </div>
                 </div>
 
+                {/* 팀별 필터 */}
+                {teams.length > 0 && (
+                    <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1 -mx-1 px-1">
+                        <button
+                            onClick={() => setTeamFilter(null)}
+                            className="shrink-0 px-3 py-1.5 rounded-full text-xs font-bold transition-all"
+                            style={{
+                                background: !teamFilter ? "var(--foreground)" : "var(--surface-2)",
+                                color: !teamFilter ? "var(--background)" : "var(--foreground-soft)",
+                            }}
+                        >
+                            전체
+                        </button>
+                        {teams.map(team => (
+                            <button
+                                key={team.id}
+                                onClick={() => setTeamFilter(teamFilter === team.name ? null : team.name)}
+                                className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-all"
+                                style={{
+                                    background: teamFilter === team.name ? "var(--secondary)" : "var(--surface-2)",
+                                    color: teamFilter === team.name ? "white" : "var(--foreground-soft)",
+                                    boxShadow: teamFilter === team.name ? "0 2px 8px rgba(67,97,238,0.25)" : "none",
+                                }}
+                            >
+                                {team.emoji} {team.name}
+                            </button>
+                        ))}
+                    </div>
+                )}
+
+                {/* 팀 필터 결과 요약 */}
+                {teamFilter && !teamHandlesLoading && (
+                    <div className="flex items-center gap-2 px-1">
+                        <span className="text-xs font-semibold" style={{ color: "var(--foreground-muted)" }}>
+                            {teams.find(t => t.name === teamFilter)?.emoji} <strong style={{ color: "var(--foreground-soft)" }}>{teamFilter}</strong> 게시물 {filteredPosts.length}개
+                        </span>
+                        <button
+                            onClick={() => setTeamFilter(null)}
+                            className="text-[10px] font-bold px-2 py-0.5 rounded-full"
+                            style={{ background: "var(--surface-2)", color: "var(--foreground-muted)" }}
+                        >
+                            × 전체 보기
+                        </button>
+                    </div>
+                )}
+                {teamHandlesLoading && (
+                    <div className="flex items-center gap-1.5 px-1">
+                        <Loader2 size={12} className="animate-spin" style={{ color: "var(--foreground-muted)" }} />
+                        <span className="text-xs" style={{ color: "var(--foreground-muted)" }}>팀 피드 로딩 중...</span>
+                    </div>
+                )}
+
                 {/* A/B 테스트 섹션 — 항상 표시 */}
                 {(() => {
                     const activeTests = abTests.filter(t => t.status === "active");
@@ -591,7 +670,7 @@ export default function FeedPage() {
                                 새로고침
                             </button>
                         </div>
-                    ) : sortedPosts.map(post => {
+                    ) : filteredPosts.map(post => {
                         if (post.type === "video") {
                             return (
                                 <div key={post.id} className="w-full max-w-sm mx-auto">
@@ -645,6 +724,27 @@ export default function FeedPage() {
                         }
                         return null;
                     })}
+
+                    {/* 팀 필터 결과 없음 */}
+                    {!isLoading && !loadError && teamFilter && filteredPosts.length === 0 && !teamHandlesLoading && (
+                        <div className="flex flex-col items-center gap-3 py-14 rounded-2xl"
+                            style={{ background: "var(--surface)", border: "1.5px dashed var(--border)" }}>
+                            <span className="text-4xl">{teams.find(t => t.name === teamFilter)?.emoji ?? "🏷️"}</span>
+                            <div className="text-center">
+                                <p className="font-black text-sm" style={{ color: "var(--foreground)" }}>
+                                    {teamFilter} 팀의 게시물이 아직 없어요
+                                </p>
+                                <p className="text-xs mt-1" style={{ color: "var(--foreground-muted)" }}>
+                                    팀원이 콘텐츠를 올리면 여기서 확인할 수 있어요
+                                </p>
+                            </div>
+                            <button onClick={() => setTeamFilter(null)}
+                                className="text-xs font-bold px-4 py-2 rounded-xl"
+                                style={{ background: "var(--surface-2)", color: "var(--foreground-soft)" }}>
+                                전체 피드 보기
+                            </button>
+                        </div>
+                    )}
 
                     {/* 무한 스크롤 sentinel — 항상 렌더링해야 observer가 초기에 올바르게 등록됨 */}
                     <div ref={sentinelRef} className="flex justify-center py-4 pb-24">

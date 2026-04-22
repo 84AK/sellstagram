@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { supabase } from "@/lib/supabase/client";
 import { CURRICULUM } from "@/lib/curriculum/sessions";
+import BrandLoader from "@/components/common/BrandLoader";
 
 interface Profile {
     id: string;
@@ -300,11 +301,7 @@ export default function AdminDashboard() {
     ];
 
     if (!authChecked || loading) {
-        return (
-            <div className="min-h-screen flex items-center justify-center" style={{ background: "var(--background)" }}>
-                <Loader2 size={28} className="animate-spin" style={{ color: "#7C3AED" }} />
-            </div>
-        );
+        return <BrandLoader variant="page" text="관리자 데이터 불러오는 중..." />;
     }
 
     return (

@@ -8,6 +8,7 @@ import {
     ArrowLeft, Send, ImageIcon, Inbox, Loader2, Check,
     PenSquare, Search, ChevronLeft, X,
 } from "lucide-react";
+import BrandLoader from "@/components/common/BrandLoader";
 
 /* ───────── 타입 ───────── */
 interface Message {
@@ -344,11 +345,7 @@ export default function MessagesPage() {
 
             {/* 받은 메시지 목록 */}
             {loadingInbox ? (
-                <div className="flex flex-col gap-3">
-                    {[1, 2, 3].map(i => (
-                        <div key={i} className="h-20 rounded-2xl animate-pulse" style={{ background: "var(--surface-2)" }} />
-                    ))}
-                </div>
+                <BrandLoader variant="section" text="메시지 불러오는 중..." />
             ) : messages.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-20 gap-4">
                     <div className="w-16 h-16 rounded-2xl flex items-center justify-center"
