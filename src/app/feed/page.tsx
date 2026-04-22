@@ -275,9 +275,9 @@ export default function FeedPage() {
                         >
                             <Plus size={18} className="text-white" />
                         </button>
-                        <button className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: "var(--surface-2)" }}>
+                        <Link href="/notifications" className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: "var(--surface-2)" }}>
                             <Bell size={18} style={{ color: "var(--foreground-soft)" }} />
-                        </button>
+                        </Link>
                     </div>
                 </header>
 

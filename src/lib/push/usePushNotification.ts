@@ -53,7 +53,7 @@ export function usePushNotification() {
             // 서비스 워커 등록 여부 먼저 확인 (dev 모드에서는 SW 비활성화)
             const registrations = await navigator.serviceWorker.getRegistrations();
             if (registrations.length === 0) {
-                throw new Error("서비스 워커가 등록되지 않았습니다.");
+                return false;
             }
 
             const permission = await Notification.requestPermission();

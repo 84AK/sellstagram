@@ -20,9 +20,9 @@ export const AI_PROMPTS = {
     4. **핵심**: '마케팅 공부가 정말 재밌다!'라고 느낄 수 있게 동기를 부여해주세요.
   `,
 
-  PEOPLE_REACTIONS: (product: string, tags: string[], personas: Persona[], fullCaption?: string, price?: number) => `
-    당신은 SNS를 활발히 쓰는 다양한 직업·연령대의 한국 가상 소비자 그룹입니다.
-    아래 마케팅 게시물을 보고 각 소비자 프로필에 완벽하게 맞는 리얼한 댓글을 생성하세요.
+  PEOPLE_REACTIONS: (product: string, tags: string[], personas: Persona[], fullCaption?: string, price?: number, reactionTypes?: Record<string, string>) => `
+    당신은 SNS를 쓰는 다양한 직업·연령대의 한국 가상 소비자 그룹입니다.
+    실제 SNS처럼 긍정·중립·회의·부정·엉뚱한 반응이 섞인 리얼한 댓글을 생성하세요.
 
     [게시물 정보]
     - 캡션: "${fullCaption || product}"
@@ -30,13 +30,29 @@ export const AI_PROMPTS = {
     ${price && price > 0 ? `- 상품 가격: ₩${price.toLocaleString()}` : ""}
 
     [가상 소비자 프로필]
-    ${personas.map((p, i) => `${i + 1}. ${p.name} (${p.age}세, ${p.gender === "F" ? "여" : "남"}, ${p.occupation} ${p.occupationEmoji})
-       - 소득: ${p.income === "low" ? "저소득" : p.income === "mid" ? "중소득" : "고소득"}, 구매 한도: ₩${p.priceThreshold.toLocaleString()}
-       - 구매 성향: ${p.buyingBehavior === "impulsive" ? "충동구매형" : p.buyingBehavior === "researcher" ? "정보탐색형" : p.buyingBehavior === "value-seeker" ? "가성비추구형" : p.buyingBehavior === "trendsetter" ? "트렌드세터형" : p.buyingBehavior === "loyal" ? "브랜드충성형" : "전문분석형"}
+    ${personas.map((p, i) => {
+      const behavior = p.buyingBehavior === "impulsive" ? "충동구매형" : p.buyingBehavior === "researcher" ? "정보탐색형" : p.buyingBehavior === "value-seeker" ? "가성비추구형" : p.buyingBehavior === "trendsetter" ? "트렌드세터형" : p.buyingBehavior === "loyal" ? "브랜드충성형" : "전문분석형";
+      const reaction = reactionTypes?.[p.id] ?? "neutral";
+      return `${i + 1}. ${p.name} (${p.age}세, ${p.gender === "F" ? "여" : "남"}, ${p.occupation} ${p.occupationEmoji})
+       - 구매 성향: ${behavior} / 구매 한도: ₩${p.priceThreshold.toLocaleString()}
        - 관심사: ${p.interests.slice(0, 3).join(", ")}
-       - 구매 결정 요인: ${p.purchaseTriggers.slice(0, 2).join(", ")}
+       - 구매 망설임 요인: ${p.painPoints.slice(0, 2).join(", ")}
        - 말투: ${p.commentStyleDesc}
-       - 대표 표현: "${p.quote}"`).join("\n\n")}
+       - ⚠️ 반응 방향: ${reaction} ← 반드시 이 방향으로만 댓글 작성`;
+    }).join("\n\n")}
+
+    [반응 유형별 예시]
+    - positive: "이거 진짜 사야겠다! 🔥", "디자인 너무 예뻐요 ㅠㅠ 갖고 싶어"
+    - neutral: "배송비는 얼마예요?", "후기 좀 더 있을까요? 고민 중이에요"
+    - skeptical: "솔직히 이 가격에 이 퀄리티면... 비슷한 게 더 싸게 있지 않나요? 🤔", "마케팅이 너무 과한 것 같은데요"
+    - negative: "별로예요. 기대가 너무 컸나봐요 😕", "가성비가 글쎄요, 안 살 것 같아요"
+    - funny: "우리 엄마한테 사줘야겠다 ㅋㅋ", "이거 저만 모르던 거 아니죠? ㅋㅋ"
+
+    [반응 분포 규칙 — 절대 준수]
+    - positive: 최대 2개
+    - neutral 또는 curious: 1개 이상
+    - skeptical 또는 negative: 반드시 1개 이상
+    ⛔ 모든 댓글이 긍정적이면 규칙 위반입니다. 각 소비자의 "반응 방향"을 반드시 따르세요.
 
     [출력 형식 — 반드시 JSON Array만 출력]
     [
@@ -45,13 +61,12 @@ export const AI_PROMPTS = {
     ]
 
     [작성 규칙]
-    1. 게시물 캡션·해시태그·가격을 직접 언급하거나 반응하세요 (구체적일수록 좋아요).
-    2. 각 소비자의 직업 배경·구매 성향이 댓글에 자연스럽게 녹아들어야 합니다.
-    3. 가격이 구매 한도를 초과하면 그 소비자는 망설이거나 부담스럽다는 반응을 보여야 합니다.
-    4. 10~20대는 신조어·줄임말, 30~40대는 정중하거나 분석적인 말투, 50대는 신중한 말투.
-    5. sentiment는 "positive" / "neutral" / "skeptical" 중 하나.
-    6. name 필드: "이름(나이·직업)" 형식으로 출력 (예: "박도현(16·고등학생)")
-    7. 반드시 JSON 리스트만 출력하세요. 다른 텍스트 없이.
+    1. 게시물 캡션·해시태그·가격을 구체적으로 언급하거나 반응하세요.
+    2. 각 소비자의 직업·구매 성향·망설임 요인이 댓글에 자연스럽게 녹아들어야 합니다.
+    3. 10~20대는 신조어·줄임말, 30~40대는 분석적 말투, 50대는 신중한 말투.
+    4. sentiment는 "positive" / "neutral" / "skeptical" / "negative" / "funny" 중 하나.
+    5. name 필드: "이름(나이·직업)" 형식 (예: "박도현(16·고등학생)")
+    6. 반드시 JSON 리스트만 출력. 다른 텍스트 없이.
   `,
 
   WEEKLY_REPORT: (weekNumber: number, sessionTitle: string, postCount: number, avgEngagement: number, totalLikes: number, bestCaption: string) => `

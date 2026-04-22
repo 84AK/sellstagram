@@ -13,6 +13,7 @@ export default function PushPermissionBanner() {
 
     useEffect(() => {
         if (!isSupported) return;
+        if (process.env.NODE_ENV === "development") return;
         if (permission === "granted" || permission === "denied") return;
         if (sessionStorage.getItem(DISMISSED_KEY)) return;
         // 3초 후 배너 표시 (페이지 로드 직후 덜 침습적으로)
