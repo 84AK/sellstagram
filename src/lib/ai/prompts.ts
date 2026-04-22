@@ -20,28 +20,38 @@ export const AI_PROMPTS = {
     4. **핵심**: '마케팅 공부가 정말 재밌다!'라고 느낄 수 있게 동기를 부여해주세요.
   `,
 
-  PEOPLE_REACTIONS: (product: string, tags: string[], personas: Persona[], fullCaption?: string) => `
-    당신은 SNS를 활발히 쓰는 가상의 고객 그룹입니다.
-    아래 마케팅 게시물을 보고 각 페르소나의 성격에 딱 맞는 댓글을 생성하세요.
+  PEOPLE_REACTIONS: (product: string, tags: string[], personas: Persona[], fullCaption?: string, price?: number) => `
+    당신은 SNS를 활발히 쓰는 다양한 직업·연령대의 한국 가상 소비자 그룹입니다.
+    아래 마케팅 게시물을 보고 각 소비자 프로필에 완벽하게 맞는 리얼한 댓글을 생성하세요.
 
     [게시물 정보]
     - 캡션: "${fullCaption || product}"
     - 해시태그: ${tags.join(", ")}
+    ${price && price > 0 ? `- 상품 가격: ₩${price.toLocaleString()}` : ""}
 
-    [페르소나]
-    ${personas.map(p => `- ${p.name} (${p.age}세, 말투: ${p.style}): ${p.description}`).join("\n")}
+    [가상 소비자 프로필]
+    ${personas.map((p, i) => `${i + 1}. ${p.name} (${p.age}세, ${p.gender === "F" ? "여" : "남"}, ${p.occupation} ${p.occupationEmoji})
+       - 소득: ${p.income === "low" ? "저소득" : p.income === "mid" ? "중소득" : "고소득"}, 구매 한도: ₩${p.priceThreshold.toLocaleString()}
+       - 구매 성향: ${p.buyingBehavior === "impulsive" ? "충동구매형" : p.buyingBehavior === "researcher" ? "정보탐색형" : p.buyingBehavior === "value-seeker" ? "가성비추구형" : p.buyingBehavior === "trendsetter" ? "트렌드세터형" : p.buyingBehavior === "loyal" ? "브랜드충성형" : "전문분석형"}
+       - 관심사: ${p.interests.slice(0, 3).join(", ")}
+       - 구매 결정 요인: ${p.purchaseTriggers.slice(0, 2).join(", ")}
+       - 말투: ${p.commentStyleDesc}
+       - 대표 표현: "${p.quote}"`).join("\n\n")}
 
     [출력 형식 — 반드시 JSON Array만 출력]
     [
-      { "name": "이름(나이)", "comment": "댓글 내용 (30자 이내, 이모지 1개 포함)", "personaId": "p1", "sentiment": "positive" },
+      { "name": "이름(나이·직업)", "comment": "댓글 내용 (40자 이내, 이모지 1개 포함)", "personaId": "p01", "sentiment": "positive" },
       ...
     ]
 
     [작성 규칙]
-    1. 게시물 캡션 내용을 직접 언급하거나 반응하세요 (구체적일수록 좋아요).
-    2. slang: 신조어·줄임말, polite: 정중한 존댓말, enthusiastic: 감탄사 많이, skeptical: 가격/품질 의문.
-    3. sentiment는 "positive" / "neutral" / "skeptical" 중 하나.
-    4. 반드시 JSON 리스트만 출력하세요. 다른 텍스트 없이.
+    1. 게시물 캡션·해시태그·가격을 직접 언급하거나 반응하세요 (구체적일수록 좋아요).
+    2. 각 소비자의 직업 배경·구매 성향이 댓글에 자연스럽게 녹아들어야 합니다.
+    3. 가격이 구매 한도를 초과하면 그 소비자는 망설이거나 부담스럽다는 반응을 보여야 합니다.
+    4. 10~20대는 신조어·줄임말, 30~40대는 정중하거나 분석적인 말투, 50대는 신중한 말투.
+    5. sentiment는 "positive" / "neutral" / "skeptical" 중 하나.
+    6. name 필드: "이름(나이·직업)" 형식으로 출력 (예: "박도현(16·고등학생)")
+    7. 반드시 JSON 리스트만 출력하세요. 다른 텍스트 없이.
   `,
 
   WEEKLY_REPORT: (weekNumber: number, sessionTitle: string, postCount: number, avgEngagement: number, totalLikes: number, bestCaption: string) => `

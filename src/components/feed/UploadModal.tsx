@@ -538,7 +538,7 @@ export default function UploadModal() {
                 const res = await fetch("/api/ai/reactions", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ product: caption.slice(0, 40), tags: tagList2, caption }),
+                    body: JSON.stringify({ product: caption.slice(0, 40), tags: tagList2, caption, price: parsedSellingPrice }),
                 });
                 const data = await res.json();
                 const reactions = data.reactions ?? [];
@@ -556,7 +556,8 @@ export default function UploadModal() {
                         is_ai_reaction: true,
                         persona_emoji: r.personaEmoji ?? "👤",
                     }));
-                    await supabase.from("comments").insert(inserts);
+                    const { error: insertErr } = await supabase.from("comments").insert(inserts);
+                    if (insertErr) console.error("[AI reactions insert]", insertErr.message);
                 }
             } catch {
                 setPersonaReactions([]);

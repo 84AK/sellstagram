@@ -4,33 +4,25 @@
  * seed 기반 결정론적 생성 → 같은 시작 시간 + 같은 포스트 → 항상 동일한 이벤트
  */
 
+import { CUSTOMER_PERSONAS } from "@/lib/ai/personas";
+
 export interface SimEvent {
     id: string;
     type: "like" | "comment" | "share" | "purchase";
-    persona: { name: string; age: string; avatar: string };
+    persona: { name: string; age: string; avatar: string; occupation?: string };
     comment?: string;
     amount?: number;     // 구매 금액 (purchase only)
     realMs: number;      // 실제 표시 시각 (ms from sim start)
     simHour: number;     // 시뮬레이션 시간 (1 simHour = 1 real minute)
 }
 
-// ─── 가상 구매자 페르소나 ─────────────────────────────────────
-const PERSONAS = [
-    { name: "민지", age: "18", avatar: "👧" },
-    { name: "재현", age: "24", avatar: "🧑" },
-    { name: "서준", age: "30", avatar: "👨" },
-    { name: "유진", age: "17", avatar: "👧" },
-    { name: "나연", age: "22", avatar: "👩" },
-    { name: "도현", age: "16", avatar: "🧒" },
-    { name: "예지", age: "28", avatar: "👩" },
-    { name: "민호", age: "20", avatar: "🧑" },
-    { name: "소연", age: "25", avatar: "👩" },
-    { name: "지훈", age: "19", avatar: "🧑" },
-    { name: "예나", age: "23", avatar: "👩" },
-    { name: "태현", age: "27", avatar: "👨" },
-    { name: "하은", age: "21", avatar: "👩" },
-    { name: "준서", age: "15", avatar: "🧒" },
-];
+// ─── 가상 구매자 페르소나 — personas.ts에서 파생 (Single Source of Truth)
+const PERSONAS = CUSTOMER_PERSONAS.map(p => ({
+    name: p.name,
+    age: String(p.age),
+    avatar: p.avatar,
+    occupation: p.occupation,
+}));
 
 // ─── 댓글 템플릿 풀 ────────────────────────────────────────────
 const COMMENTS = {

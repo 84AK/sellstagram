@@ -101,6 +101,10 @@ export default function FeedCard({ id, user, content, stats, timeAgo, sellingPri
     const [showSimResult, setShowSimResult] = useState(false);
     // AI 반응 제외한 실제 사람 댓글 수
     const [humanCommentCount, setHumanCommentCount] = useState(0);
+    // 가상 고객 반응 (AI 생성 댓글)
+    const [showAiReactions, setShowAiReactions] = useState(false);
+    const [aiReactions, setAiReactions] = useState<{ id: string; user_name: string; text: string }[]>([]);
+    const [aiReactionsLoaded, setAiReactionsLoaded] = useState(false);
     // 이미지 캐러셀 — image_url(첫 번째) + images(나머지)를 합쳐 전체 슬라이드 구성
     const initImages = (() => {
         const first = content.image ? [content.image] : [];
@@ -401,6 +405,22 @@ export default function FeedCard({ id, user, content, stats, timeAgo, sellingPri
         return () => { supabase.removeChannel(channel); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [showComments]);
+
+    // 가상 고객 반응 로드
+    useEffect(() => {
+        if (!showAiReactions || aiReactionsLoaded) return;
+        supabase
+            .from("comments")
+            .select("id, user_name, text, created_at")
+            .eq("post_id", id)
+            .eq("is_ai_reaction", true)
+            .order("created_at", { ascending: true })
+            .then(({ data }) => {
+                if (data) setAiReactions(data);
+                setAiReactionsLoaded(true);
+            });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [showAiReactions]);
 
     // 광고 집행 핸들러
     const handleRunAd = async () => {
@@ -1044,6 +1064,65 @@ export default function FeedCard({ id, user, content, stats, timeAgo, sellingPri
                                 게시
                             </button>
                         }
+                    </div>
+                </div>
+            )}
+
+            {/* ─── 가상 고객 반응 토글 ─── */}
+            <div className="px-4 pb-1">
+                <button
+                    onClick={() => setShowAiReactions(v => !v)}
+                    className="flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1 rounded-full transition-all"
+                    style={{
+                        color: showAiReactions ? "white" : "var(--foreground-muted)",
+                        background: showAiReactions ? "linear-gradient(135deg, #4361EE, #06D6A0)" : "var(--surface-2)",
+                        border: "1px solid var(--border)",
+                    }}
+                >
+                    🤖 가상 고객 반응 {aiReactionsLoaded && aiReactions.length > 0 ? `(${aiReactions.length})` : "보기"}
+                </button>
+            </div>
+
+            {showAiReactions && (
+                <div className="mx-4 mb-3 rounded-xl overflow-hidden"
+                    style={{ border: "1px solid rgba(67,97,238,0.25)", background: "rgba(67,97,238,0.04)" }}>
+                    <div className="px-3 py-2 flex items-center gap-1.5"
+                        style={{ borderBottom: "1px solid rgba(67,97,238,0.15)" }}>
+                        <span className="text-[11px] font-black" style={{ color: "#4361EE" }}>🤖 가상 소비자 반응</span>
+                        <span className="text-[10px]" style={{ color: "var(--foreground-muted)" }}>— AI가 생성한 페르소나 반응입니다</span>
+                    </div>
+                    <div className="px-3 py-2 flex flex-col gap-2">
+                        {!aiReactionsLoaded ? (
+                            <div className="flex items-center gap-2 py-2">
+                                <Loader2 size={12} className="animate-spin" style={{ color: "#4361EE" }} />
+                                <span className="text-[11px]" style={{ color: "var(--foreground-muted)" }}>불러오는 중...</span>
+                            </div>
+                        ) : aiReactions.length === 0 ? (
+                            <p className="text-[11px] text-center py-2" style={{ color: "var(--foreground-muted)" }}>
+                                게시물을 업로드하면 가상 고객 반응이 생성됩니다
+                            </p>
+                        ) : (
+                            aiReactions.map((r) => {
+                                const nameParts = r.user_name.match(/^(.+?)\(([^)]+)\)\s*$/);
+                                const displayName = nameParts ? nameParts[1] : r.user_name;
+                                const meta = nameParts ? nameParts[2] : "";
+                                return (
+                                    <div key={r.id} className="flex gap-2 items-start">
+                                        <div className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] shrink-0"
+                                            style={{ background: "rgba(67,97,238,0.12)", border: "1px solid rgba(67,97,238,0.2)" }}>
+                                            🤖
+                                        </div>
+                                        <div>
+                                            <p className="text-[11px] font-semibold" style={{ color: "#4361EE" }}>
+                                                {displayName}
+                                                {meta && <span className="font-normal text-[10px] ml-1" style={{ color: "var(--foreground-muted)" }}>· {meta}</span>}
+                                            </p>
+                                            <p className="text-[12px]" style={{ color: "var(--foreground-soft)" }}>{r.text}</p>
+                                        </div>
+                                    </div>
+                                );
+                            })
+                        )}
                     </div>
                 </div>
             )}

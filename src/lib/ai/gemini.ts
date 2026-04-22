@@ -93,6 +93,8 @@ export function invalidateApiKeyCache() {
     cacheExpiresAt = 0;
 }
 
+const GEMINI_MODEL = "gemini-2.0-flash-lite";
+
 // ─── 핵심 호출 함수 ───────────────────────────────────────────────────
 export async function askGemini(prompt: string): Promise<string> {
     const apiKey = await resolveApiKey();
@@ -103,7 +105,7 @@ export async function askGemini(prompt: string): Promise<string> {
 
     try {
         const genAI = new GoogleGenerativeAI(apiKey);
-        const model = genAI.getGenerativeModel({ model: "gemini-flash-latest" });
+        const model = genAI.getGenerativeModel({ model: GEMINI_MODEL });
         const result = await model.generateContent(prompt);
         const response = await result.response;
         return response.text();
@@ -125,7 +127,7 @@ export async function askGeminiVision(prompt: string, imageUrls: string[]): Prom
 
     try {
         const genAI = new GoogleGenerativeAI(apiKey);
-        const model = genAI.getGenerativeModel({ model: "gemini-flash-latest" });
+        const model = genAI.getGenerativeModel({ model: GEMINI_MODEL });
 
         // 이미지 최대 3장 (토큰 절약), base64 변환
         const safeUrls = imageUrls.slice(0, 3);
