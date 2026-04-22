@@ -35,7 +35,10 @@ import {
     ExternalLink,
     X,
     Link as LinkIcon,
+    Bell,
+    BellOff,
 } from "lucide-react";
+import { usePushNotification } from "@/lib/push/usePushNotification";
 import { useGameStore } from "@/store/useGameStore";
 import { supabase, isSupabaseConfigured, DbProfile } from "@/lib/supabase/client";
 import { getSavedAvatarStyle } from "@/lib/avatar/styles";
@@ -127,6 +130,7 @@ export default function ProfilePage() {
     const [teamCreatedAt, setTeamCreatedAt] = useState<string | null>(null);
     const [loadingTeam, setLoadingTeam] = useState(true);
     const [activeTab, setActiveTab] = useState<"team" | "skills" | "bookmarks" | "idcard" | "posts">("posts");
+    const { permission, isSubscribed, isSupported, isLoading: pushLoading, subscribe, unsubscribe } = usePushNotification();
     const [bookmarkedPosts, setBookmarkedPosts] = useState<{ id: string; image_url: string | null; caption: string | null; likes: number }[]>([]);
     const [loadingBookmarks, setLoadingBookmarks] = useState(false);
 
@@ -466,6 +470,53 @@ export default function ProfilePage() {
                         </GlassCard>
                     ))}
                 </div>
+
+                {/* 알림 설정 */}
+                {isSupported && (
+                    <div className="rounded-2xl p-4 flex items-center gap-4"
+                        style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
+                        <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+                            style={{
+                                background: isSubscribed
+                                    ? "linear-gradient(135deg, #FF6B35, #FF9A72)"
+                                    : permission === "denied"
+                                        ? "rgba(239,68,68,0.12)"
+                                        : "var(--surface-2)",
+                            }}>
+                            {isSubscribed
+                                ? <Bell size={18} className="text-white" />
+                                : permission === "denied"
+                                    ? <BellOff size={18} style={{ color: "#EF4444" }} />
+                                    : <Bell size={18} style={{ color: "var(--foreground-muted)" }} />}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                            <p className="text-sm font-black" style={{ color: "var(--foreground)" }}>
+                                {isSubscribed ? "수업 알림 켜짐" : permission === "denied" ? "알림이 차단됨" : "수업 알림 꺼짐"}
+                            </p>
+                            <p className="text-xs mt-0.5" style={{ color: "var(--foreground-muted)" }}>
+                                {isSubscribed
+                                    ? "미션 시작, 선생님 공지 알림을 받고 있어요"
+                                    : permission === "denied"
+                                        ? "브라우저 주소창 왼쪽 자물쇠 → 알림 → 허용"
+                                        : "알림을 허용하면 수업 공지를 바로 받을 수 있어요"}
+                            </p>
+                        </div>
+                        {permission !== "denied" && (
+                            <button
+                                onClick={() => { if (isSubscribed) unsubscribe(); else { sessionStorage.removeItem("push_banner_dismissed"); subscribe(); } }}
+                                disabled={pushLoading}
+                                className="shrink-0 px-4 py-2 rounded-xl text-xs font-black transition-all active:scale-95 disabled:opacity-50"
+                                style={{
+                                    background: isSubscribed ? "var(--surface-2)" : "linear-gradient(135deg, #FF6B35, #FF9A72)",
+                                    color: isSubscribed ? "var(--foreground-muted)" : "white",
+                                    border: isSubscribed ? "1px solid var(--border)" : "none",
+                                }}
+                            >
+                                {pushLoading ? <Loader2 size={13} className="animate-spin" /> : isSubscribed ? "해제" : "알림 허용"}
+                            </button>
+                        )}
+                    </div>
+                )}
 
                 {/* 나의 파트너 */}
                 {user.marketerType && (

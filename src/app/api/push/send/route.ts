@@ -108,6 +108,13 @@ export async function POST(req: NextRequest) {
         const sent   = results.filter(r => r.status === "fulfilled").length;
         const failed = results.filter(r => r.status === "rejected").length;
 
+        // 알림 이력 저장 (수신함용)
+        await supabaseAdmin.from("notifications").insert({
+            title: payload.title,
+            body:  payload.body,
+            url:   payload.url || "/",
+        }).then(({ error }) => { if (error) console.warn("[notifications insert]", error.message); });
+
         return NextResponse.json({ ok: true, sent, failed, total: subs?.length ?? 0 });
     } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);

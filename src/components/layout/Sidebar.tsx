@@ -20,6 +20,7 @@ import {
     Target,
     FlaskConical,
     GraduationCap,
+    Bell,
 } from "lucide-react";
 import ThemeToggle from "@/components/common/ThemeToggle";
 import { useGameStore } from "@/store/useGameStore";
@@ -27,13 +28,14 @@ import { supabase } from "@/lib/supabase/client";
 import { useEffect, useState } from "react";
 
 const navItems = [
-    { name: "피드",              href: "/feed",     icon: Home },
-    { name: "주간 미션",         href: "/missions", icon: Target },
-    { name: "AI 마켓 시뮬레이션",href: "/simulate", icon: FlaskConical },
-    { name: "커리큘럼",          href: "/session",  icon: GraduationCap },
-    { name: "스토어",            href: "/shop",     icon: ShoppingBag },
-    { name: "메시지",            href: "/messages", icon: Inbox },
-    { name: "프로필",            href: "/profile",  icon: User },
+    { name: "피드",              href: "/feed",          icon: Home },
+    { name: "주간 미션",         href: "/missions",      icon: Target },
+    { name: "AI 마켓 시뮬레이션",href: "/simulate",      icon: FlaskConical },
+    { name: "커리큘럼",          href: "/session",       icon: GraduationCap },
+    { name: "스토어",            href: "/shop",          icon: ShoppingBag },
+    { name: "알림",              href: "/notifications", icon: Bell },
+    { name: "메시지",            href: "/messages",      icon: Inbox },
+    { name: "프로필",            href: "/profile",       icon: User },
 ];
 
 export default function Sidebar() {
@@ -49,6 +51,35 @@ export default function Sidebar() {
     const [adminChecked, setAdminChecked] = useState(false);
     const unreadMessages = useGameStore(s => s.unreadCount);
     const setUnreadMessages = useGameStore(s => s.setUnreadCount);
+    const [unreadNotifications, setUnreadNotifications] = useState(0);
+
+    // 읽지 않은 알림 수 계산 (localStorage 기준)
+    useEffect(() => {
+        const check = async () => {
+            const lastRead = localStorage.getItem("notifications_last_read_at");
+            const { data } = await supabase
+                .from("notifications")
+                .select("created_at")
+                .order("created_at", { ascending: false })
+                .limit(50);
+            if (!data) return;
+            const unread = lastRead
+                ? data.filter(n => new Date(n.created_at) > new Date(lastRead)).length
+                : data.length;
+            setUnreadNotifications(unread);
+        };
+        check();
+
+        // 새 알림 실시간 감지
+        const ch = supabase
+            .channel("sidebar-notifications")
+            .on("postgres_changes", { event: "INSERT", schema: "public", table: "notifications" }, () => {
+                setUnreadNotifications(prev => prev + 1);
+            })
+            .subscribe();
+        return () => { supabase.removeChannel(ch); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
     // 읽지 않은 메시지 수 로드 + 실시간 구독 (새 메시지 알림용)
     useEffect(() => {
@@ -155,9 +186,10 @@ export default function Sidebar() {
     const closeMobileMenu = () => setMobileMenuOpen(false);
 
     const mobileExtraNavItems = [
-        { href: "/shop",     icon: ShoppingBag,   label: "스토어" },
-        { href: "/simulate", icon: FlaskConical,  label: "AI 마켓 시뮬레이션" },
-        { href: "/session",  icon: GraduationCap, label: "커리큘럼" },
+        { href: "/notifications", icon: Bell,         label: "알림" },
+        { href: "/shop",          icon: ShoppingBag,  label: "스토어" },
+        { href: "/simulate",      icon: FlaskConical, label: "AI 마켓 시뮬레이션" },
+        { href: "/session",       icon: GraduationCap,label: "커리큘럼" },
     ];
 
     const mobileAdminItems = [
@@ -294,6 +326,12 @@ export default function Sidebar() {
                                                 <span className="absolute -top-1 -right-1 min-w-[14px] h-[14px] rounded-full flex items-center justify-center text-[9px] font-black text-white px-[3px]"
                                                     style={{ background: "var(--secondary)" }}>
                                                     {unreadMessages > 9 ? "9+" : unreadMessages}
+                                                </span>
+                                            )}
+                                            {item.href === "/notifications" && unreadNotifications > 0 && (
+                                                <span className="absolute -top-1 -right-1 min-w-[14px] h-[14px] rounded-full flex items-center justify-center text-[9px] font-black text-white px-[3px]"
+                                                    style={{ background: "#FF6B35" }}>
+                                                    {unreadNotifications > 9 ? "9+" : unreadNotifications}
                                                 </span>
                                             )}
                                         </div>
@@ -471,6 +509,12 @@ export default function Sidebar() {
                                         <span className="absolute -top-1 -right-1 min-w-[14px] h-[14px] rounded-full flex items-center justify-center text-[9px] font-black text-white px-[3px]"
                                             style={{ background: "var(--secondary)" }}>
                                             {unreadMessages > 9 ? "9+" : unreadMessages}
+                                        </span>
+                                    )}
+                                    {item.href === "/notifications" && unreadNotifications > 0 && (
+                                        <span className="absolute -top-1 -right-1 min-w-[14px] h-[14px] rounded-full flex items-center justify-center text-[9px] font-black text-white px-[3px]"
+                                            style={{ background: "#FF6B35" }}>
+                                            {unreadNotifications > 9 ? "9+" : unreadNotifications}
                                         </span>
                                     )}
                                 </div>
