@@ -43,6 +43,7 @@ import { useGameStore } from "@/store/useGameStore";
 import { supabase, isSupabaseConfigured, DbProfile } from "@/lib/supabase/client";
 import { getSavedAvatarStyle } from "@/lib/avatar/styles";
 import PartnerRoom from "@/components/character/PartnerRoom";
+import NotificationGuideModal from "@/components/pwa/NotificationGuideModal";
 
 interface TeamMember {
     id: string;
@@ -131,6 +132,7 @@ export default function ProfilePage() {
     const [loadingTeam, setLoadingTeam] = useState(true);
     const [activeTab, setActiveTab] = useState<"team" | "skills" | "bookmarks" | "idcard" | "posts">("posts");
     const { permission, isSubscribed, isSupported, isLoading: pushLoading, subscribe, unsubscribe } = usePushNotification();
+    const [showNotifGuide, setShowNotifGuide] = useState(false);
     const [bookmarkedPosts, setBookmarkedPosts] = useState<{ id: string; image_url: string | null; caption: string | null; likes: number }[]>([]);
     const [loadingBookmarks, setLoadingBookmarks] = useState(false);
 
@@ -501,7 +503,15 @@ export default function ProfilePage() {
                                         : "알림을 허용하면 수업 공지를 바로 받을 수 있어요"}
                             </p>
                         </div>
-                        {permission !== "denied" && (
+                        {permission === "denied" ? (
+                            <button
+                                onClick={() => setShowNotifGuide(true)}
+                                className="shrink-0 px-4 py-2 rounded-xl text-xs font-black transition-all active:scale-95"
+                                style={{ background: "rgba(239,68,68,0.12)", color: "#EF4444" }}
+                            >
+                                설정 방법
+                            </button>
+                        ) : (
                             <button
                                 onClick={() => { if (isSubscribed) unsubscribe(); else { sessionStorage.removeItem("push_banner_dismissed"); subscribe(); } }}
                                 disabled={pushLoading}
@@ -516,6 +526,10 @@ export default function ProfilePage() {
                             </button>
                         )}
                     </div>
+                )}
+
+                {showNotifGuide && (
+                    <NotificationGuideModal onClose={() => setShowNotifGuide(false)} />
                 )}
 
                 {/* 나의 파트너 */}
